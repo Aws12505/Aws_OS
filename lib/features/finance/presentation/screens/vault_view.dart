@@ -82,14 +82,36 @@ class _VaultBody extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
       children: [
         Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Total per currency',
-                    style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(
+                        Icons.account_balance_rounded,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        size: 18,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      'Total per currency',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                          ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
                 if (totals.isEmpty) const Text('—'),
                 for (final entry in totals.entries)
                   _TotalRow(
@@ -126,14 +148,34 @@ class _TotalRow extends StatelessWidget {
     final symbol = currency?.symbol ?? '';
     final dp = currency?.decimalPlaces ?? 2;
     final text = Money(amount, currency?.id ?? '').formatPlain(dp);
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Text(code, style: Theme.of(context).textTheme.bodyMedium),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              code,
+              style: tt.labelSmall?.copyWith(
+                color: cs.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           const Spacer(),
-          Text('$text $symbol',
-              style: Theme.of(context).textTheme.titleMedium),
+          Text(
+            '$text $symbol',
+            style: tt.titleMedium?.copyWith(
+              fontWeight: FontWeight.w700,
+              letterSpacing: -0.3,
+            ),
+          ),
         ],
       ),
     );
@@ -147,13 +189,27 @@ class _CurrencyHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (currency == null) return const SizedBox.shrink();
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
-      child: Text(
-        '${currency!.code} accounts',
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
+      padding: const EdgeInsets.fromLTRB(4, 20, 4, 8),
+      child: Row(
+        children: [
+          Text(
+            '${currency!.code} Accounts',
+            style: tt.labelLarge?.copyWith(
+              color: cs.primary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Divider(
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -174,14 +230,50 @@ class _AccountTile extends StatelessWidget {
     final dp = currency?.decimalPlaces ?? 2;
     final formatted = Money(balance, account.currencyId).formatPlain(dp);
     final symbol = currency?.symbol ?? '';
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isPositive = balance >= 0;
     return Card(
-      child: ListTile(
-        leading: const CircleAvatar(child: Icon(Icons.account_balance_wallet)),
-        title: Text(account.name),
-        subtitle: Text(account.kind),
-        trailing: Text(
-          '$formatted $symbol',
-          style: Theme.of(context).textTheme.titleMedium,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.account_balance_wallet_rounded,
+                  color: cs.onPrimaryContainer, size: 20),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(account.name,
+                      style: tt.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 2),
+                  Text(
+                    account.kind,
+                    style: tt.bodySmall
+                        ?.copyWith(color: cs.onSurfaceVariant),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              '$formatted $symbol',
+              style: tt.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isPositive ? cs.onSurface : cs.error,
+                letterSpacing: -0.3,
+              ),
+            ),
+          ],
         ),
       ),
     );

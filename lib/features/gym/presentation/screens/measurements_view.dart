@@ -43,31 +43,146 @@ class MeasurementsView extends ConsumerWidget {
                 children: [
                   Card(
                     child: ListTile(
-                      leading: const Icon(Icons.tune),
-                      title: const Text('Manage measurement types'),
+                      leading: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primaryContainer,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Icon(Icons.tune_rounded,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onPrimaryContainer,
+                            size: 18),
+                      ),
+                      title: const Text('Manage measurement types',
+                          style: TextStyle(fontWeight: FontWeight.w600)),
+                      trailing: Icon(Icons.chevron_right_rounded,
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurfaceVariant),
                       onTap: () => _showTypesSheet(context),
                     ),
                   ),
                   if (entries.isEmpty)
-                    const Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'No entries yet. Tap the floating button to record one.',
-                        textAlign: TextAlign.center,
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.monitor_weight_outlined,
+                                  size: 40, color: Color(0xFFEF4444)),
+                            ),
+                            const SizedBox(height: 20),
+                            Text(
+                              'No entries yet',
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w700),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Tap + to record your first measurement.',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodyMedium
+                                  ?.copyWith(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurfaceVariant,
+                                  ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   for (final e in entries)
                     Card(
-                      child: ListTile(
-                        title: Text(DateFormat.yMMMd().format(e.takenAt)),
-                        subtitle: Text((byEntry[e.id] ?? const [])
-                            .map((v) =>
-                                '${typesById[v.typeId]?.name ?? '?'}: ${v.value}${typesById[v.typeId]?.unit ?? ''}')
-                            .join('  •  ')),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () =>
-                              ref.read(gymDaoProvider).deleteEntry(e.id),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.monitor_weight_rounded,
+                                  color: Color(0xFFEF4444), size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    DateFormat.yMMMd().format(e.takenAt),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleSmall
+                                        ?.copyWith(
+                                            fontWeight: FontWeight.w700),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Wrap(
+                                    spacing: 6,
+                                    runSpacing: 4,
+                                    children: [
+                                      for (final v
+                                          in (byEntry[e.id] ?? const []))
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest,
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                          ),
+                                          child: Text(
+                                            '${typesById[v.typeId]?.name ?? '?'}: ${v.value}${typesById[v.typeId]?.unit ?? ''}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete_outline_rounded,
+                                  size: 18,
+                                  color:
+                                      Theme.of(context).colorScheme.error),
+                              onPressed: () =>
+                                  ref.read(gymDaoProvider).deleteEntry(e.id),
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(32, 32),
+                                padding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),

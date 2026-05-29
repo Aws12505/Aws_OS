@@ -19,18 +19,10 @@ class ProgramsView extends ConsumerWidget {
         error: (e, _) => Center(child: Text(e.toString())),
         data: (programs) {
           if (programs.isEmpty) {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(24),
-                child: Text(
-                  'No programs yet. Tap + to add one (e.g. PPL, Upper/Lower).',
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
+            return const _ProgramsEmpty();
           }
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+            padding: const EdgeInsets.fromLTRB(8, 8, 8, 120),
             itemCount: programs.length,
             itemBuilder: (_, i) => _ProgramTile(program: programs[i]),
           );
@@ -148,12 +140,55 @@ class _ProgramTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    const accent = Color(0xFFEF4444);
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
       child: ListTile(
-        title: Text(program.name),
-        subtitle: Text(program.startedAt == null
-            ? 'No start date'
-            : 'Started ${DateFormat.yMMMd().format(program.startedAt!)}'),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        leading: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [accent, Color.lerp(accent, Colors.black, 0.25)!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(13),
+            boxShadow: [
+              BoxShadow(
+                color: accent.withValues(alpha: 0.4),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: const Icon(Icons.fitness_center_rounded,
+              color: Colors.white, size: 22),
+        ),
+        title: Text(program.name,
+            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+        subtitle: Text(
+            program.startedAt == null
+                ? 'No start date'
+                : 'Started ${DateFormat.yMMMd().format(program.startedAt!)}',
+            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
         trailing: PopupMenuButton<String>(
           onSelected: (v) async {
             switch (v) {
@@ -189,6 +224,41 @@ class _ProgramTile extends ConsumerWidget {
         onTap: () => Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ProgramDetailScreen(program: program),
         )),
+      ),
+    );
+  }
+}
+
+class _ProgramsEmpty extends StatelessWidget {
+  const _ProgramsEmpty();
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.list_alt_rounded,
+                  size: 40, color: Color(0xFFEF4444)),
+            ),
+            const SizedBox(height: 20),
+            Text('No programs yet',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Text('Tap + to add one (e.g. PPL, Upper/Lower).',
+                textAlign: TextAlign.center,
+                style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
+          ],
+        ),
       ),
     );
   }

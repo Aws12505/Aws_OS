@@ -22,24 +22,44 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final tagsAsync = ref.watch(tagsStreamProvider);
     final mappingsAsync = ref.watch(noteTagsStreamProvider);
 
+    final tt = Theme.of(context).textTheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Notes'),
-      ),
-      body: Column(
+      body: SafeArea(
+        bottom: false,
+        child: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('CAPTURE',
+                    style: tt.labelSmall?.copyWith(
+                      color: const Color(0xFF8B5CF6),
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.6,
+                    )),
+                const SizedBox(height: 2),
+                Text('Notes',
+                    style: tt.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.6,
+                    )),
+              ],
+            ),
+          ),
           SizedBox(
-            height: 48,
+            height: 52,
             child: tagsAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (e, _) => const SizedBox.shrink(),
               data: (tags) {
                 return ListView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                   children: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      padding: const EdgeInsets.only(right: 6),
                       child: ChoiceChip(
                         label: const Text('All'),
                         selected: _filterTagId == null,
@@ -49,7 +69,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                     ),
                     for (final t in tags)
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(6, 6, 0, 6),
+                        padding: const EdgeInsets.only(right: 6),
                         child: ChoiceChip(
                           label: Text(t.name),
                           selected: _filterTagId == t.id,
@@ -84,12 +104,44 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                                 .contains(_filterTagId))
                         .toList();
                 if (filtered.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.all(24),
-                      child: Text(
-                        'No notes here. Tap + to add one.',
-                        textAlign: TextAlign.center,
+                      padding: const EdgeInsets.all(40),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF8B5CF6)
+                                  .withValues(alpha: 0.1),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.sticky_note_2_rounded,
+                                size: 40, color: Color(0xFF8B5CF6)),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'No notes here',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Tap + to write your first note.',
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodyMedium
+                                ?.copyWith(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -114,8 +166,11 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           ),
         ],
       ),
+      ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
+        backgroundColor: const Color(0xFF8B5CF6),
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Note'),
         onPressed: () => showNoteFormSheet(context),
       ),
@@ -130,73 +185,137 @@ class _NoteTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: InkWell(
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final title = note.title?.isNotEmpty == true
+        ? note.title!
+        : _firstLine(note.contentMd);
+    final preview = note.title?.isNotEmpty == true
+        ? _firstLine(note.contentMd)
+        : null;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
         onTap: () => _openViewer(context),
         child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
+          padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      note.title?.isNotEmpty == true
-                          ? note.title!
-                          : _firstLine(note.contentMd),
-                      style: Theme.of(context).textTheme.titleMedium,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  Text(DateFormat.MMMd().format(note.occurredAt),
-                      style: Theme.of(context).textTheme.bodySmall),
-                  PopupMenuButton<String>(
-                    onSelected: (v) async {
-                      switch (v) {
-                        case 'edit':
-                          showNoteFormSheet(context, existing: note);
-                        case 'delete':
-                          await ref
-                              .read(notesRepositoryProvider)
-                              .deleteNote(note.id);
-                      }
-                    },
-                    itemBuilder: (_) => const [
-                      PopupMenuItem(value: 'edit', child: Text('Edit')),
-                      PopupMenuItem(value: 'delete', child: Text('Delete')),
-                    ],
-                  ),
-                ],
-              ),
-              if (note.title?.isNotEmpty == true) ...[
-                const SizedBox(height: 4),
-                Text(
-                  _firstLine(note.contentMd),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+              Container(
+                width: 3,
+                height: tags.isNotEmpty ? 80 : 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6),
+                  borderRadius: BorderRadius.circular(2),
                 ),
-              ],
-              if (tags.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 4,
-                  runSpacing: 4,
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    for (final t in tags)
-                      Chip(
-                        label: Text(t.name),
-                        visualDensity: VisualDensity.compact,
-                        padding: EdgeInsets.zero,
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            title,
+                            style: tt.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          DateFormat.MMMd().format(note.occurredAt),
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
+                        PopupMenuButton<String>(
+                          icon: Icon(Icons.more_vert_rounded,
+                              size: 18, color: cs.onSurfaceVariant),
+                          onSelected: (v) async {
+                            switch (v) {
+                              case 'edit':
+                                showNoteFormSheet(context, existing: note);
+                              case 'delete':
+                                await ref
+                                    .read(notesRepositoryProvider)
+                                    .deleteNote(note.id);
+                            }
+                          },
+                          itemBuilder: (_) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(
+                                value: 'delete', child: Text('Delete')),
+                          ],
+                        ),
+                      ],
+                    ),
+                    if (preview != null && preview.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        preview,
+                        style: tt.bodySmall?.copyWith(
+                          color: cs.onSurfaceVariant,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
+                    ],
+                    if (tags.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 4,
+                        runSpacing: 4,
+                        children: [
+                          for (final t in tags)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF8B5CF6)
+                                    .withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                t.name,
+                                style: tt.labelSmall?.copyWith(
+                                  color: const Color(0xFF8B5CF6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
-              ],
+              ),
             ],
           ),
         ),
+      ),
       ),
     );
   }
