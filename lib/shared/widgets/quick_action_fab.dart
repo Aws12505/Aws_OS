@@ -24,10 +24,12 @@ class QuickActionFab extends ConsumerWidget {
   void _show(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
       showDragHandle: true,
       builder: (sheetCtx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        child: ListView(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
           children: [
             _Tile(
               icon: Icons.trending_down,
@@ -96,7 +98,6 @@ class QuickActionFab extends ConsumerWidget {
                 showNoteFormSheet(context);
               },
             ),
-            const SizedBox(height: 12),
           ],
         ),
       ),

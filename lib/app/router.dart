@@ -13,11 +13,11 @@ import '../features/tasks/presentation/screens/tasks_screen.dart';
 import '../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final lock = ref.watch(auth.lockProvider);
   return GoRouter(
     initialLocation: '/',
     refreshListenable: _RouterRefresh(ref),
     redirect: (context, state) {
+      final lock = ref.read(auth.lockProvider);
       final isLockScreen = state.uri.path == '/lock';
       if (lock.lockEnabled && lock.locked && !isLockScreen) return '/lock';
       if (!lock.locked && isLockScreen) return '/';
@@ -26,10 +26,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       ShellRoute(
         builder: (context, state, child) {
-          return MainScaffold(
-            location: state.uri.path,
-            child: child,
-          );
+          return MainScaffold(location: state.uri.path, child: child);
         },
         routes: [
           GoRoute(
@@ -44,8 +41,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/tasks',
-            pageBuilder: (c, s) =>
-                const NoTransitionPage(child: TasksScreen()),
+            pageBuilder: (c, s) => const NoTransitionPage(child: TasksScreen()),
           ),
           GoRoute(
             path: '/gym',
@@ -53,19 +49,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
           GoRoute(
             path: '/notes',
-            pageBuilder: (c, s) =>
-                const NoTransitionPage(child: NotesScreen()),
+            pageBuilder: (c, s) => const NoTransitionPage(child: NotesScreen()),
           ),
         ],
       ),
-      GoRoute(
-        path: '/settings',
-        builder: (c, s) => const SettingsScreen(),
-      ),
-      GoRoute(
-        path: '/lock',
-        builder: (c, s) => const LockScreen(),
-      ),
+      GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
+      GoRoute(path: '/lock', builder: (c, s) => const LockScreen()),
     ],
   );
 });

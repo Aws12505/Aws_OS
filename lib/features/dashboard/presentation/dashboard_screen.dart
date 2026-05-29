@@ -12,10 +12,11 @@ import '../../gym/presentation/providers.dart' as gym;
 import '../../notes/presentation/providers.dart' as notes;
 import '../../tasks/presentation/providers.dart' as tasks;
 import '../../../shared/widgets/quick_action_fab.dart';
-import '../../settings/presentation/settings_screen.dart';
+import 'package:go_router/go_router.dart';
 
-final _selectedDayProvider =
-    StateProvider<DateTime>((_) => DateTime.now().atStartOfDay);
+final _selectedDayProvider = StateProvider<DateTime>(
+  (_) => DateTime.now().atStartOfDay,
+);
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
@@ -28,9 +29,7 @@ class DashboardScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-              builder: (_) => const SettingsScreen(),
-            )),
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -80,9 +79,8 @@ class _DayHeader extends ConsumerWidget {
           children: [
             IconButton(
               icon: const Icon(Icons.chevron_left),
-              onPressed: () => ref
-                  .read(_selectedDayProvider.notifier)
-                  .state = selected.addDays(-1).atStartOfDay,
+              onPressed: () => ref.read(_selectedDayProvider.notifier).state =
+                  selected.addDays(-1).atStartOfDay,
             ),
             Expanded(
               child: InkWell(
@@ -109,9 +107,9 @@ class _DayHeader extends ConsumerWidget {
                         ),
                         if (!isToday)
                           TextButton(
-                            onPressed: () => ref
-                                .read(_selectedDayProvider.notifier)
-                                .state = DateTime.now().atStartOfDay,
+                            onPressed: () =>
+                                ref.read(_selectedDayProvider.notifier).state =
+                                    DateTime.now().atStartOfDay,
                             child: const Text('Today'),
                           ),
                       ],
@@ -122,9 +120,8 @@ class _DayHeader extends ConsumerWidget {
             ),
             IconButton(
               icon: const Icon(Icons.chevron_right),
-              onPressed: () => ref
-                  .read(_selectedDayProvider.notifier)
-                  .state = selected.addDays(1).atStartOfDay,
+              onPressed: () => ref.read(_selectedDayProvider.notifier).state =
+                  selected.addDays(1).atStartOfDay,
             ),
           ],
         ),
@@ -140,7 +137,8 @@ class _NeedsAttentionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending = ref.watch(fin.pendingOccurrencesProvider).value ??
+    final pending =
+        ref.watch(fin.pendingOccurrencesProvider).value ??
         const <ScheduledOccurrence>[];
     if (pending.isEmpty) return const SizedBox.shrink();
     return Card(
@@ -154,13 +152,17 @@ class _NeedsAttentionCard extends ConsumerWidget {
               children: [
                 const Icon(Icons.notifications_active),
                 const SizedBox(width: 8),
-                Text('Needs your attention',
-                    style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  'Needs your attention',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ],
             ),
             const SizedBox(height: 4),
-            Text('${pending.length} pending occurrence(s) — confirm or skip.',
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              '${pending.length} pending occurrence(s) — confirm or skip.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const Divider(),
             for (final o in pending)
               ListTile(
@@ -168,10 +170,8 @@ class _NeedsAttentionCard extends ConsumerWidget {
                 contentPadding: EdgeInsets.zero,
                 title: Text(DateFormat.yMMMd().format(o.dueAt)),
                 trailing: FilledButton(
-                  onPressed: () => showConfirmOccurrenceSheet(
-                    context,
-                    occurrence: o,
-                  ),
+                  onPressed: () =>
+                      showConfirmOccurrenceSheet(context, occurrence: o),
                   child: const Text('Review'),
                 ),
               ),
@@ -199,8 +199,11 @@ class _BalancesCard extends ConsumerWidget {
     final byCur = {for (final c in currencies) c.id: c};
     final totals = <String, double>{};
     for (final a in accounts) {
-      totals.update(a.currencyId, (v) => v + (balances[a.id] ?? 0),
-          ifAbsent: () => balances[a.id] ?? 0);
+      totals.update(
+        a.currencyId,
+        (v) => v + (balances[a.id] ?? 0),
+        ifAbsent: () => balances[a.id] ?? 0,
+      );
     }
     return Card(
       child: Padding(
@@ -240,10 +243,12 @@ class _TransactionsForDayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final txs = ref.watch(fin.recentTransactionsStreamProvider).value ??
+    final txs =
+        ref.watch(fin.recentTransactionsStreamProvider).value ??
         const <TransactionWithLegs>[];
-    final dayTxs =
-        txs.where((t) => t.transaction.occurredAt.isSameDay(date)).toList();
+    final dayTxs = txs
+        .where((t) => t.transaction.occurredAt.isSameDay(date))
+        .toList();
     if (dayTxs.isEmpty) return const SizedBox.shrink();
     return Card(
       child: Padding(
@@ -251,8 +256,10 @@ class _TransactionsForDayCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${dayTxs.length} transaction(s) on this day',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              '${dayTxs.length} transaction(s) on this day',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             for (final t in dayTxs)
               ListTile(
@@ -286,9 +293,11 @@ class _TasksForDayCard extends ConsumerWidget {
     final allTasks =
         ref.watch(tasks.allTasksStreamProvider).value ?? const <Task>[];
     final today = allTasks
-        .where((t) =>
-            (t.dueAt != null && t.dueAt!.isSameDay(date)) ||
-            (t.deadlineAt != null && t.deadlineAt!.isSameDay(date)))
+        .where(
+          (t) =>
+              (t.dueAt != null && t.dueAt!.isSameDay(date)) ||
+              (t.deadlineAt != null && t.deadlineAt!.isSameDay(date)),
+        )
         .toList();
     if (today.isEmpty) return const SizedBox.shrink();
     return Card(
@@ -297,8 +306,10 @@ class _TasksForDayCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tasks for this day',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Tasks for this day',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             for (final t in today)
               CheckboxListTile(
@@ -325,7 +336,8 @@ class _NotesForDayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final allNotes = ref.watch(notes.notesStreamProvider).value ?? const <Note>[];
+    final allNotes =
+        ref.watch(notes.notesStreamProvider).value ?? const <Note>[];
     final day = allNotes.where((n) => n.occurredAt.isSameDay(date)).toList();
     if (day.isEmpty) return const SizedBox.shrink();
     return Card(
@@ -334,16 +346,21 @@ class _NotesForDayCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Notes for this day',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Notes for this day',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 8),
             for (final n in day)
               ListTile(
                 dense: true,
                 contentPadding: EdgeInsets.zero,
                 leading: const Icon(Icons.notes),
-                title: Text(n.title ?? n.contentMd.split('\n').first,
-                    maxLines: 1, overflow: TextOverflow.ellipsis),
+                title: Text(
+                  n.title ?? n.contentMd.split('\n').first,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
           ],
         ),
@@ -367,8 +384,7 @@ class _GymLastSessionCard extends ConsumerWidget {
       child: ListTile(
         leading: const Icon(Icons.fitness_center),
         title: const Text('Last gym session'),
-        subtitle:
-            Text(DateFormat.yMMMd().add_Hm().format(last.playedAt)),
+        subtitle: Text(DateFormat.yMMMd().add_Hm().format(last.playedAt)),
       ),
     );
   }
@@ -381,7 +397,8 @@ class _ExpensePieCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final txs = ref.watch(fin.recentTransactionsStreamProvider).value ??
+    final txs =
+        ref.watch(fin.recentTransactionsStreamProvider).value ??
         const <TransactionWithLegs>[];
     final cats =
         ref.watch(fin.allCategoriesProvider).value ?? const <Category>[];
@@ -408,13 +425,15 @@ class _ExpensePieCard extends ConsumerWidget {
     final sections = <PieChartSectionData>[];
     var i = 0;
     perCategory.forEach((name, value) {
-      sections.add(PieChartSectionData(
-        value: value,
-        title: name,
-        color: palette[i % palette.length].shade400,
-        radius: 60,
-        titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
-      ));
+      sections.add(
+        PieChartSectionData(
+          value: value,
+          title: name,
+          color: palette[i % palette.length].shade400,
+          radius: 60,
+          titleStyle: const TextStyle(fontSize: 10, color: Colors.white),
+        ),
+      );
       i++;
     });
     return Card(
@@ -423,8 +442,10 @@ class _ExpensePieCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Expenses this month, by category',
-                style: Theme.of(context).textTheme.titleMedium),
+            Text(
+              'Expenses this month, by category',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
             const SizedBox(height: 12),
             SizedBox(
               height: 220,
@@ -446,19 +467,19 @@ class _ProjectedBalanceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending = ref.watch(fin.pendingOccurrencesWindowProvider(90)).value ??
+    final pending =
+        ref.watch(fin.pendingOccurrencesWindowProvider(90)).value ??
         const <ScheduledOccurrence>[];
     if (pending.isEmpty) return const SizedBox.shrink();
     final today = DateTime.now().atStartOfDay;
-    final upcomingCount = pending
-        .where((o) => !o.dueAt.isBefore(today))
-        .length;
+    final upcomingCount = pending.where((o) => !o.dueAt.isBefore(today)).length;
     return Card(
       child: ListTile(
         leading: const Icon(Icons.show_chart),
         title: const Text('Projected pending occurrences'),
         subtitle: Text(
-            '$upcomingCount expected in the next 90 days (across all recurring entries).'),
+          '$upcomingCount expected in the next 90 days (across all recurring entries).',
+        ),
       ),
     );
   }
