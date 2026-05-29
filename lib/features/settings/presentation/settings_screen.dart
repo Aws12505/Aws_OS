@@ -32,8 +32,7 @@ class SettingsScreen extends ConsumerWidget {
               context,
               title: 'Primary color',
               initial: theme.primaryColor,
-              onPicked: (c) =>
-                  ref.read(themeProvider.notifier).setPrimary(c),
+              onPicked: (c) => ref.read(themeProvider.notifier).setPrimary(c),
             ),
           ),
           ListTile(
@@ -43,8 +42,7 @@ class SettingsScreen extends ConsumerWidget {
               context,
               title: 'Accent color',
               initial: theme.accentColor,
-              onPicked: (c) =>
-                  ref.read(themeProvider.notifier).setAccent(c),
+              onPicked: (c) => ref.read(themeProvider.notifier).setAccent(c),
             ),
           ),
           ListTile(
@@ -119,9 +117,7 @@ class SettingsScreen extends ConsumerWidget {
                 initialTime: reminder,
               );
               if (picked != null) {
-                await ref
-                    .read(reminderTimeProvider.notifier)
-                    .setTime(picked);
+                await ref.read(reminderTimeProvider.notifier).setTime(picked);
               }
             },
           ),
@@ -146,10 +142,9 @@ class _SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
       child: Text(
         title.toUpperCase(),
-        style: Theme.of(context)
-            .textTheme
-            .labelSmall
-            ?.copyWith(color: Theme.of(context).colorScheme.primary),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+          color: Theme.of(context).colorScheme.primary,
+        ),
       ),
     );
   }
@@ -193,8 +188,9 @@ void _pickColor(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(dCtx),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.pop(dCtx),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
           onPressed: () {
             onPicked(current);
@@ -218,13 +214,16 @@ class _BackupSection extends ConsumerWidget {
           leading: const Icon(Icons.upload_file),
           title: const Text('Export backup'),
           subtitle: const Text(
-              'JSON file with everything; optional password encryption.'),
+            'JSON file with everything; optional password encryption.',
+          ),
           onTap: () => _exportBackup(context, ref),
         ),
         ListTile(
           leading: const Icon(Icons.download),
           title: const Text('Import backup'),
-          subtitle: const Text('Pick a backup file. Replaces all current data.'),
+          subtitle: const Text(
+            'Pick a backup file. Replaces all current data.',
+          ),
           onTap: () => _importBackup(context, ref),
         ),
       ],
@@ -232,32 +231,30 @@ class _BackupSection extends ConsumerWidget {
   }
 
   Future<void> _exportBackup(BuildContext context, WidgetRef ref) async {
-    final result = await _askOptionalPassword(context,
-        title: 'Encrypt backup?', confirmLabel: 'Export');
+    final result = await _askOptionalPassword(
+      context,
+      title: 'Encrypt backup?',
+      confirmLabel: 'Export',
+    );
     if (!result.confirmed) return;
     final svc = ref.read(backupServiceProvider);
     try {
-      final file = await svc.writeBackupFile(
-        password: result.password,
-      );
+      final file = await svc.writeBackupFile(password: result.password);
       if (!context.mounted) return;
       await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(file.path)],
-          subject: 'Aws OS backup',
-        ),
+        ShareParams(files: [XFile(file.path)], subject: 'Aws OS backup'),
       );
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Export failed: $e'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Export failed: $e')));
       }
     }
   }
 
   Future<void> _importBackup(BuildContext context, WidgetRef ref) async {
-    final picked = await FilePicker.platform.pickFiles(type: FileType.any);
+    final picked = await FilePicker.pickFiles(type: FileType.any);
     if (picked == null || picked.files.isEmpty) return;
     final path = picked.files.single.path;
     if (path == null) return;
@@ -267,8 +264,11 @@ class _BackupSection extends ConsumerWidget {
     if (!context.mounted) return;
     String? password;
     if (isEncrypted) {
-      final result = await _askPassword(context,
-          title: 'Password', confirmLabel: 'Import');
+      final result = await _askPassword(
+        context,
+        title: 'Password',
+        confirmLabel: 'Import',
+      );
       if (result == null) return;
       password = result;
     }
@@ -279,35 +279,37 @@ class _BackupSection extends ConsumerWidget {
       builder: (dCtx) => AlertDialog(
         title: const Text('Replace all data?'),
         content: const Text(
-            'Importing wipes every row in the database and replaces it with the backup. '
-            'This cannot be undone.'),
+          'Importing wipes every row in the database and replaces it with the backup. '
+          'This cannot be undone.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dCtx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(dCtx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(dCtx, true),
-              child: const Text('Replace')),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: const Text('Replace'),
+          ),
         ],
       ),
     );
     if (ok != true) return;
 
     try {
-      await ref.read(backupServiceProvider).importFromFile(
-            file,
-            password: password,
-          );
+      await ref
+          .read(backupServiceProvider)
+          .importFromFile(file, password: password);
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Backup restored.'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Backup restored.')));
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Import failed: $e'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Import failed: $e')));
       }
     }
   }
@@ -329,7 +331,8 @@ Future<_PasswordResult> _askOptionalPassword(
         mainAxisSize: MainAxisSize.min,
         children: [
           const Text(
-              'Leave blank for plain JSON, or set a password to AES-encrypt.'),
+            'Leave blank for plain JSON, or set a password to AES-encrypt.',
+          ),
           const SizedBox(height: 8),
           TextField(
             controller: controller,
@@ -341,18 +344,20 @@ Future<_PasswordResult> _askOptionalPassword(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(
-                dCtx, (confirmed: false, password: null)),
-            child: const Text('Cancel')),
+          onPressed: () =>
+              Navigator.pop(dCtx, (confirmed: false, password: null)),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
-            onPressed: () {
-              final v = controller.text;
-              Navigator.pop(
-                dCtx,
-                (confirmed: true, password: v.isEmpty ? null : v),
-              );
-            },
-            child: Text(confirmLabel)),
+          onPressed: () {
+            final v = controller.text;
+            Navigator.pop(dCtx, (
+              confirmed: true,
+              password: v.isEmpty ? null : v,
+            ));
+          },
+          child: Text(confirmLabel),
+        ),
       ],
     ),
   );
@@ -377,14 +382,16 @@ Future<String?> _askPassword(
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(dCtx),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.pop(dCtx),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
-            onPressed: () {
-              if (controller.text.isEmpty) return;
-              Navigator.pop(dCtx, controller.text);
-            },
-            child: Text(confirmLabel)),
+          onPressed: () {
+            if (controller.text.isEmpty) return;
+            Navigator.pop(dCtx, controller.text);
+          },
+          child: Text(confirmLabel),
+        ),
       ],
     ),
   );
@@ -430,9 +437,9 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     if (current == null) return;
     if (!await _auth.verifyPin(current)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Wrong PIN.'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Wrong PIN.')));
       }
       return;
     }
@@ -447,9 +454,9 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
     if (current == null) return;
     if (!await _auth.verifyPin(current)) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Wrong PIN.'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Wrong PIN.')));
       }
       return;
     }
@@ -472,15 +479,17 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dCtx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () {
-                final v = controller.text.trim();
-                if (v.length < 4 || v.length > 8) return;
-                Navigator.pop(dCtx, v);
-              },
-              child: const Text('OK')),
+            onPressed: () {
+              final v = controller.text.trim();
+              if (v.length < 4 || v.length > 8) return;
+              Navigator.pop(dCtx, v);
+            },
+            child: const Text('OK'),
+          ),
         ],
       ),
     );
@@ -500,9 +509,9 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
       children: [
         SwitchListTile(
           title: const Text('PIN unlock'),
-          subtitle: Text(pinSet
-              ? 'Enabled — tap below to change or clear'
-              : 'Disabled'),
+          subtitle: Text(
+            pinSet ? 'Enabled — tap below to change or clear' : 'Disabled',
+          ),
           value: pinSet,
           onChanged: (v) async {
             if (v) {
@@ -521,7 +530,8 @@ class _SecuritySectionState extends ConsumerState<_SecuritySection> {
         SwitchListTile(
           title: const Text('Biometric unlock'),
           subtitle: const Text(
-              'Use fingerprint/face if available on this device.'),
+            'Use fingerprint/face if available on this device.',
+          ),
           value: bio,
           onChanged: (v) async {
             await _auth.setBiometric(v);
