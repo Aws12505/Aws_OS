@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.VIBRATE"/>
 
     <application
-        android:label="aws_os"
+        android:label="Aws OS"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
