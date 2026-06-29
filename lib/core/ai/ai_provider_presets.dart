@@ -28,11 +28,11 @@ String normalizeBaseUrl(String url) =>
 const kAiProviderPresets = <AiProviderPreset>[
   AiProviderPreset(
     label: 'Google Gemini',
-    // Gemini's OpenAI-compatible endpoint. The service appends
-    // `/chat/completions`, yielding `.../v1beta/openai/chat/completions`.
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    // Detection signal only — AiService builds the full generateContent URL
+    // internally when this hostname is present.
+    baseUrl: 'https://generativelanguage.googleapis.com',
     // Editable; the user can switch to gemini-2.5-flash, gemini-2.0-flash, etc.
-    defaultModel: 'gemini-3.5-flash',
+    defaultModel: 'gemini-2.0-flash',
   ),
   AiProviderPreset(
     label: 'OpenAI',
