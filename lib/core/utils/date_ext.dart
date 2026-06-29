@@ -9,6 +9,11 @@ extension DateTimeX on DateTime {
   bool isSameDay(DateTime other) =>
       year == other.year && month == other.month && day == other.day;
 
+  /// Local date as 'yyyy-MM-dd'. Sorts lexicographically = chronologically, so
+  /// it doubles as a stable per-day key (used by debrief entries).
+  String get dayKey =>
+      '${year.toString().padLeft(4, '0')}-${month.toString().padLeft(2, '0')}-${day.toString().padLeft(2, '0')}';
+
   DateTime addDays(int days) => DateTime(year, month, day + days, hour, minute,
       second, millisecond, microsecond);
 

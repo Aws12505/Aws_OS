@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/db/app_database.dart';
+import '../../../core/db/tables/budget_tables.dart';
 import '../../../core/db/tables/finance_tables.dart';
 
 part 'finance_dao.g.dart';
@@ -15,6 +16,7 @@ part 'finance_dao.g.dart';
   ExchangeRates,
   Recurrences,
   ScheduledOccurrences,
+  Budgets,
 ])
 class FinanceDao extends DatabaseAccessor<AppDatabase> with _$FinanceDaoMixin {
   FinanceDao(super.db);
@@ -260,6 +262,31 @@ class FinanceDao extends DatabaseAccessor<AppDatabase> with _$FinanceDaoMixin {
     });
   }
 
+  /// Transactions (with legs) occurring within an inclusive [from, to] range.
+  /// Used by the analytics/debrief layer for accurate day & trend aggregation.
+  Stream<List<TransactionWithLegs>> watchTransactionsInRange(
+      DateTime from, DateTime to) {
+    final q = select(transactions)
+      ..where((t) =>
+          t.occurredAt.isBiggerOrEqualValue(from) &
+          t.occurredAt.isSmallerOrEqualValue(to))
+      ..orderBy([(t) => OrderingTerm.desc(t.occurredAt)]);
+    return q.watch().asyncMap((txs) async {
+      if (txs.isEmpty) return const <TransactionWithLegs>[];
+      final ids = txs.map((t) => t.id).toList();
+      final legs = await (select(transactionLegs)
+            ..where((t) => t.transactionId.isIn(ids)))
+          .get();
+      final byTx = <String, List<TransactionLeg>>{};
+      for (final l in legs) {
+        byTx.putIfAbsent(l.transactionId, () => []).add(l);
+      }
+      return [
+        for (final tx in txs) TransactionWithLegs(tx, byTx[tx.id] ?? const []),
+      ];
+    });
+  }
+
   Future<TransactionWithLegs?> getTransactionWithLegs(String id) async {
     final tx = await (select(transactions)..where((t) => t.id.equals(id)))
         .getSingleOrNull();
@@ -305,6 +332,18 @@ class FinanceDao extends DatabaseAccessor<AppDatabase> with _$FinanceDaoMixin {
           ..limit(limit))
         .watch();
   }
+
+  // -- Budgets -------------------------------------------------------------
+
+  Stream<List<Budget>> watchBudgets() => select(budgets).watch();
+
+  Future<void> upsertBudget(BudgetsCompanion b) {
+    return into(budgets)
+        .insertOnConflictUpdate(b.copyWith(updatedAt: Value(DateTime.now())));
+  }
+
+  Future<void> deleteBudget(String id) =>
+      (delete(budgets)..where((t) => t.id.equals(id))).go();
 }
 
 /// Plain pair returned from queries that join a transaction with its legs.

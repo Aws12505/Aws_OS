@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 import '../widgets/add_transaction_chooser.dart';
 import 'accounts_screen.dart';
+import 'budgets_screen.dart';
 import 'categories_screen.dart';
 import 'currencies_screen.dart';
 import 'recurring_screen.dart';
@@ -76,6 +78,11 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                       ],
                     ),
                   ),
+                  IconButton(
+                    tooltip: 'Finance mentor',
+                    icon: const Icon(Icons.psychology_rounded),
+                    onPressed: () => context.push('/mentor?kind=finance'),
+                  ),
                   _ManageMenu(),
                 ],
               ),
@@ -120,6 +127,7 @@ class _ManageMenu extends StatelessWidget {
           'currencies': const CurrenciesScreen(),
           'accounts': const AccountsScreen(),
           'categories': const CategoriesScreen(),
+          'budgets': const BudgetsScreen(),
           'recurring': const RecurringScreen(),
         };
         Navigator.of(context)
@@ -129,6 +137,7 @@ class _ManageMenu extends StatelessWidget {
         PopupMenuItem(value: 'currencies', child: Text('Manage currencies')),
         PopupMenuItem(value: 'accounts', child: Text('Manage accounts')),
         PopupMenuItem(value: 'categories', child: Text('Manage categories')),
+        PopupMenuItem(value: 'budgets', child: Text('Budgets')),
         PopupMenuItem(value: 'recurring', child: Text('Recurring entries')),
       ],
     );
@@ -229,12 +238,16 @@ class _FlowChip extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          Text(value,
-              style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: color,
-                letterSpacing: -0.3,
-              )),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: color,
+                  letterSpacing: -0.3,
+                )),
+          ),
         ],
       ),
     );
@@ -299,12 +312,17 @@ class _Segmented extends StatelessWidget {
                               ? cs.onPrimary
                               : cs.onSurfaceVariant),
                       const SizedBox(width: 6),
-                      Text(
-                        labels[i],
-                        style: tt.labelLarge?.copyWith(
-                          color:
-                              i == index ? cs.onPrimary : cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          labels[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.labelLarge?.copyWith(
+                            color: i == index
+                                ? cs.onPrimary
+                                : cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],

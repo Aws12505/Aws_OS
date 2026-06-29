@@ -36,9 +36,11 @@ const _orderedTables = <String>[
   'transaction_legs',
   'exchange_rates',
   'scheduled_occurrences',
+  'budgets',
   'notes',
   'tags',
   'note_tags',
+  'debrief_entries',
 ];
 
 class BackupService {

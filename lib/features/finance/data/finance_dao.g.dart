@@ -14,6 +14,7 @@ mixin _$FinanceDaoMixin on DatabaseAccessor<AppDatabase> {
   $RecurrencesTable get recurrences => attachedDatabase.recurrences;
   $ScheduledOccurrencesTable get scheduledOccurrences =>
       attachedDatabase.scheduledOccurrences;
+  $BudgetsTable get budgets => attachedDatabase.budgets;
   FinanceDaoManager get managers => FinanceDaoManager(this);
 }
 
@@ -44,4 +45,6 @@ class FinanceDaoManager {
         _db.attachedDatabase,
         _db.scheduledOccurrences,
       );
+  $$BudgetsTableTableManager get budgets =>
+      $$BudgetsTableTableManager(_db.attachedDatabase, _db.budgets);
 }

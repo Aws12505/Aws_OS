@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'measurements_view.dart';
 import 'programs_view.dart';
@@ -43,22 +44,34 @@ class _GymScreenState extends ConsumerState<GymScreen>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 20, 6),
-              child: Column(
+              padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('TRAINING',
-                      style: tt.labelSmall?.copyWith(
-                        color: accent,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.6,
-                      )),
-                  const SizedBox(height: 2),
-                  Text('Gym',
-                      style: tt.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.6,
-                      )),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('TRAINING',
+                            style: tt.labelSmall?.copyWith(
+                              color: accent,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 1.6,
+                            )),
+                        const SizedBox(height: 2),
+                        Text('Gym',
+                            style: tt.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -0.6,
+                            )),
+                      ],
+                    ),
+                  ),
+                  IconButton.filledTonal(
+                    tooltip: 'Gym mentor',
+                    icon: const Icon(Icons.psychology_rounded),
+                    onPressed: () => context.push('/mentor?kind=gym'),
+                  ),
                 ],
               ),
             ),
@@ -146,13 +159,17 @@ class _GymSegmented extends StatelessWidget {
                               ? Colors.white
                               : cs.onSurfaceVariant),
                       const SizedBox(width: 6),
-                      Text(
-                        labels[i],
-                        style: tt.labelLarge?.copyWith(
-                          color: i == index
-                              ? Colors.white
-                              : cs.onSurfaceVariant,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          labels[i],
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.labelLarge?.copyWith(
+                            color: i == index
+                                ? Colors.white
+                                : cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],

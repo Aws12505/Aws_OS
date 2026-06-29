@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -195,6 +196,22 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
                         ],
                       ),
                     ),
+                    IconButton(
+                      tooltip: 'Carry unfinished tasks to tomorrow',
+                      icon: const Icon(Icons.event_repeat_rounded),
+                      onPressed: () async {
+                        final moved = await ref
+                            .read(tasksRepositoryProvider)
+                            .carryOverUnfinished(from: DateTime.now());
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                            content: Text(moved == 0
+                                ? 'Nothing to carry over'
+                                : 'Moved $moved task${moved == 1 ? '' : 's'} to tomorrow'),
+                          ));
+                        }
+                      },
+                    ),
                     IconButton.filledTonal(
                       tooltip: 'New workspace',
                       icon: const Icon(Icons.create_new_folder_rounded),
@@ -204,7 +221,7 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
                 ),
               ),
               SizedBox(
-                height: 132,
+                height: 156,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -285,7 +302,7 @@ class _WorkspaceCard extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 280),
             curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               gradient: selected
                   ? LinearGradient(
@@ -335,11 +352,15 @@ class _WorkspaceCard extends StatelessWidget {
                       ),
                     ),
                     const Spacer(),
-                    Text(
-                      '$total',
-                      style: tt.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                        color: selected ? Colors.white : cs.onSurface,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        '$total',
+                        maxLines: 1,
+                        style: tt.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: selected ? Colors.white : cs.onSurface,
+                        ),
                       ),
                     ),
                   ],
@@ -592,8 +613,10 @@ class _TaskTile extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerLow,
+                  color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.4)),
                 ),
                 child: Column(
                   children: [
@@ -629,7 +652,10 @@ class _Check extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
-      onTap: onTap,
+      onTap: () {
+        HapticFeedback.selectionClick();
+        onTap();
+      },
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
@@ -677,13 +703,17 @@ class _DateChip extends StatelessWidget {
         children: [
           Icon(icon, size: 11, color: color),
           const SizedBox(width: 4),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: color,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 11,
-                ),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: color,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 11,
+                  ),
+            ),
           ),
         ],
       ),

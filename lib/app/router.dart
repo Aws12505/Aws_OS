@@ -4,6 +4,9 @@ import 'package:go_router/go_router.dart';
 
 import '../core/providers/auth_provider.dart' as auth;
 import '../features/dashboard/presentation/dashboard_screen.dart';
+import '../features/dashboard/presentation/debrief_screen.dart';
+import '../features/mentor/data/forecast_service.dart';
+import '../features/mentor/presentation/mentor_screen.dart';
 import '../features/finance/presentation/screens/finance_screen.dart';
 import '../features/gym/presentation/screens/gym_screen.dart';
 import '../features/notes/presentation/screens/notes_screen.dart';
@@ -52,6 +55,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             pageBuilder: (c, s) => const NoTransitionPage(child: NotesScreen()),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/debrief',
+        builder: (c, s) {
+          final raw = s.uri.queryParameters['date'];
+          final date = raw != null ? DateTime.tryParse(raw) : null;
+          return DebriefScreen(date: date);
+        },
+      ),
+      GoRoute(
+        path: '/mentor',
+        builder: (c, s) {
+          final raw = s.uri.queryParameters['kind'];
+          final kind = MentorKind.values.firstWhere(
+            (k) => k.name == raw,
+            orElse: () => MentorKind.finance,
+          );
+          return MentorScreen(kind: kind);
+        },
       ),
       GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
       GoRoute(path: '/lock', builder: (c, s) => const LockScreen()),

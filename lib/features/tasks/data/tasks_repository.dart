@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart';
 
 import '../../../core/db/app_database.dart';
+import '../../../core/utils/date_ext.dart';
 import 'tasks_dao.dart';
 
 class TasksRepository {
@@ -80,4 +81,40 @@ class TasksRepository {
 
   Stream<List<TaskHistoryData>> watchHistoryForTask(String id) =>
       dao.watchHistoryForTask(id);
+
+  /// Roll every unfinished task due (or with a deadline) on [from] forward to
+  /// [to] (default: the next day), preserving each task's time-of-day. Records
+  /// a 'carried_over' history entry per task and returns how many moved.
+  Future<int> carryOverUnfinished({required DateTime from, DateTime? to}) async {
+    final target = (to ?? from.addDays(1)).atStartOfDay;
+    final all = await dao.watchAllTasks().first;
+    final pending = all
+        .where((t) =>
+            !t.isCompleted &&
+            ((t.dueAt != null && t.dueAt!.isSameDay(from)) ||
+                (t.deadlineAt != null && t.deadlineAt!.isSameDay(from))))
+        .toList();
+    for (final t in pending) {
+      final newDue = t.dueAt == null ? null : target.withTimeOf(t.dueAt!);
+      final newDeadline =
+          t.deadlineAt == null ? null : target.withTimeOf(t.deadlineAt!);
+      await dao.upsertTaskReturning(t.toCompanion(true).copyWith(
+            dueAt: Value(newDue),
+            deadlineAt: Value(newDeadline),
+          ));
+      await dao.appendHistory(
+        taskId: t.id,
+        action: 'carried_over',
+        snapshot: {
+          'from': from.toIso8601String(),
+          'to': target.toIso8601String(),
+        },
+      );
+    }
+    return pending.length;
+  }
+
+  /// Convenience: carry today's unfinished tasks to tomorrow.
+  Future<int> planTomorrow() =>
+      carryOverUnfinished(from: DateTime.now().atStartOfDay);
 }

@@ -5,6 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_empty_state.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/sparkline.dart';
 import '../providers.dart';
 
 class MeasurementsView extends ConsumerWidget {
@@ -18,173 +23,86 @@ class MeasurementsView extends ConsumerWidget {
 
     return Scaffold(
       body: typesAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+        loading: () => const AppLoading(),
+        error: (e, _) => AppErrorView(error: e),
         data: (types) {
           if (types.isEmpty) {
-            return _EmptyState(
+            return AppEmptyState(
+              icon: Icons.straighten_rounded,
               title: 'No measurement types',
               message: 'Add a few (Weight, Chest, …) before recording entries.',
-              actionLabel: 'Manage types',
-              onPressed: () => _showTypesSheet(context),
+              accent: DomainColors.gym,
+              action: FilledButton.icon(
+                style: FilledButton.styleFrom(
+                  backgroundColor: DomainColors.gym,
+                  foregroundColor: Colors.white,
+                ),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('Manage types'),
+                onPressed: () => _showTypesSheet(context),
+              ),
             );
           }
           return entriesAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text(e.toString())),
+            loading: () => const AppLoading(),
+            error: (e, _) => AppErrorView(error: e),
             data: (entries) {
               final byEntry = <String, List<MeasurementValue>>{};
-              for (final v in (valuesAsync.value ?? const <MeasurementValue>[])) {
+              for (final v
+                  in (valuesAsync.value ?? const <MeasurementValue>[])) {
                 byEntry.putIfAbsent(v.entryId, () => []).add(v);
               }
               final typesById = {for (final t in types) t.id: t};
+
+              // Chronological value series per type (oldest → newest).
+              final entriesAsc = entries.reversed.toList();
+              final seriesByType = <String, List<double>>{};
+              for (final e in entriesAsc) {
+                for (final v in (byEntry[e.id] ?? const [])) {
+                  seriesByType.putIfAbsent(v.typeId, () => []).add(v.value);
+                }
+              }
+              final trendTypes =
+                  types.where((t) => (seriesByType[t.id] ?? const []).isNotEmpty);
+
               return ListView(
-                padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
                 children: [
-                  Card(
-                    child: ListTile(
-                      leading: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primaryContainer,
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(Icons.tune_rounded,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onPrimaryContainer,
-                            size: 18),
+                  _ManageTypesCard(onTap: () => _showTypesSheet(context)),
+                  if (trendTypes.isNotEmpty) ...[
+                    const _SectionLabel('Trends'),
+                    SizedBox(
+                      height: 152,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [
+                          for (final t in trendTypes)
+                            _TypeTrendCard(
+                              type: t,
+                              series: seriesByType[t.id]!,
+                            ),
+                        ],
                       ),
-                      title: const Text('Manage measurement types',
-                          style: TextStyle(fontWeight: FontWeight.w600)),
-                      trailing: Icon(Icons.chevron_right_rounded,
-                          color: Theme.of(context)
-                              .colorScheme
-                              .onSurfaceVariant),
-                      onTap: () => _showTypesSheet(context),
                     ),
-                  ),
+                  ],
+                  const _SectionLabel('History'),
                   if (entries.isEmpty)
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444)
-                                    .withValues(alpha: 0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(Icons.monitor_weight_outlined,
-                                  size: 40, color: Color(0xFFEF4444)),
-                            ),
-                            const SizedBox(height: 20),
-                            Text(
-                              'No entries yet',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Tap + to record your first measurement.',
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ],
-                        ),
+                    const Padding(
+                      padding: EdgeInsets.only(top: 24),
+                      child: AppEmptyState(
+                        compact: true,
+                        icon: Icons.monitor_weight_outlined,
+                        title: 'No entries yet',
+                        message: 'Tap + to record your first measurement.',
+                        accent: DomainColors.gym,
                       ),
                     ),
                   for (final e in entries)
-                    Card(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFEF4444)
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: const Icon(Icons.monitor_weight_rounded,
-                                  color: Color(0xFFEF4444), size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    DateFormat.yMMMd().format(e.takenAt),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleSmall
-                                        ?.copyWith(
-                                            fontWeight: FontWeight.w700),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Wrap(
-                                    spacing: 6,
-                                    runSpacing: 4,
-                                    children: [
-                                      for (final v
-                                          in (byEntry[e.id] ?? const []))
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest,
-                                            borderRadius:
-                                                BorderRadius.circular(6),
-                                          ),
-                                          child: Text(
-                                            '${typesById[v.typeId]?.name ?? '?'}: ${v.value}${typesById[v.typeId]?.unit ?? ''}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete_outline_rounded,
-                                  size: 18,
-                                  color:
-                                      Theme.of(context).colorScheme.error),
-                              onPressed: () =>
-                                  ref.read(gymDaoProvider).deleteEntry(e.id),
-                              style: IconButton.styleFrom(
-                                minimumSize: const Size(32, 32),
-                                padding: EdgeInsets.zero,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    _EntryTile(
+                      entry: e,
+                      values: byEntry[e.id] ?? const [],
+                      typesById: typesById,
+                      onDelete: () => ref.read(gymDaoProvider).deleteEntry(e.id),
                     ),
                 ],
               );
@@ -193,16 +111,241 @@ class MeasurementsView extends ConsumerWidget {
         },
       ),
       floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
+        backgroundColor: DomainColors.gym,
+        foregroundColor: Colors.white,
+        icon: const Icon(Icons.add_rounded),
         label: const Text('Entry'),
         onPressed: () {
-          final types = ref.read(measurementTypesStreamProvider).value ?? const [];
+          final types =
+              ref.read(measurementTypesStreamProvider).value ?? const [];
           if (types.isEmpty) {
             _showTypesSheet(context);
           } else {
             _showEntrySheet(context);
           }
         },
+      ),
+    );
+  }
+}
+
+class _SectionLabel extends StatelessWidget {
+  const _SectionLabel(this.text);
+  final String text;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 16, 4, 8),
+      child: Text(
+        text.toUpperCase(),
+        style: tt.labelMedium?.copyWith(
+          color: cs.onSurfaceVariant,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
+      ),
+    );
+  }
+}
+
+class _ManageTypesCard extends StatelessWidget {
+  const _ManageTypesCard({required this.onTap});
+  final VoidCallback onTap;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: DomainColors.gym.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: const Icon(Icons.tune_rounded,
+              color: DomainColors.gym, size: 18),
+        ),
+        title: const Text('Manage measurement types',
+            style: TextStyle(fontWeight: FontWeight.w600)),
+        trailing: Icon(Icons.chevron_right_rounded,
+            color: cs.onSurfaceVariant),
+        onTap: onTap,
+      ),
+    );
+  }
+}
+
+class _TypeTrendCard extends StatelessWidget {
+  const _TypeTrendCard({required this.type, required this.series});
+  final MeasurementType type;
+  final List<double> series;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final latest = series.last;
+    final prev = series.length >= 2 ? series[series.length - 2] : null;
+    final delta = prev == null ? null : latest - prev;
+    final up = (delta ?? 0) > 0;
+    final deltaColor = delta == null || delta == 0
+        ? cs.onSurfaceVariant
+        : (up ? DomainColors.income : DomainColors.expense);
+
+    return Container(
+      width: 150,
+      margin: const EdgeInsets.only(right: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(type.name,
+              style: tt.labelLarge?.copyWith(fontWeight: FontWeight.w700),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 6),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(_fmt(latest),
+                      maxLines: 1,
+                      style: tt.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                ),
+              ),
+              const SizedBox(width: 3),
+              Text(type.unit ?? '',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            ],
+          ),
+          if (delta != null && delta != 0)
+            Row(
+              children: [
+                Icon(up ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
+                    size: 12, color: deltaColor),
+                Flexible(
+                  child: Text('${_fmt(delta.abs())}${type.unit ?? ''}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: tt.labelSmall?.copyWith(
+                          color: deltaColor, fontWeight: FontWeight.w700)),
+                ),
+              ],
+            )
+          else
+            Text('${series.length} record${series.length == 1 ? '' : 's'}',
+                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+          const Spacer(),
+          Sparkline(values: series, color: DomainColors.gym, fill: true),
+        ],
+      ),
+    );
+  }
+
+  String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(1);
+}
+
+class _EntryTile extends StatelessWidget {
+  const _EntryTile({
+    required this.entry,
+    required this.values,
+    required this.typesById,
+    required this.onDelete,
+  });
+  final MeasurementEntry entry;
+  final List<MeasurementValue> values;
+  final Map<String, MeasurementType> typesById;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: DomainColors.gym.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.monitor_weight_rounded,
+                  color: DomainColors.gym, size: 20),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(DateFormat.yMMMd().format(entry.takenAt),
+                      style: tt.titleSmall
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: [
+                      for (final v in values)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: cs.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            '${typesById[v.typeId]?.name ?? '?'}: ${v.value}${typesById[v.typeId]?.unit ?? ''}',
+                            style: tt.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w500),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.delete_outline_rounded,
+                  size: 18, color: cs.error),
+              onPressed: onDelete,
+              style: IconButton.styleFrom(
+                minimumSize: const Size(32, 32),
+                padding: EdgeInsets.zero,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -236,8 +379,8 @@ class _TypesSheet extends ConsumerWidget {
   const _TypesSheet();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final types =
-        ref.watch(measurementTypesStreamProvider).value ?? const <MeasurementType>[];
+    final types = ref.watch(measurementTypesStreamProvider).value ??
+        const <MeasurementType>[];
     final controller = TextEditingController();
     final unitController = TextEditingController();
     return Padding(
@@ -257,9 +400,8 @@ class _TypesSheet extends ConsumerWidget {
               subtitle: t.unit == null ? null : Text(t.unit!),
               trailing: IconButton(
                 icon: const Icon(Icons.delete_outline),
-                onPressed: () => ref
-                    .read(gymDaoProvider)
-                    .deleteMeasurementType(t.id),
+                onPressed: () =>
+                    ref.read(gymDaoProvider).deleteMeasurementType(t.id),
               ),
             ),
           const Divider(),
@@ -277,8 +419,8 @@ class _TypesSheet extends ConsumerWidget {
                 width: 90,
                 child: TextField(
                   controller: unitController,
-                  decoration:
-                      const InputDecoration(labelText: 'Unit', hintText: 'kg, cm'),
+                  decoration: const InputDecoration(
+                      labelText: 'Unit', hintText: 'kg, cm'),
                 ),
               ),
               const SizedBox(width: 8),
@@ -287,14 +429,14 @@ class _TypesSheet extends ConsumerWidget {
                 onPressed: () async {
                   final n = controller.text.trim();
                   if (n.isEmpty) return;
-                  await ref
-                      .read(gymDaoProvider)
-                      .upsertMeasurementType(MeasurementTypesCompanion.insert(
-                        name: n,
-                        unit: Value(unitController.text.trim().isEmpty
-                            ? null
-                            : unitController.text.trim()),
-                      ));
+                  await ref.read(gymDaoProvider).upsertMeasurementType(
+                        MeasurementTypesCompanion.insert(
+                          name: n,
+                          unit: Value(unitController.text.trim().isEmpty
+                              ? null
+                              : unitController.text.trim()),
+                        ),
+                      );
                   controller.clear();
                   unitController.clear();
                 },
@@ -352,8 +494,8 @@ class _EntrySheetState extends ConsumerState<_EntrySheet> {
 
   @override
   Widget build(BuildContext context) {
-    final types =
-        ref.watch(measurementTypesStreamProvider).value ?? const <MeasurementType>[];
+    final types = ref.watch(measurementTypesStreamProvider).value ??
+        const <MeasurementType>[];
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: SingleChildScrollView(
@@ -401,44 +543,6 @@ class _EntrySheetState extends ConsumerState<_EntrySheet> {
               onPressed: () => _save(types),
               icon: const Icon(Icons.save),
               label: const Text('Save'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.title,
-    required this.message,
-    required this.actionLabel,
-    required this.onPressed,
-  });
-  final String title;
-  final String message;
-  final String actionLabel;
-  final VoidCallback onPressed;
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.straighten,
-                size: 64, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 16),
-            Text(title, style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 8),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: onPressed,
-              icon: const Icon(Icons.add),
-              label: Text(actionLabel),
             ),
           ],
         ),

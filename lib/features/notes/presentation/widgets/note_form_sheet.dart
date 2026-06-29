@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../providers.dart';
@@ -38,6 +39,7 @@ class _FormState extends ConsumerState<_Form> {
   late final TextEditingController _content;
   late DateTime _occurredAt;
   late Set<String> _selectedTagIds;
+  bool _preview = false;
 
   @override
   void initState() {
@@ -70,7 +72,14 @@ class _FormState extends ConsumerState<_Form> {
   }
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_content.text.trim().isEmpty) {
+      setState(() => _preview = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Content is required.')),
+      );
+      return;
+    }
+    if (!_preview && !_formKey.currentState!.validate()) return;
     await ref.read(notesRepositoryProvider).saveNote(
           id: widget.existing?.id,
           title: _title.text.trim().isEmpty ? null : _title.text.trim(),
@@ -128,17 +137,74 @@ class _FormState extends ConsumerState<_Form> {
                     labelText: 'Title (optional)'),
               ),
               const SizedBox(height: 12),
-              TextFormField(
-                controller: _content,
-                minLines: 6,
-                maxLines: 14,
-                decoration: const InputDecoration(
-                  labelText: 'Content (Markdown)',
-                  alignLabelWithHint: true,
-                ),
-                validator: (v) =>
-                    (v == null || v.isEmpty) ? 'Required' : null,
+              Row(
+                children: [
+                  Text('Content',
+                      style: Theme.of(context).textTheme.titleSmall),
+                  const Spacer(),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(
+                          value: false,
+                          label: Text('Write'),
+                          icon: Icon(Icons.edit_rounded, size: 16)),
+                      ButtonSegment(
+                          value: true,
+                          label: Text('Preview'),
+                          icon: Icon(Icons.visibility_rounded, size: 16)),
+                    ],
+                    selected: {_preview},
+                    showSelectedIcon: false,
+                    style: const ButtonStyle(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                    onSelectionChanged: (s) =>
+                        setState(() => _preview = s.first),
+                  ),
+                ],
               ),
+              const SizedBox(height: 8),
+              if (_preview)
+                Container(
+                  width: double.infinity,
+                  constraints: const BoxConstraints(minHeight: 140),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .surfaceContainerHighest
+                        .withValues(alpha: 0.4),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .outline
+                            .withValues(alpha: 0.4)),
+                  ),
+                  child: _content.text.trim().isEmpty
+                      ? Text('Nothing to preview yet',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant,
+                              ))
+                      : MarkdownBody(data: _content.text),
+                )
+              else
+                TextFormField(
+                  controller: _content,
+                  minLines: 6,
+                  maxLines: 14,
+                  decoration: const InputDecoration(
+                    hintText: 'Write in Markdown…',
+                    alignLabelWithHint: true,
+                  ),
+                  validator: (v) =>
+                      (v == null || v.isEmpty) ? 'Required' : null,
+                ),
               const SizedBox(height: 12),
               ListTile(
                 contentPadding: EdgeInsets.zero,

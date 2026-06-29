@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../core/providers/auth_provider.dart';
 import '../core/providers/reminder_time_provider.dart';
 import '../features/finance/presentation/providers.dart';
 import '../shared/widgets/app_background.dart';
@@ -16,10 +17,12 @@ class AwsOsApp extends ConsumerStatefulWidget {
   ConsumerState<AwsOsApp> createState() => _AwsOsAppState();
 }
 
-class _AwsOsAppState extends ConsumerState<AwsOsApp> {
+class _AwsOsAppState extends ConsumerState<AwsOsApp>
+    with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Refresh the recurring-entry queue every time the app boots so the
     // "Needs your attention" card and notifications stay accurate.
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -30,6 +33,21 @@ class _AwsOsAppState extends ConsumerState<AwsOsApp> {
           .setReminderTime(time.hour, time.minute);
       unawaited(ref.read(recurrenceServiceProvider).materializeAll());
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Auto-lock: when the app is backgrounded, relock so the lock screen is
+    // required on return (no-op unless lock is enabled).
+    if (state == AppLifecycleState.paused) {
+      ref.read(lockProvider.notifier).relock();
+    }
   }
 
   @override

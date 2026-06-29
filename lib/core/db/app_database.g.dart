@@ -5123,6 +5123,410 @@ class ScheduledOccurrencesCompanion
   }
 }
 
+class $BudgetsTable extends Budgets with TableInfo<$BudgetsTable, Budget> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $BudgetsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newUuid,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  static const VerificationMeta _categoryIdMeta = const VerificationMeta(
+    'categoryId',
+  );
+  @override
+  late final GeneratedColumn<String> categoryId = GeneratedColumn<String>(
+    'category_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+    $customConstraints: 'NOT NULL REFERENCES categories(id) ON DELETE CASCADE',
+  );
+  static const VerificationMeta _amountMeta = const VerificationMeta('amount');
+  @override
+  late final GeneratedColumn<double> amount = GeneratedColumn<double>(
+    'amount',
+    aliasedName,
+    false,
+    type: DriftSqlType.double,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _periodMeta = const VerificationMeta('period');
+  @override
+  late final GeneratedColumn<String> period = GeneratedColumn<String>(
+    'period',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('monthly'),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    updatedAt,
+    categoryId,
+    amount,
+    period,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'budgets';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<Budget> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('category_id')) {
+      context.handle(
+        _categoryIdMeta,
+        categoryId.isAcceptableOrUnknown(data['category_id']!, _categoryIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_categoryIdMeta);
+    }
+    if (data.containsKey('amount')) {
+      context.handle(
+        _amountMeta,
+        amount.isAcceptableOrUnknown(data['amount']!, _amountMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_amountMeta);
+    }
+    if (data.containsKey('period')) {
+      context.handle(
+        _periodMeta,
+        period.isAcceptableOrUnknown(data['period']!, _periodMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {categoryId, period},
+  ];
+  @override
+  Budget map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return Budget(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      categoryId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category_id'],
+      )!,
+      amount: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}amount'],
+      )!,
+      period: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}period'],
+      )!,
+    );
+  }
+
+  @override
+  $BudgetsTable createAlias(String alias) {
+    return $BudgetsTable(attachedDatabase, alias);
+  }
+}
+
+class Budget extends DataClass implements Insertable<Budget> {
+  final String id;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String categoryId;
+  final double amount;
+  final String period;
+  const Budget({
+    required this.id,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.categoryId,
+    required this.amount,
+    required this.period,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['category_id'] = Variable<String>(categoryId);
+    map['amount'] = Variable<double>(amount);
+    map['period'] = Variable<String>(period);
+    return map;
+  }
+
+  BudgetsCompanion toCompanion(bool nullToAbsent) {
+    return BudgetsCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      categoryId: Value(categoryId),
+      amount: Value(amount),
+      period: Value(period),
+    );
+  }
+
+  factory Budget.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return Budget(
+      id: serializer.fromJson<String>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      categoryId: serializer.fromJson<String>(json['categoryId']),
+      amount: serializer.fromJson<double>(json['amount']),
+      period: serializer.fromJson<String>(json['period']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'categoryId': serializer.toJson<String>(categoryId),
+      'amount': serializer.toJson<double>(amount),
+      'period': serializer.toJson<String>(period),
+    };
+  }
+
+  Budget copyWith({
+    String? id,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? categoryId,
+    double? amount,
+    String? period,
+  }) => Budget(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    categoryId: categoryId ?? this.categoryId,
+    amount: amount ?? this.amount,
+    period: period ?? this.period,
+  );
+  Budget copyWithCompanion(BudgetsCompanion data) {
+    return Budget(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      categoryId: data.categoryId.present
+          ? data.categoryId.value
+          : this.categoryId,
+      amount: data.amount.present ? data.amount.value : this.amount,
+      period: data.period.present ? data.period.value : this.period,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('Budget(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('amount: $amount, ')
+          ..write('period: $period')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode =>
+      Object.hash(id, createdAt, updatedAt, categoryId, amount, period);
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is Budget &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.categoryId == this.categoryId &&
+          other.amount == this.amount &&
+          other.period == this.period);
+}
+
+class BudgetsCompanion extends UpdateCompanion<Budget> {
+  final Value<String> id;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<String> categoryId;
+  final Value<double> amount;
+  final Value<String> period;
+  final Value<int> rowid;
+  const BudgetsCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.categoryId = const Value.absent(),
+    this.amount = const Value.absent(),
+    this.period = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  BudgetsCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String categoryId,
+    required double amount,
+    this.period = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : categoryId = Value(categoryId),
+       amount = Value(amount);
+  static Insertable<Budget> custom({
+    Expression<String>? id,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? categoryId,
+    Expression<double>? amount,
+    Expression<String>? period,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (categoryId != null) 'category_id': categoryId,
+      if (amount != null) 'amount': amount,
+      if (period != null) 'period': period,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  BudgetsCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<String>? categoryId,
+    Value<double>? amount,
+    Value<String>? period,
+    Value<int>? rowid,
+  }) {
+    return BudgetsCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      categoryId: categoryId ?? this.categoryId,
+      amount: amount ?? this.amount,
+      period: period ?? this.period,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (categoryId.present) {
+      map['category_id'] = Variable<String>(categoryId.value);
+    }
+    if (amount.present) {
+      map['amount'] = Variable<double>(amount.value);
+    }
+    if (period.present) {
+      map['period'] = Variable<String>(period.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('BudgetsCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('categoryId: $categoryId, ')
+          ..write('amount: $amount, ')
+          ..write('period: $period, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 class $WorkspacesTable extends Workspaces
     with TableInfo<$WorkspacesTable, Workspace> {
   @override
@@ -12171,6 +12575,769 @@ class NoteTagsCompanion extends UpdateCompanion<NoteTag> {
   }
 }
 
+class $DebriefEntriesTable extends DebriefEntries
+    with TableInfo<$DebriefEntriesTable, DebriefEntry> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $DebriefEntriesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<String> id = GeneratedColumn<String>(
+    'id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    clientDefault: newUuid,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  static const VerificationMeta _updatedAtMeta = const VerificationMeta(
+    'updatedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> updatedAt = GeneratedColumn<DateTime>(
+    'updated_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    clientDefault: () => DateTime.now(),
+  );
+  static const VerificationMeta _dayKeyMeta = const VerificationMeta('dayKey');
+  @override
+  late final GeneratedColumn<String> dayKey = GeneratedColumn<String>(
+    'day_key',
+    aliasedName,
+    false,
+    additionalChecks: GeneratedColumn.checkTextLength(
+      minTextLength: 10,
+      maxTextLength: 10,
+    ),
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _moodMeta = const VerificationMeta('mood');
+  @override
+  late final GeneratedColumn<int> mood = GeneratedColumn<int>(
+    'mood',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _energyMeta = const VerificationMeta('energy');
+  @override
+  late final GeneratedColumn<int> energy = GeneratedColumn<int>(
+    'energy',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _winsMeta = const VerificationMeta('wins');
+  @override
+  late final GeneratedColumn<String> wins = GeneratedColumn<String>(
+    'wins',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _improveMeta = const VerificationMeta(
+    'improve',
+  );
+  @override
+  late final GeneratedColumn<String> improve = GeneratedColumn<String>(
+    'improve',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _gratitudeMeta = const VerificationMeta(
+    'gratitude',
+  );
+  @override
+  late final GeneratedColumn<String> gratitude = GeneratedColumn<String>(
+    'gratitude',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _reflectionMeta = const VerificationMeta(
+    'reflection',
+  );
+  @override
+  late final GeneratedColumn<String> reflection = GeneratedColumn<String>(
+    'reflection',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aiSummaryMeta = const VerificationMeta(
+    'aiSummary',
+  );
+  @override
+  late final GeneratedColumn<String> aiSummary = GeneratedColumn<String>(
+    'ai_summary',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _aiSummaryAtMeta = const VerificationMeta(
+    'aiSummaryAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> aiSummaryAt = GeneratedColumn<DateTime>(
+    'ai_summary_at',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _statsJsonMeta = const VerificationMeta(
+    'statsJson',
+  );
+  @override
+  late final GeneratedColumn<String> statsJson = GeneratedColumn<String>(
+    'stats_json',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    createdAt,
+    updatedAt,
+    dayKey,
+    mood,
+    energy,
+    wins,
+    improve,
+    gratitude,
+    reflection,
+    aiSummary,
+    aiSummaryAt,
+    statsJson,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'debrief_entries';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<DebriefEntry> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    if (data.containsKey('updated_at')) {
+      context.handle(
+        _updatedAtMeta,
+        updatedAt.isAcceptableOrUnknown(data['updated_at']!, _updatedAtMeta),
+      );
+    }
+    if (data.containsKey('day_key')) {
+      context.handle(
+        _dayKeyMeta,
+        dayKey.isAcceptableOrUnknown(data['day_key']!, _dayKeyMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_dayKeyMeta);
+    }
+    if (data.containsKey('mood')) {
+      context.handle(
+        _moodMeta,
+        mood.isAcceptableOrUnknown(data['mood']!, _moodMeta),
+      );
+    }
+    if (data.containsKey('energy')) {
+      context.handle(
+        _energyMeta,
+        energy.isAcceptableOrUnknown(data['energy']!, _energyMeta),
+      );
+    }
+    if (data.containsKey('wins')) {
+      context.handle(
+        _winsMeta,
+        wins.isAcceptableOrUnknown(data['wins']!, _winsMeta),
+      );
+    }
+    if (data.containsKey('improve')) {
+      context.handle(
+        _improveMeta,
+        improve.isAcceptableOrUnknown(data['improve']!, _improveMeta),
+      );
+    }
+    if (data.containsKey('gratitude')) {
+      context.handle(
+        _gratitudeMeta,
+        gratitude.isAcceptableOrUnknown(data['gratitude']!, _gratitudeMeta),
+      );
+    }
+    if (data.containsKey('reflection')) {
+      context.handle(
+        _reflectionMeta,
+        reflection.isAcceptableOrUnknown(data['reflection']!, _reflectionMeta),
+      );
+    }
+    if (data.containsKey('ai_summary')) {
+      context.handle(
+        _aiSummaryMeta,
+        aiSummary.isAcceptableOrUnknown(data['ai_summary']!, _aiSummaryMeta),
+      );
+    }
+    if (data.containsKey('ai_summary_at')) {
+      context.handle(
+        _aiSummaryAtMeta,
+        aiSummaryAt.isAcceptableOrUnknown(
+          data['ai_summary_at']!,
+          _aiSummaryAtMeta,
+        ),
+      );
+    }
+    if (data.containsKey('stats_json')) {
+      context.handle(
+        _statsJsonMeta,
+        statsJson.isAcceptableOrUnknown(data['stats_json']!, _statsJsonMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  List<Set<GeneratedColumn>> get uniqueKeys => [
+    {dayKey},
+  ];
+  @override
+  DebriefEntry map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return DebriefEntry(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}id'],
+      )!,
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+      updatedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}updated_at'],
+      )!,
+      dayKey: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}day_key'],
+      )!,
+      mood: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}mood'],
+      ),
+      energy: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}energy'],
+      ),
+      wins: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}wins'],
+      ),
+      improve: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}improve'],
+      ),
+      gratitude: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}gratitude'],
+      ),
+      reflection: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}reflection'],
+      ),
+      aiSummary: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ai_summary'],
+      ),
+      aiSummaryAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}ai_summary_at'],
+      ),
+      statsJson: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}stats_json'],
+      ),
+    );
+  }
+
+  @override
+  $DebriefEntriesTable createAlias(String alias) {
+    return $DebriefEntriesTable(attachedDatabase, alias);
+  }
+}
+
+class DebriefEntry extends DataClass implements Insertable<DebriefEntry> {
+  final String id;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+  final String dayKey;
+  final int? mood;
+  final int? energy;
+  final String? wins;
+  final String? improve;
+  final String? gratitude;
+  final String? reflection;
+
+  /// Cached narrative summary (AI-generated or rule-based) + when it was made.
+  final String? aiSummary;
+  final DateTime? aiSummaryAt;
+
+  /// Frozen JSON snapshot of the computed day stats, so a historical day's
+  /// numbers stay stable even if older rows are edited later.
+  final String? statsJson;
+  const DebriefEntry({
+    required this.id,
+    required this.createdAt,
+    required this.updatedAt,
+    required this.dayKey,
+    this.mood,
+    this.energy,
+    this.wins,
+    this.improve,
+    this.gratitude,
+    this.reflection,
+    this.aiSummary,
+    this.aiSummaryAt,
+    this.statsJson,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<String>(id);
+    map['created_at'] = Variable<DateTime>(createdAt);
+    map['updated_at'] = Variable<DateTime>(updatedAt);
+    map['day_key'] = Variable<String>(dayKey);
+    if (!nullToAbsent || mood != null) {
+      map['mood'] = Variable<int>(mood);
+    }
+    if (!nullToAbsent || energy != null) {
+      map['energy'] = Variable<int>(energy);
+    }
+    if (!nullToAbsent || wins != null) {
+      map['wins'] = Variable<String>(wins);
+    }
+    if (!nullToAbsent || improve != null) {
+      map['improve'] = Variable<String>(improve);
+    }
+    if (!nullToAbsent || gratitude != null) {
+      map['gratitude'] = Variable<String>(gratitude);
+    }
+    if (!nullToAbsent || reflection != null) {
+      map['reflection'] = Variable<String>(reflection);
+    }
+    if (!nullToAbsent || aiSummary != null) {
+      map['ai_summary'] = Variable<String>(aiSummary);
+    }
+    if (!nullToAbsent || aiSummaryAt != null) {
+      map['ai_summary_at'] = Variable<DateTime>(aiSummaryAt);
+    }
+    if (!nullToAbsent || statsJson != null) {
+      map['stats_json'] = Variable<String>(statsJson);
+    }
+    return map;
+  }
+
+  DebriefEntriesCompanion toCompanion(bool nullToAbsent) {
+    return DebriefEntriesCompanion(
+      id: Value(id),
+      createdAt: Value(createdAt),
+      updatedAt: Value(updatedAt),
+      dayKey: Value(dayKey),
+      mood: mood == null && nullToAbsent ? const Value.absent() : Value(mood),
+      energy: energy == null && nullToAbsent
+          ? const Value.absent()
+          : Value(energy),
+      wins: wins == null && nullToAbsent ? const Value.absent() : Value(wins),
+      improve: improve == null && nullToAbsent
+          ? const Value.absent()
+          : Value(improve),
+      gratitude: gratitude == null && nullToAbsent
+          ? const Value.absent()
+          : Value(gratitude),
+      reflection: reflection == null && nullToAbsent
+          ? const Value.absent()
+          : Value(reflection),
+      aiSummary: aiSummary == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiSummary),
+      aiSummaryAt: aiSummaryAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(aiSummaryAt),
+      statsJson: statsJson == null && nullToAbsent
+          ? const Value.absent()
+          : Value(statsJson),
+    );
+  }
+
+  factory DebriefEntry.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return DebriefEntry(
+      id: serializer.fromJson<String>(json['id']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      dayKey: serializer.fromJson<String>(json['dayKey']),
+      mood: serializer.fromJson<int?>(json['mood']),
+      energy: serializer.fromJson<int?>(json['energy']),
+      wins: serializer.fromJson<String?>(json['wins']),
+      improve: serializer.fromJson<String?>(json['improve']),
+      gratitude: serializer.fromJson<String?>(json['gratitude']),
+      reflection: serializer.fromJson<String?>(json['reflection']),
+      aiSummary: serializer.fromJson<String?>(json['aiSummary']),
+      aiSummaryAt: serializer.fromJson<DateTime?>(json['aiSummaryAt']),
+      statsJson: serializer.fromJson<String?>(json['statsJson']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<String>(id),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+      'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'dayKey': serializer.toJson<String>(dayKey),
+      'mood': serializer.toJson<int?>(mood),
+      'energy': serializer.toJson<int?>(energy),
+      'wins': serializer.toJson<String?>(wins),
+      'improve': serializer.toJson<String?>(improve),
+      'gratitude': serializer.toJson<String?>(gratitude),
+      'reflection': serializer.toJson<String?>(reflection),
+      'aiSummary': serializer.toJson<String?>(aiSummary),
+      'aiSummaryAt': serializer.toJson<DateTime?>(aiSummaryAt),
+      'statsJson': serializer.toJson<String?>(statsJson),
+    };
+  }
+
+  DebriefEntry copyWith({
+    String? id,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? dayKey,
+    Value<int?> mood = const Value.absent(),
+    Value<int?> energy = const Value.absent(),
+    Value<String?> wins = const Value.absent(),
+    Value<String?> improve = const Value.absent(),
+    Value<String?> gratitude = const Value.absent(),
+    Value<String?> reflection = const Value.absent(),
+    Value<String?> aiSummary = const Value.absent(),
+    Value<DateTime?> aiSummaryAt = const Value.absent(),
+    Value<String?> statsJson = const Value.absent(),
+  }) => DebriefEntry(
+    id: id ?? this.id,
+    createdAt: createdAt ?? this.createdAt,
+    updatedAt: updatedAt ?? this.updatedAt,
+    dayKey: dayKey ?? this.dayKey,
+    mood: mood.present ? mood.value : this.mood,
+    energy: energy.present ? energy.value : this.energy,
+    wins: wins.present ? wins.value : this.wins,
+    improve: improve.present ? improve.value : this.improve,
+    gratitude: gratitude.present ? gratitude.value : this.gratitude,
+    reflection: reflection.present ? reflection.value : this.reflection,
+    aiSummary: aiSummary.present ? aiSummary.value : this.aiSummary,
+    aiSummaryAt: aiSummaryAt.present ? aiSummaryAt.value : this.aiSummaryAt,
+    statsJson: statsJson.present ? statsJson.value : this.statsJson,
+  );
+  DebriefEntry copyWithCompanion(DebriefEntriesCompanion data) {
+    return DebriefEntry(
+      id: data.id.present ? data.id.value : this.id,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      dayKey: data.dayKey.present ? data.dayKey.value : this.dayKey,
+      mood: data.mood.present ? data.mood.value : this.mood,
+      energy: data.energy.present ? data.energy.value : this.energy,
+      wins: data.wins.present ? data.wins.value : this.wins,
+      improve: data.improve.present ? data.improve.value : this.improve,
+      gratitude: data.gratitude.present ? data.gratitude.value : this.gratitude,
+      reflection: data.reflection.present
+          ? data.reflection.value
+          : this.reflection,
+      aiSummary: data.aiSummary.present ? data.aiSummary.value : this.aiSummary,
+      aiSummaryAt: data.aiSummaryAt.present
+          ? data.aiSummaryAt.value
+          : this.aiSummaryAt,
+      statsJson: data.statsJson.present ? data.statsJson.value : this.statsJson,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DebriefEntry(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('dayKey: $dayKey, ')
+          ..write('mood: $mood, ')
+          ..write('energy: $energy, ')
+          ..write('wins: $wins, ')
+          ..write('improve: $improve, ')
+          ..write('gratitude: $gratitude, ')
+          ..write('reflection: $reflection, ')
+          ..write('aiSummary: $aiSummary, ')
+          ..write('aiSummaryAt: $aiSummaryAt, ')
+          ..write('statsJson: $statsJson')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    createdAt,
+    updatedAt,
+    dayKey,
+    mood,
+    energy,
+    wins,
+    improve,
+    gratitude,
+    reflection,
+    aiSummary,
+    aiSummaryAt,
+    statsJson,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is DebriefEntry &&
+          other.id == this.id &&
+          other.createdAt == this.createdAt &&
+          other.updatedAt == this.updatedAt &&
+          other.dayKey == this.dayKey &&
+          other.mood == this.mood &&
+          other.energy == this.energy &&
+          other.wins == this.wins &&
+          other.improve == this.improve &&
+          other.gratitude == this.gratitude &&
+          other.reflection == this.reflection &&
+          other.aiSummary == this.aiSummary &&
+          other.aiSummaryAt == this.aiSummaryAt &&
+          other.statsJson == this.statsJson);
+}
+
+class DebriefEntriesCompanion extends UpdateCompanion<DebriefEntry> {
+  final Value<String> id;
+  final Value<DateTime> createdAt;
+  final Value<DateTime> updatedAt;
+  final Value<String> dayKey;
+  final Value<int?> mood;
+  final Value<int?> energy;
+  final Value<String?> wins;
+  final Value<String?> improve;
+  final Value<String?> gratitude;
+  final Value<String?> reflection;
+  final Value<String?> aiSummary;
+  final Value<DateTime?> aiSummaryAt;
+  final Value<String?> statsJson;
+  final Value<int> rowid;
+  const DebriefEntriesCompanion({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    this.dayKey = const Value.absent(),
+    this.mood = const Value.absent(),
+    this.energy = const Value.absent(),
+    this.wins = const Value.absent(),
+    this.improve = const Value.absent(),
+    this.gratitude = const Value.absent(),
+    this.reflection = const Value.absent(),
+    this.aiSummary = const Value.absent(),
+    this.aiSummaryAt = const Value.absent(),
+    this.statsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  DebriefEntriesCompanion.insert({
+    this.id = const Value.absent(),
+    this.createdAt = const Value.absent(),
+    this.updatedAt = const Value.absent(),
+    required String dayKey,
+    this.mood = const Value.absent(),
+    this.energy = const Value.absent(),
+    this.wins = const Value.absent(),
+    this.improve = const Value.absent(),
+    this.gratitude = const Value.absent(),
+    this.reflection = const Value.absent(),
+    this.aiSummary = const Value.absent(),
+    this.aiSummaryAt = const Value.absent(),
+    this.statsJson = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : dayKey = Value(dayKey);
+  static Insertable<DebriefEntry> custom({
+    Expression<String>? id,
+    Expression<DateTime>? createdAt,
+    Expression<DateTime>? updatedAt,
+    Expression<String>? dayKey,
+    Expression<int>? mood,
+    Expression<int>? energy,
+    Expression<String>? wins,
+    Expression<String>? improve,
+    Expression<String>? gratitude,
+    Expression<String>? reflection,
+    Expression<String>? aiSummary,
+    Expression<DateTime>? aiSummaryAt,
+    Expression<String>? statsJson,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (createdAt != null) 'created_at': createdAt,
+      if (updatedAt != null) 'updated_at': updatedAt,
+      if (dayKey != null) 'day_key': dayKey,
+      if (mood != null) 'mood': mood,
+      if (energy != null) 'energy': energy,
+      if (wins != null) 'wins': wins,
+      if (improve != null) 'improve': improve,
+      if (gratitude != null) 'gratitude': gratitude,
+      if (reflection != null) 'reflection': reflection,
+      if (aiSummary != null) 'ai_summary': aiSummary,
+      if (aiSummaryAt != null) 'ai_summary_at': aiSummaryAt,
+      if (statsJson != null) 'stats_json': statsJson,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  DebriefEntriesCompanion copyWith({
+    Value<String>? id,
+    Value<DateTime>? createdAt,
+    Value<DateTime>? updatedAt,
+    Value<String>? dayKey,
+    Value<int?>? mood,
+    Value<int?>? energy,
+    Value<String?>? wins,
+    Value<String?>? improve,
+    Value<String?>? gratitude,
+    Value<String?>? reflection,
+    Value<String?>? aiSummary,
+    Value<DateTime?>? aiSummaryAt,
+    Value<String?>? statsJson,
+    Value<int>? rowid,
+  }) {
+    return DebriefEntriesCompanion(
+      id: id ?? this.id,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      dayKey: dayKey ?? this.dayKey,
+      mood: mood ?? this.mood,
+      energy: energy ?? this.energy,
+      wins: wins ?? this.wins,
+      improve: improve ?? this.improve,
+      gratitude: gratitude ?? this.gratitude,
+      reflection: reflection ?? this.reflection,
+      aiSummary: aiSummary ?? this.aiSummary,
+      aiSummaryAt: aiSummaryAt ?? this.aiSummaryAt,
+      statsJson: statsJson ?? this.statsJson,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<String>(id.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    if (updatedAt.present) {
+      map['updated_at'] = Variable<DateTime>(updatedAt.value);
+    }
+    if (dayKey.present) {
+      map['day_key'] = Variable<String>(dayKey.value);
+    }
+    if (mood.present) {
+      map['mood'] = Variable<int>(mood.value);
+    }
+    if (energy.present) {
+      map['energy'] = Variable<int>(energy.value);
+    }
+    if (wins.present) {
+      map['wins'] = Variable<String>(wins.value);
+    }
+    if (improve.present) {
+      map['improve'] = Variable<String>(improve.value);
+    }
+    if (gratitude.present) {
+      map['gratitude'] = Variable<String>(gratitude.value);
+    }
+    if (reflection.present) {
+      map['reflection'] = Variable<String>(reflection.value);
+    }
+    if (aiSummary.present) {
+      map['ai_summary'] = Variable<String>(aiSummary.value);
+    }
+    if (aiSummaryAt.present) {
+      map['ai_summary_at'] = Variable<DateTime>(aiSummaryAt.value);
+    }
+    if (statsJson.present) {
+      map['stats_json'] = Variable<String>(statsJson.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('DebriefEntriesCompanion(')
+          ..write('id: $id, ')
+          ..write('createdAt: $createdAt, ')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('dayKey: $dayKey, ')
+          ..write('mood: $mood, ')
+          ..write('energy: $energy, ')
+          ..write('wins: $wins, ')
+          ..write('improve: $improve, ')
+          ..write('gratitude: $gratitude, ')
+          ..write('reflection: $reflection, ')
+          ..write('aiSummary: $aiSummary, ')
+          ..write('aiSummaryAt: $aiSummaryAt, ')
+          ..write('statsJson: $statsJson, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -12189,6 +13356,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $RecurrencesTable recurrences = $RecurrencesTable(this);
   late final $ScheduledOccurrencesTable scheduledOccurrences =
       $ScheduledOccurrencesTable(this);
+  late final $BudgetsTable budgets = $BudgetsTable(this);
   late final $WorkspacesTable workspaces = $WorkspacesTable(this);
   late final $TaskRecurrencesTable taskRecurrences = $TaskRecurrencesTable(
     this,
@@ -12212,6 +13380,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $NotesTable notes = $NotesTable(this);
   late final $TagsTable tags = $TagsTable(this);
   late final $NoteTagsTable noteTags = $NoteTagsTable(this);
+  late final $DebriefEntriesTable debriefEntries = $DebriefEntriesTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -12227,6 +13396,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     exchangeRates,
     recurrences,
     scheduledOccurrences,
+    budgets,
     workspaces,
     taskRecurrences,
     tasks,
@@ -12243,6 +13413,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     notes,
     tags,
     noteTags,
+    debriefEntries,
   ];
   @override
   StreamQueryUpdateRules get streamUpdateRules => const StreamQueryUpdateRules([
@@ -12542,7 +13713,7 @@ final class $$CurrenciesTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.accounts,
-    aliasName: $_aliasNameGenerator(db.currencies.id, db.accounts.currencyId),
+    aliasName: 'currencies__id__accounts__currency_id',
   );
 
   $$AccountsTableProcessedTableManager get accountsRefs {
@@ -12560,10 +13731,7 @@ final class $$CurrenciesTableReferences
   static MultiTypedResultKey<$TransactionLegsTable, List<TransactionLeg>>
   _transactionLegsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactionLegs,
-    aliasName: $_aliasNameGenerator(
-      db.currencies.id,
-      db.transactionLegs.currencyId,
-    ),
+    aliasName: 'currencies__id__transaction_legs__currency_id',
   );
 
   $$TransactionLegsTableProcessedTableManager get transactionLegsRefs {
@@ -13006,9 +14174,7 @@ final class $$AccountsTableReferences
   $$AccountsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CurrenciesTable _currencyIdTable(_$AppDatabase db) =>
-      db.currencies.createAlias(
-        $_aliasNameGenerator(db.accounts.currencyId, db.currencies.id),
-      );
+      db.currencies.createAlias('accounts__currency_id__currencies__id');
 
   $$CurrenciesTableProcessedTableManager get currencyId {
     final $_column = $_itemColumn<String>('currency_id')!;
@@ -13027,10 +14193,7 @@ final class $$AccountsTableReferences
   static MultiTypedResultKey<$TransactionLegsTable, List<TransactionLeg>>
   _transactionLegsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactionLegs,
-    aliasName: $_aliasNameGenerator(
-      db.accounts.id,
-      db.transactionLegs.accountId,
-    ),
+    aliasName: 'accounts__id__transaction_legs__account_id',
   );
 
   $$TransactionLegsTableProcessedTableManager get transactionLegsRefs {
@@ -13533,10 +14696,7 @@ final class $$CategoriesTableReferences
   static MultiTypedResultKey<$CategoryTypesTable, List<CategoryType>>
   _categoryTypesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.categoryTypes,
-    aliasName: $_aliasNameGenerator(
-      db.categories.id,
-      db.categoryTypes.categoryId,
-    ),
+    aliasName: 'categories__id__category_types__category_id',
   );
 
   $$CategoryTypesTableProcessedTableManager get categoryTypesRefs {
@@ -13554,10 +14714,7 @@ final class $$CategoriesTableReferences
   static MultiTypedResultKey<$TransactionsTable, List<Transaction>>
   _transactionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactions,
-    aliasName: $_aliasNameGenerator(
-      db.categories.id,
-      db.transactions.categoryId,
-    ),
+    aliasName: 'categories__id__transactions__category_id',
   );
 
   $$TransactionsTableProcessedTableManager get transactionsRefs {
@@ -13575,10 +14732,7 @@ final class $$CategoriesTableReferences
   static MultiTypedResultKey<$RecurrencesTable, List<Recurrence>>
   _recurrencesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.recurrences,
-    aliasName: $_aliasNameGenerator(
-      db.categories.id,
-      db.recurrences.categoryId,
-    ),
+    aliasName: 'categories__id__recurrences__category_id',
   );
 
   $$RecurrencesTableProcessedTableManager get recurrencesRefs {
@@ -14095,9 +15249,7 @@ final class $$CategoryTypesTableReferences
   );
 
   static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias(
-        $_aliasNameGenerator(db.categoryTypes.categoryId, db.categories.id),
-      );
+      db.categories.createAlias('category_types__category_id__categories__id');
 
   $$CategoriesTableProcessedTableManager get categoryId {
     final $_column = $_itemColumn<String>('category_id')!;
@@ -14116,10 +15268,7 @@ final class $$CategoryTypesTableReferences
   static MultiTypedResultKey<$TransactionsTable, List<Transaction>>
   _transactionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactions,
-    aliasName: $_aliasNameGenerator(
-      db.categoryTypes.id,
-      db.transactions.typeId,
-    ),
+    aliasName: 'category_types__id__transactions__type_id',
   );
 
   $$TransactionsTableProcessedTableManager get transactionsRefs {
@@ -14137,7 +15286,7 @@ final class $$CategoryTypesTableReferences
   static MultiTypedResultKey<$RecurrencesTable, List<Recurrence>>
   _recurrencesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.recurrences,
-    aliasName: $_aliasNameGenerator(db.categoryTypes.id, db.recurrences.typeId),
+    aliasName: 'category_types__id__recurrences__type_id',
   );
 
   $$RecurrencesTableProcessedTableManager get recurrencesRefs {
@@ -14641,9 +15790,7 @@ final class $$TransactionsTableReferences
   $$TransactionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias(
-        $_aliasNameGenerator(db.transactions.categoryId, db.categories.id),
-      );
+      db.categories.createAlias('transactions__category_id__categories__id');
 
   $$CategoriesTableProcessedTableManager? get categoryId {
     final $_column = $_itemColumn<String>('category_id');
@@ -14660,9 +15807,7 @@ final class $$TransactionsTableReferences
   }
 
   static $CategoryTypesTable _typeIdTable(_$AppDatabase db) =>
-      db.categoryTypes.createAlias(
-        $_aliasNameGenerator(db.transactions.typeId, db.categoryTypes.id),
-      );
+      db.categoryTypes.createAlias('transactions__type_id__category_types__id');
 
   $$CategoryTypesTableProcessedTableManager? get typeId {
     final $_column = $_itemColumn<String>('type_id');
@@ -14681,10 +15826,7 @@ final class $$TransactionsTableReferences
   static MultiTypedResultKey<$TransactionLegsTable, List<TransactionLeg>>
   _transactionLegsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.transactionLegs,
-    aliasName: $_aliasNameGenerator(
-      db.transactions.id,
-      db.transactionLegs.transactionId,
-    ),
+    aliasName: 'transactions__id__transaction_legs__transaction_id',
   );
 
   $$TransactionLegsTableProcessedTableManager get transactionLegsRefs {
@@ -14704,10 +15846,7 @@ final class $$TransactionsTableReferences
   static MultiTypedResultKey<$ExchangeRatesTable, List<ExchangeRate>>
   _exchangeRatesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.exchangeRates,
-    aliasName: $_aliasNameGenerator(
-      db.transactions.id,
-      db.exchangeRates.transactionId,
-    ),
+    aliasName: 'transactions__id__exchange_rates__transaction_id',
   );
 
   $$ExchangeRatesTableProcessedTableManager get exchangeRatesRefs {
@@ -14726,14 +15865,13 @@ final class $$TransactionsTableReferences
     $ScheduledOccurrencesTable,
     List<ScheduledOccurrence>
   >
-  _scheduledOccurrencesRefsTable(_$AppDatabase db) =>
-      MultiTypedResultKey.fromTable(
-        db.scheduledOccurrences,
-        aliasName: $_aliasNameGenerator(
-          db.transactions.id,
-          db.scheduledOccurrences.materializedTransactionId,
-        ),
-      );
+  _scheduledOccurrencesRefsTable(
+    _$AppDatabase db,
+  ) => MultiTypedResultKey.fromTable(
+    db.scheduledOccurrences,
+    aliasName:
+        'transactions__id__scheduled_occurrences__materialized_transaction_id',
+  );
 
   $$ScheduledOccurrencesTableProcessedTableManager
   get scheduledOccurrencesRefs {
@@ -15466,13 +16604,9 @@ final class $$TransactionLegsTableReferences
     super.$_typedResult,
   );
 
-  static $TransactionsTable _transactionIdTable(_$AppDatabase db) =>
-      db.transactions.createAlias(
-        $_aliasNameGenerator(
-          db.transactionLegs.transactionId,
-          db.transactions.id,
-        ),
-      );
+  static $TransactionsTable _transactionIdTable(_$AppDatabase db) => db
+      .transactions
+      .createAlias('transaction_legs__transaction_id__transactions__id');
 
   $$TransactionsTableProcessedTableManager get transactionId {
     final $_column = $_itemColumn<String>('transaction_id')!;
@@ -15489,9 +16623,7 @@ final class $$TransactionLegsTableReferences
   }
 
   static $AccountsTable _accountIdTable(_$AppDatabase db) =>
-      db.accounts.createAlias(
-        $_aliasNameGenerator(db.transactionLegs.accountId, db.accounts.id),
-      );
+      db.accounts.createAlias('transaction_legs__account_id__accounts__id');
 
   $$AccountsTableProcessedTableManager get accountId {
     final $_column = $_itemColumn<String>('account_id')!;
@@ -15507,10 +16639,8 @@ final class $$TransactionLegsTableReferences
     );
   }
 
-  static $CurrenciesTable _currencyIdTable(_$AppDatabase db) =>
-      db.currencies.createAlias(
-        $_aliasNameGenerator(db.transactionLegs.currencyId, db.currencies.id),
-      );
+  static $CurrenciesTable _currencyIdTable(_$AppDatabase db) => db.currencies
+      .createAlias('transaction_legs__currency_id__currencies__id');
 
   $$CurrenciesTableProcessedTableManager get currencyId {
     final $_column = $_itemColumn<String>('currency_id')!;
@@ -16025,10 +17155,9 @@ final class $$ExchangeRatesTableReferences
     super.$_typedResult,
   );
 
-  static $CurrenciesTable _fromCurrencyIdTable(_$AppDatabase db) =>
-      db.currencies.createAlias(
-        $_aliasNameGenerator(db.exchangeRates.fromCurrencyId, db.currencies.id),
-      );
+  static $CurrenciesTable _fromCurrencyIdTable(_$AppDatabase db) => db
+      .currencies
+      .createAlias('exchange_rates__from_currency_id__currencies__id');
 
   $$CurrenciesTableProcessedTableManager get fromCurrencyId {
     final $_column = $_itemColumn<String>('from_currency_id')!;
@@ -16044,10 +17173,8 @@ final class $$ExchangeRatesTableReferences
     );
   }
 
-  static $CurrenciesTable _toCurrencyIdTable(_$AppDatabase db) =>
-      db.currencies.createAlias(
-        $_aliasNameGenerator(db.exchangeRates.toCurrencyId, db.currencies.id),
-      );
+  static $CurrenciesTable _toCurrencyIdTable(_$AppDatabase db) => db.currencies
+      .createAlias('exchange_rates__to_currency_id__currencies__id');
 
   $$CurrenciesTableProcessedTableManager get toCurrencyId {
     final $_column = $_itemColumn<String>('to_currency_id')!;
@@ -16063,13 +17190,9 @@ final class $$ExchangeRatesTableReferences
     );
   }
 
-  static $TransactionsTable _transactionIdTable(_$AppDatabase db) =>
-      db.transactions.createAlias(
-        $_aliasNameGenerator(
-          db.exchangeRates.transactionId,
-          db.transactions.id,
-        ),
-      );
+  static $TransactionsTable _transactionIdTable(_$AppDatabase db) => db
+      .transactions
+      .createAlias('exchange_rates__transaction_id__transactions__id');
 
   $$TransactionsTableProcessedTableManager? get transactionId {
     final $_column = $_itemColumn<String>('transaction_id');
@@ -16610,9 +17733,7 @@ final class $$RecurrencesTableReferences
   $$RecurrencesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $CategoriesTable _categoryIdTable(_$AppDatabase db) =>
-      db.categories.createAlias(
-        $_aliasNameGenerator(db.recurrences.categoryId, db.categories.id),
-      );
+      db.categories.createAlias('recurrences__category_id__categories__id');
 
   $$CategoriesTableProcessedTableManager? get categoryId {
     final $_column = $_itemColumn<String>('category_id');
@@ -16629,9 +17750,7 @@ final class $$RecurrencesTableReferences
   }
 
   static $CategoryTypesTable _typeIdTable(_$AppDatabase db) =>
-      db.categoryTypes.createAlias(
-        $_aliasNameGenerator(db.recurrences.typeId, db.categoryTypes.id),
-      );
+      db.categoryTypes.createAlias('recurrences__type_id__category_types__id');
 
   $$CategoryTypesTableProcessedTableManager? get typeId {
     final $_column = $_itemColumn<String>('type_id');
@@ -16654,10 +17773,7 @@ final class $$RecurrencesTableReferences
   _scheduledOccurrencesRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.scheduledOccurrences,
-        aliasName: $_aliasNameGenerator(
-          db.recurrences.id,
-          db.scheduledOccurrences.recurrenceId,
-        ),
+        aliasName: 'recurrences__id__scheduled_occurrences__recurrence_id',
       );
 
   $$ScheduledOccurrencesTableProcessedTableManager
@@ -17274,13 +18390,9 @@ final class $$ScheduledOccurrencesTableReferences
     super.$_typedResult,
   );
 
-  static $RecurrencesTable _recurrenceIdTable(_$AppDatabase db) =>
-      db.recurrences.createAlias(
-        $_aliasNameGenerator(
-          db.scheduledOccurrences.recurrenceId,
-          db.recurrences.id,
-        ),
-      );
+  static $RecurrencesTable _recurrenceIdTable(_$AppDatabase db) => db
+      .recurrences
+      .createAlias('scheduled_occurrences__recurrence_id__recurrences__id');
 
   $$RecurrencesTableProcessedTableManager get recurrenceId {
     final $_column = $_itemColumn<String>('recurrence_id')!;
@@ -17298,10 +18410,7 @@ final class $$ScheduledOccurrencesTableReferences
 
   static $TransactionsTable _materializedTransactionIdTable(_$AppDatabase db) =>
       db.transactions.createAlias(
-        $_aliasNameGenerator(
-          db.scheduledOccurrences.materializedTransactionId,
-          db.transactions.id,
-        ),
+        'scheduled_occurrences__materialized_transaction_id__transactions__id',
       );
 
   $$TransactionsTableProcessedTableManager? get materializedTransactionId {
@@ -17741,6 +18850,221 @@ typedef $$ScheduledOccurrencesTableProcessedTableManager =
         bool materializedTransactionId,
       })
     >;
+typedef $$BudgetsTableCreateCompanionBuilder =
+    BudgetsCompanion Function({
+      Value<String> id,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      required String categoryId,
+      required double amount,
+      Value<String> period,
+      Value<int> rowid,
+    });
+typedef $$BudgetsTableUpdateCompanionBuilder =
+    BudgetsCompanion Function({
+      Value<String> id,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<String> categoryId,
+      Value<double> amount,
+      Value<String> period,
+      Value<int> rowid,
+    });
+
+class $$BudgetsTableFilterComposer
+    extends Composer<_$AppDatabase, $BudgetsTable> {
+  $$BudgetsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$BudgetsTableOrderingComposer
+    extends Composer<_$AppDatabase, $BudgetsTable> {
+  $$BudgetsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<double> get amount => $composableBuilder(
+    column: $table.amount,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get period => $composableBuilder(
+    column: $table.period,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$BudgetsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $BudgetsTable> {
+  $$BudgetsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get categoryId => $composableBuilder(
+    column: $table.categoryId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<double> get amount =>
+      $composableBuilder(column: $table.amount, builder: (column) => column);
+
+  GeneratedColumn<String> get period =>
+      $composableBuilder(column: $table.period, builder: (column) => column);
+}
+
+class $$BudgetsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $BudgetsTable,
+          Budget,
+          $$BudgetsTableFilterComposer,
+          $$BudgetsTableOrderingComposer,
+          $$BudgetsTableAnnotationComposer,
+          $$BudgetsTableCreateCompanionBuilder,
+          $$BudgetsTableUpdateCompanionBuilder,
+          (Budget, BaseReferences<_$AppDatabase, $BudgetsTable, Budget>),
+          Budget,
+          PrefetchHooks Function()
+        > {
+  $$BudgetsTableTableManager(_$AppDatabase db, $BudgetsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$BudgetsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$BudgetsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$BudgetsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> categoryId = const Value.absent(),
+                Value<double> amount = const Value.absent(),
+                Value<String> period = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BudgetsCompanion(
+                id: id,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                categoryId: categoryId,
+                amount: amount,
+                period: period,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String categoryId,
+                required double amount,
+                Value<String> period = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => BudgetsCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                categoryId: categoryId,
+                amount: amount,
+                period: period,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$BudgetsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $BudgetsTable,
+      Budget,
+      $$BudgetsTableFilterComposer,
+      $$BudgetsTableOrderingComposer,
+      $$BudgetsTableAnnotationComposer,
+      $$BudgetsTableCreateCompanionBuilder,
+      $$BudgetsTableUpdateCompanionBuilder,
+      (Budget, BaseReferences<_$AppDatabase, $BudgetsTable, Budget>),
+      Budget,
+      PrefetchHooks Function()
+    >;
 typedef $$WorkspacesTableCreateCompanionBuilder =
     WorkspacesCompanion Function({
       Value<String> id,
@@ -17772,7 +19096,7 @@ final class $$WorkspacesTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tasks,
-    aliasName: $_aliasNameGenerator(db.workspaces.id, db.tasks.workspaceId),
+    aliasName: 'workspaces__id__tasks__workspace_id',
   );
 
   $$TasksTableProcessedTableManager get tasksRefs {
@@ -18117,10 +19441,7 @@ final class $$TaskRecurrencesTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.tasks,
-    aliasName: $_aliasNameGenerator(
-      db.taskRecurrences.id,
-      db.tasks.recurrenceId,
-    ),
+    aliasName: 'task_recurrences__id__tasks__recurrence_id',
   );
 
   $$TasksTableProcessedTableManager get tasksRefs {
@@ -18492,9 +19813,7 @@ final class $$TasksTableReferences
   $$TasksTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $WorkspacesTable _workspaceIdTable(_$AppDatabase db) =>
-      db.workspaces.createAlias(
-        $_aliasNameGenerator(db.tasks.workspaceId, db.workspaces.id),
-      );
+      db.workspaces.createAlias('tasks__workspace_id__workspaces__id');
 
   $$WorkspacesTableProcessedTableManager get workspaceId {
     final $_column = $_itemColumn<String>('workspace_id')!;
@@ -18510,10 +19829,9 @@ final class $$TasksTableReferences
     );
   }
 
-  static $TaskRecurrencesTable _recurrenceIdTable(_$AppDatabase db) =>
-      db.taskRecurrences.createAlias(
-        $_aliasNameGenerator(db.tasks.recurrenceId, db.taskRecurrences.id),
-      );
+  static $TaskRecurrencesTable _recurrenceIdTable(_$AppDatabase db) => db
+      .taskRecurrences
+      .createAlias('tasks__recurrence_id__task_recurrences__id');
 
   $$TaskRecurrencesTableProcessedTableManager? get recurrenceId {
     final $_column = $_itemColumn<String>('recurrence_id');
@@ -18532,7 +19850,7 @@ final class $$TasksTableReferences
   static MultiTypedResultKey<$TaskHistoryTable, List<TaskHistoryData>>
   _taskHistoryRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.taskHistory,
-    aliasName: $_aliasNameGenerator(db.tasks.id, db.taskHistory.taskId),
+    aliasName: 'tasks__id__task_history__task_id',
   );
 
   $$TaskHistoryTableProcessedTableManager get taskHistoryRefs {
@@ -19148,9 +20466,8 @@ final class $$TaskHistoryTableReferences
     extends BaseReferences<_$AppDatabase, $TaskHistoryTable, TaskHistoryData> {
   $$TaskHistoryTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $TasksTable _taskIdTable(_$AppDatabase db) => db.tasks.createAlias(
-    $_aliasNameGenerator(db.taskHistory.taskId, db.tasks.id),
-  );
+  static $TasksTable _taskIdTable(_$AppDatabase db) =>
+      db.tasks.createAlias('task_history__task_id__tasks__id');
 
   $$TasksTableProcessedTableManager get taskId {
     final $_column = $_itemColumn<String>('task_id')!;
@@ -19513,10 +20830,7 @@ final class $$MeasurementTypesTableReferences
   _measurementValuesRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.measurementValues,
-        aliasName: $_aliasNameGenerator(
-          db.measurementTypes.id,
-          db.measurementValues.typeId,
-        ),
+        aliasName: 'measurement_types__id__measurement_values__type_id',
       );
 
   $$MeasurementValuesTableProcessedTableManager get measurementValuesRefs {
@@ -19851,10 +21165,7 @@ final class $$MeasurementEntriesTableReferences
   _measurementValuesRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.measurementValues,
-        aliasName: $_aliasNameGenerator(
-          db.measurementEntries.id,
-          db.measurementValues.entryId,
-        ),
+        aliasName: 'measurement_entries__id__measurement_values__entry_id',
       );
 
   $$MeasurementValuesTableProcessedTableManager get measurementValuesRefs {
@@ -20173,13 +21484,9 @@ final class $$MeasurementValuesTableReferences
     super.$_typedResult,
   );
 
-  static $MeasurementEntriesTable _entryIdTable(_$AppDatabase db) =>
-      db.measurementEntries.createAlias(
-        $_aliasNameGenerator(
-          db.measurementValues.entryId,
-          db.measurementEntries.id,
-        ),
-      );
+  static $MeasurementEntriesTable _entryIdTable(_$AppDatabase db) => db
+      .measurementEntries
+      .createAlias('measurement_values__entry_id__measurement_entries__id');
 
   $$MeasurementEntriesTableProcessedTableManager get entryId {
     final $_column = $_itemColumn<String>('entry_id')!;
@@ -20195,13 +21502,9 @@ final class $$MeasurementValuesTableReferences
     );
   }
 
-  static $MeasurementTypesTable _typeIdTable(_$AppDatabase db) =>
-      db.measurementTypes.createAlias(
-        $_aliasNameGenerator(
-          db.measurementValues.typeId,
-          db.measurementTypes.id,
-        ),
-      );
+  static $MeasurementTypesTable _typeIdTable(_$AppDatabase db) => db
+      .measurementTypes
+      .createAlias('measurement_values__type_id__measurement_types__id');
 
   $$MeasurementTypesTableProcessedTableManager get typeId {
     final $_column = $_itemColumn<String>('type_id')!;
@@ -20620,7 +21923,7 @@ final class $$ProgramsTableReferences
   static MultiTypedResultKey<$ProgramDaysTable, List<ProgramDay>>
   _programDaysRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.programDays,
-    aliasName: $_aliasNameGenerator(db.programs.id, db.programDays.programId),
+    aliasName: 'programs__id__program_days__program_id',
   );
 
   $$ProgramDaysTableProcessedTableManager get programDaysRefs {
@@ -20954,9 +22257,7 @@ final class $$ProgramDaysTableReferences
   $$ProgramDaysTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $ProgramsTable _programIdTable(_$AppDatabase db) =>
-      db.programs.createAlias(
-        $_aliasNameGenerator(db.programDays.programId, db.programs.id),
-      );
+      db.programs.createAlias('program_days__program_id__programs__id');
 
   $$ProgramsTableProcessedTableManager get programId {
     final $_column = $_itemColumn<String>('program_id')!;
@@ -20975,7 +22276,7 @@ final class $$ProgramDaysTableReferences
   static MultiTypedResultKey<$SupersetGroupsTable, List<SupersetGroup>>
   _supersetGroupsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.supersetGroups,
-    aliasName: $_aliasNameGenerator(db.programDays.id, db.supersetGroups.dayId),
+    aliasName: 'program_days__id__superset_groups__day_id',
   );
 
   $$SupersetGroupsTableProcessedTableManager get supersetGroupsRefs {
@@ -20993,7 +22294,7 @@ final class $$ProgramDaysTableReferences
   static MultiTypedResultKey<$DayExercisesTable, List<DayExercise>>
   _dayExercisesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.dayExercises,
-    aliasName: $_aliasNameGenerator(db.programDays.id, db.dayExercises.dayId),
+    aliasName: 'program_days__id__day_exercises__day_id',
   );
 
   $$DayExercisesTableProcessedTableManager get dayExercisesRefs {
@@ -21011,10 +22312,7 @@ final class $$ProgramDaysTableReferences
   static MultiTypedResultKey<$DaySessionsTable, List<DaySession>>
   _daySessionsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.daySessions,
-    aliasName: $_aliasNameGenerator(
-      db.programDays.id,
-      db.daySessions.programDayId,
-    ),
+    aliasName: 'program_days__id__day_sessions__program_day_id',
   );
 
   $$DaySessionsTableProcessedTableManager get daySessionsRefs {
@@ -21589,9 +22887,7 @@ final class $$SupersetGroupsTableReferences
   );
 
   static $ProgramDaysTable _dayIdTable(_$AppDatabase db) =>
-      db.programDays.createAlias(
-        $_aliasNameGenerator(db.supersetGroups.dayId, db.programDays.id),
-      );
+      db.programDays.createAlias('superset_groups__day_id__program_days__id');
 
   $$ProgramDaysTableProcessedTableManager get dayId {
     final $_column = $_itemColumn<String>('day_id')!;
@@ -21610,10 +22906,7 @@ final class $$SupersetGroupsTableReferences
   static MultiTypedResultKey<$DayExercisesTable, List<DayExercise>>
   _dayExercisesRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
     db.dayExercises,
-    aliasName: $_aliasNameGenerator(
-      db.supersetGroups.id,
-      db.dayExercises.supersetGroupId,
-    ),
+    aliasName: 'superset_groups__id__day_exercises__superset_group_id',
   );
 
   $$DayExercisesTableProcessedTableManager get dayExercisesRefs {
@@ -22029,9 +23322,7 @@ final class $$DayExercisesTableReferences
   $$DayExercisesTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $ProgramDaysTable _dayIdTable(_$AppDatabase db) =>
-      db.programDays.createAlias(
-        $_aliasNameGenerator(db.dayExercises.dayId, db.programDays.id),
-      );
+      db.programDays.createAlias('day_exercises__day_id__program_days__id');
 
   $$ProgramDaysTableProcessedTableManager get dayId {
     final $_column = $_itemColumn<String>('day_id')!;
@@ -22047,13 +23338,9 @@ final class $$DayExercisesTableReferences
     );
   }
 
-  static $SupersetGroupsTable _supersetGroupIdTable(_$AppDatabase db) =>
-      db.supersetGroups.createAlias(
-        $_aliasNameGenerator(
-          db.dayExercises.supersetGroupId,
-          db.supersetGroups.id,
-        ),
-      );
+  static $SupersetGroupsTable _supersetGroupIdTable(_$AppDatabase db) => db
+      .supersetGroups
+      .createAlias('day_exercises__superset_group_id__superset_groups__id');
 
   $$SupersetGroupsTableProcessedTableManager? get supersetGroupId {
     final $_column = $_itemColumn<String>('superset_group_id');
@@ -22076,10 +23363,8 @@ final class $$DayExercisesTableReferences
   _exerciseSetPrescriptionsRefsTable(_$AppDatabase db) =>
       MultiTypedResultKey.fromTable(
         db.exerciseSetPrescriptions,
-        aliasName: $_aliasNameGenerator(
-          db.dayExercises.id,
-          db.exerciseSetPrescriptions.dayExerciseId,
-        ),
+        aliasName:
+            'day_exercises__id__exercise_set_prescriptions__day_exercise_id',
       );
 
   $$ExerciseSetPrescriptionsTableProcessedTableManager
@@ -22634,10 +23919,7 @@ final class $$ExerciseSetPrescriptionsTableReferences
 
   static $DayExercisesTable _dayExerciseIdTable(_$AppDatabase db) =>
       db.dayExercises.createAlias(
-        $_aliasNameGenerator(
-          db.exerciseSetPrescriptions.dayExerciseId,
-          db.dayExercises.id,
-        ),
+        'exercise_set_prescriptions__day_exercise_id__day_exercises__id',
       );
 
   $$DayExercisesTableProcessedTableManager get dayExerciseId {
@@ -23022,10 +24304,9 @@ final class $$DaySessionsTableReferences
     extends BaseReferences<_$AppDatabase, $DaySessionsTable, DaySession> {
   $$DaySessionsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $ProgramDaysTable _programDayIdTable(_$AppDatabase db) =>
-      db.programDays.createAlias(
-        $_aliasNameGenerator(db.daySessions.programDayId, db.programDays.id),
-      );
+  static $ProgramDaysTable _programDayIdTable(_$AppDatabase db) => db
+      .programDays
+      .createAlias('day_sessions__program_day_id__program_days__id');
 
   $$ProgramDaysTableProcessedTableManager get programDayId {
     final $_column = $_itemColumn<String>('program_day_id')!;
@@ -23366,7 +24647,7 @@ final class $$NotesTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.noteTags,
-    aliasName: $_aliasNameGenerator(db.notes.id, db.noteTags.noteId),
+    aliasName: 'notes__id__note_tags__note_id',
   );
 
   $$NoteTagsTableProcessedTableManager get noteTagsRefs {
@@ -23693,7 +24974,7 @@ final class $$TagsTableReferences
     _$AppDatabase db,
   ) => MultiTypedResultKey.fromTable(
     db.noteTags,
-    aliasName: $_aliasNameGenerator(db.tags.id, db.noteTags.tagId),
+    aliasName: 'tags__id__note_tags__tag_id',
   );
 
   $$NoteTagsTableProcessedTableManager get noteTagsRefs {
@@ -23974,9 +25255,8 @@ final class $$NoteTagsTableReferences
     extends BaseReferences<_$AppDatabase, $NoteTagsTable, NoteTag> {
   $$NoteTagsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
-  static $NotesTable _noteIdTable(_$AppDatabase db) => db.notes.createAlias(
-    $_aliasNameGenerator(db.noteTags.noteId, db.notes.id),
-  );
+  static $NotesTable _noteIdTable(_$AppDatabase db) =>
+      db.notes.createAlias('note_tags__note_id__notes__id');
 
   $$NotesTableProcessedTableManager get noteId {
     final $_column = $_itemColumn<String>('note_id')!;
@@ -23993,7 +25273,7 @@ final class $$NoteTagsTableReferences
   }
 
   static $TagsTable _tagIdTable(_$AppDatabase db) =>
-      db.tags.createAlias($_aliasNameGenerator(db.noteTags.tagId, db.tags.id));
+      db.tags.createAlias('note_tags__tag_id__tags__id');
 
   $$TagsTableProcessedTableManager get tagId {
     final $_column = $_itemColumn<String>('tag_id')!;
@@ -24301,6 +25581,364 @@ typedef $$NoteTagsTableProcessedTableManager =
       NoteTag,
       PrefetchHooks Function({bool noteId, bool tagId})
     >;
+typedef $$DebriefEntriesTableCreateCompanionBuilder =
+    DebriefEntriesCompanion Function({
+      Value<String> id,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      required String dayKey,
+      Value<int?> mood,
+      Value<int?> energy,
+      Value<String?> wins,
+      Value<String?> improve,
+      Value<String?> gratitude,
+      Value<String?> reflection,
+      Value<String?> aiSummary,
+      Value<DateTime?> aiSummaryAt,
+      Value<String?> statsJson,
+      Value<int> rowid,
+    });
+typedef $$DebriefEntriesTableUpdateCompanionBuilder =
+    DebriefEntriesCompanion Function({
+      Value<String> id,
+      Value<DateTime> createdAt,
+      Value<DateTime> updatedAt,
+      Value<String> dayKey,
+      Value<int?> mood,
+      Value<int?> energy,
+      Value<String?> wins,
+      Value<String?> improve,
+      Value<String?> gratitude,
+      Value<String?> reflection,
+      Value<String?> aiSummary,
+      Value<DateTime?> aiSummaryAt,
+      Value<String?> statsJson,
+      Value<int> rowid,
+    });
+
+class $$DebriefEntriesTableFilterComposer
+    extends Composer<_$AppDatabase, $DebriefEntriesTable> {
+  $$DebriefEntriesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get mood => $composableBuilder(
+    column: $table.mood,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get energy => $composableBuilder(
+    column: $table.energy,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get wins => $composableBuilder(
+    column: $table.wins,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get improve => $composableBuilder(
+    column: $table.improve,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get gratitude => $composableBuilder(
+    column: $table.gratitude,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get aiSummary => $composableBuilder(
+    column: $table.aiSummary,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get aiSummaryAt => $composableBuilder(
+    column: $table.aiSummaryAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get statsJson => $composableBuilder(
+    column: $table.statsJson,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$DebriefEntriesTableOrderingComposer
+    extends Composer<_$AppDatabase, $DebriefEntriesTable> {
+  $$DebriefEntriesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get updatedAt => $composableBuilder(
+    column: $table.updatedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get dayKey => $composableBuilder(
+    column: $table.dayKey,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get mood => $composableBuilder(
+    column: $table.mood,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get energy => $composableBuilder(
+    column: $table.energy,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get wins => $composableBuilder(
+    column: $table.wins,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get improve => $composableBuilder(
+    column: $table.improve,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get gratitude => $composableBuilder(
+    column: $table.gratitude,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get aiSummary => $composableBuilder(
+    column: $table.aiSummary,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get aiSummaryAt => $composableBuilder(
+    column: $table.aiSummaryAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get statsJson => $composableBuilder(
+    column: $table.statsJson,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$DebriefEntriesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $DebriefEntriesTable> {
+  $$DebriefEntriesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get updatedAt =>
+      $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get dayKey =>
+      $composableBuilder(column: $table.dayKey, builder: (column) => column);
+
+  GeneratedColumn<int> get mood =>
+      $composableBuilder(column: $table.mood, builder: (column) => column);
+
+  GeneratedColumn<int> get energy =>
+      $composableBuilder(column: $table.energy, builder: (column) => column);
+
+  GeneratedColumn<String> get wins =>
+      $composableBuilder(column: $table.wins, builder: (column) => column);
+
+  GeneratedColumn<String> get improve =>
+      $composableBuilder(column: $table.improve, builder: (column) => column);
+
+  GeneratedColumn<String> get gratitude =>
+      $composableBuilder(column: $table.gratitude, builder: (column) => column);
+
+  GeneratedColumn<String> get reflection => $composableBuilder(
+    column: $table.reflection,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get aiSummary =>
+      $composableBuilder(column: $table.aiSummary, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get aiSummaryAt => $composableBuilder(
+    column: $table.aiSummaryAt,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get statsJson =>
+      $composableBuilder(column: $table.statsJson, builder: (column) => column);
+}
+
+class $$DebriefEntriesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $DebriefEntriesTable,
+          DebriefEntry,
+          $$DebriefEntriesTableFilterComposer,
+          $$DebriefEntriesTableOrderingComposer,
+          $$DebriefEntriesTableAnnotationComposer,
+          $$DebriefEntriesTableCreateCompanionBuilder,
+          $$DebriefEntriesTableUpdateCompanionBuilder,
+          (
+            DebriefEntry,
+            BaseReferences<_$AppDatabase, $DebriefEntriesTable, DebriefEntry>,
+          ),
+          DebriefEntry,
+          PrefetchHooks Function()
+        > {
+  $$DebriefEntriesTableTableManager(
+    _$AppDatabase db,
+    $DebriefEntriesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$DebriefEntriesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$DebriefEntriesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$DebriefEntriesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                Value<String> dayKey = const Value.absent(),
+                Value<int?> mood = const Value.absent(),
+                Value<int?> energy = const Value.absent(),
+                Value<String?> wins = const Value.absent(),
+                Value<String?> improve = const Value.absent(),
+                Value<String?> gratitude = const Value.absent(),
+                Value<String?> reflection = const Value.absent(),
+                Value<String?> aiSummary = const Value.absent(),
+                Value<DateTime?> aiSummaryAt = const Value.absent(),
+                Value<String?> statsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DebriefEntriesCompanion(
+                id: id,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                dayKey: dayKey,
+                mood: mood,
+                energy: energy,
+                wins: wins,
+                improve: improve,
+                gratitude: gratitude,
+                reflection: reflection,
+                aiSummary: aiSummary,
+                aiSummaryAt: aiSummaryAt,
+                statsJson: statsJson,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                Value<String> id = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+                Value<DateTime> updatedAt = const Value.absent(),
+                required String dayKey,
+                Value<int?> mood = const Value.absent(),
+                Value<int?> energy = const Value.absent(),
+                Value<String?> wins = const Value.absent(),
+                Value<String?> improve = const Value.absent(),
+                Value<String?> gratitude = const Value.absent(),
+                Value<String?> reflection = const Value.absent(),
+                Value<String?> aiSummary = const Value.absent(),
+                Value<DateTime?> aiSummaryAt = const Value.absent(),
+                Value<String?> statsJson = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => DebriefEntriesCompanion.insert(
+                id: id,
+                createdAt: createdAt,
+                updatedAt: updatedAt,
+                dayKey: dayKey,
+                mood: mood,
+                energy: energy,
+                wins: wins,
+                improve: improve,
+                gratitude: gratitude,
+                reflection: reflection,
+                aiSummary: aiSummary,
+                aiSummaryAt: aiSummaryAt,
+                statsJson: statsJson,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map((e) => (e.readTable(table), BaseReferences(db, table, e)))
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$DebriefEntriesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $DebriefEntriesTable,
+      DebriefEntry,
+      $$DebriefEntriesTableFilterComposer,
+      $$DebriefEntriesTableOrderingComposer,
+      $$DebriefEntriesTableAnnotationComposer,
+      $$DebriefEntriesTableCreateCompanionBuilder,
+      $$DebriefEntriesTableUpdateCompanionBuilder,
+      (
+        DebriefEntry,
+        BaseReferences<_$AppDatabase, $DebriefEntriesTable, DebriefEntry>,
+      ),
+      DebriefEntry,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -24325,6 +25963,8 @@ class $AppDatabaseManager {
       $$RecurrencesTableTableManager(_db, _db.recurrences);
   $$ScheduledOccurrencesTableTableManager get scheduledOccurrences =>
       $$ScheduledOccurrencesTableTableManager(_db, _db.scheduledOccurrences);
+  $$BudgetsTableTableManager get budgets =>
+      $$BudgetsTableTableManager(_db, _db.budgets);
   $$WorkspacesTableTableManager get workspaces =>
       $$WorkspacesTableTableManager(_db, _db.workspaces);
   $$TaskRecurrencesTableTableManager get taskRecurrences =>
@@ -24359,4 +25999,6 @@ class $AppDatabaseManager {
   $$TagsTableTableManager get tags => $$TagsTableTableManager(_db, _db.tags);
   $$NoteTagsTableTableManager get noteTags =>
       $$NoteTagsTableTableManager(_db, _db.noteTags);
+  $$DebriefEntriesTableTableManager get debriefEntries =>
+      $$DebriefEntriesTableTableManager(_db, _db.debriefEntries);
 }

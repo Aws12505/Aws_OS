@@ -57,7 +57,7 @@ class TaskHistory extends Table with SyncableColumns {
 
   TextColumn get taskId => text().customConstraint(
       'NOT NULL REFERENCES tasks(id) ON DELETE CASCADE')();
-  // 'created' | 'completed' | 'uncompleted' | 'edited' | 'deleted'
+  // 'created' | 'completed' | 'uncompleted' | 'edited' | 'deleted' | 'carried_over'
   TextColumn get action => text()();
   DateTimeColumn get at => dateTime()();
   TextColumn get snapshotJson => text().nullable()();

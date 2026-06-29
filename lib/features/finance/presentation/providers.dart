@@ -33,6 +33,15 @@ final recentTransactionsStreamProvider =
   return ref.watch(financeRepositoryProvider).watchRecentTransactions();
 });
 
+/// Transactions (with legs) within an inclusive date range — used by the
+/// analytics/debrief layer for accurate day & trend aggregation.
+final transactionsInRangeProvider = StreamProvider.family<
+    List<TransactionWithLegs>, ({DateTime start, DateTime end})>((ref, range) {
+  return ref
+      .watch(financeDaoProvider)
+      .watchTransactionsInRange(range.start, range.end);
+});
+
 final exchangeRatesStreamProvider =
     StreamProvider<List<ExchangeRate>>((ref) {
   return ref.watch(financeRepositoryProvider).watchExchangeRates();
@@ -56,6 +65,10 @@ final typesForCategoryProvider =
 
 final allTypesProvider = StreamProvider<List<CategoryType>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAllTypes();
+});
+
+final budgetsStreamProvider = StreamProvider<List<Budget>>((ref) {
+  return ref.watch(financeDaoProvider).watchBudgets();
 });
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {

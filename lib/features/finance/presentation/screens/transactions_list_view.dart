@@ -3,78 +3,184 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/widgets/app_empty_state.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 
-class TransactionsListView extends ConsumerWidget {
+class TransactionsListView extends ConsumerStatefulWidget {
   const TransactionsListView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final txAsync = ref.watch(recentTransactionsStreamProvider);
-    final currenciesAsync = ref.watch(currenciesStreamProvider);
-    final accountsAsync = ref.watch(accountsStreamProvider);
+  ConsumerState<TransactionsListView> createState() =>
+      _TransactionsListViewState();
+}
 
-    return txAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(e.toString())),
-      data: (items) {
-        if (items.isEmpty) {
-          return const _Empty();
-        }
-        final currencies = {
-          for (final c in (currenciesAsync.value ?? const <Currency>[]))
-            c.id: c,
-        };
-        final accounts = {
-          for (final a in (accountsAsync.value ?? const <Account>[]))
-            a.id: a,
-        };
-        final categoriesAsync = ref.watch(allCategoriesProvider);
-        final typesAsync = ref.watch(allTypesProvider);
-        final categoryNames = {
-          for (final c in (categoriesAsync.value ?? const <Category>[]))
-            c.id: c.name,
-        };
-        final typeNames = {
-          for (final t in (typesAsync.value ?? const <CategoryType>[]))
-            t.id: t.name,
-        };
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
-          itemCount: items.length,
-          itemBuilder: (_, i) => _TransactionTile(
-            entry: items[i],
-            currencies: currencies,
-            accounts: accounts,
-            categoryNames: categoryNames,
-            typeNames: typeNames,
-            onDelete: () async {
-              final ok = await showDialog<bool>(
-                context: context,
-                builder: (dCtx) => AlertDialog(
-                  title: const Text('Delete transaction?'),
-                  content: const Text('This cannot be undone.'),
-                  actions: [
-                    TextButton(
-                        onPressed: () => Navigator.pop(dCtx, false),
-                        child: const Text('Cancel')),
-                    FilledButton(
-                        onPressed: () => Navigator.pop(dCtx, true),
-                        child: const Text('Delete')),
-                  ],
+class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
+  final _search = TextEditingController();
+  String _query = '';
+  String _kind = 'all'; // all | income | expense | transfer | exchange
+
+  static const _kinds = ['all', 'income', 'expense', 'transfer', 'exchange'];
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final txAsync = ref.watch(recentTransactionsStreamProvider);
+    final currencies = {
+      for (final c in (ref.watch(currenciesStreamProvider).value ??
+          const <Currency>[]))
+        c.id: c,
+    };
+    final accounts = {
+      for (final a
+          in (ref.watch(accountsStreamProvider).value ?? const <Account>[]))
+        a.id: a,
+    };
+    final categoryNames = {
+      for (final c
+          in (ref.watch(allCategoriesProvider).value ?? const <Category>[]))
+        c.id: c.name,
+    };
+    final typeNames = {
+      for (final t
+          in (ref.watch(allTypesProvider).value ?? const <CategoryType>[]))
+        t.id: t.name,
+    };
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+          child: TextField(
+            controller: _search,
+            onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
+            decoration: InputDecoration(
+              hintText: 'Search transactions',
+              isDense: true,
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              suffixIcon: _query.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      onPressed: () {
+                        _search.clear();
+                        setState(() => _query = '');
+                      },
+                    ),
+            ),
+          ),
+        ),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              for (final k in _kinds)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: AppChip(
+                    label: k == 'all' ? 'All' : DomainColors.labelForTxKind(k),
+                    color: k == 'all' ? null : DomainColors.forTxKind(k),
+                    selected: _kind == k,
+                    onTap: () => setState(() => _kind = k),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 4),
+        Expanded(
+          child: txAsync.when(
+            loading: () => const AppLoading(),
+            error: (e, _) => AppErrorView(error: e),
+            data: (items) {
+              if (items.isEmpty) {
+                return const AppEmptyState(
+                  icon: Icons.receipt_long_rounded,
+                  title: 'No transactions yet',
+                  message:
+                      'Tap + to add income, expense, transfer, or exchange.',
+                );
+              }
+              final filtered = items.where((e) {
+                if (_kind != 'all' && e.transaction.kind != _kind) return false;
+                if (_query.isEmpty) return true;
+                final hay = StringBuffer()
+                  ..write(e.transaction.kind)
+                  ..write(' ')
+                  ..write(e.transaction.note ?? '')
+                  ..write(' ')
+                  ..write(categoryNames[e.transaction.categoryId] ?? '')
+                  ..write(' ')
+                  ..write(typeNames[e.transaction.typeId] ?? '');
+                for (final l in e.legs) {
+                  hay
+                    ..write(' ')
+                    ..write(accounts[l.accountId]?.name ?? '')
+                    ..write(' ')
+                    ..write(l.amount.toString());
+                }
+                return hay.toString().toLowerCase().contains(_query);
+              }).toList();
+
+              if (filtered.isEmpty) {
+                return const AppEmptyState(
+                  icon: Icons.search_off_rounded,
+                  title: 'No matches',
+                  message: 'Try a different search or filter.',
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
+                itemCount: filtered.length,
+                itemBuilder: (_, i) => _TransactionTile(
+                  entry: filtered[i],
+                  currencies: currencies,
+                  accounts: accounts,
+                  categoryNames: categoryNames,
+                  typeNames: typeNames,
+                  onDelete: () => _confirmDelete(filtered[i]),
                 ),
               );
-              if (ok == true) {
-                await ref
-                    .read(financeRepositoryProvider)
-                    .deleteTransaction(items[i].transaction.id);
-              }
             },
           ),
-        );
-      },
+        ),
+      ],
     );
+  }
+
+  Future<void> _confirmDelete(TransactionWithLegs entry) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dCtx) => AlertDialog(
+        title: const Text('Delete transaction?'),
+        content: const Text('This cannot be undone.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(dCtx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(dCtx, true),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await ref
+          .read(financeRepositoryProvider)
+          .deleteTransaction(entry.transaction.id);
+    }
   }
 }
 
@@ -102,29 +208,16 @@ class _TransactionTile extends StatelessWidget {
       final cur = currencies[l.currencyId];
       final acc = accounts[l.accountId];
       final dp = cur?.decimalPlaces ?? 2;
-      final amt = NumberFormat.decimalPatternDigits(decimalDigits: dp)
-          .format(l.amount);
+      final amt =
+          NumberFormat.decimalPatternDigits(decimalDigits: dp).format(l.amount);
       return '${acc?.name ?? '?'}: $amt ${cur?.code ?? ''}';
     }).join('  •  ');
 
-    final icon = switch (tx.kind) {
-      'income' => Icons.trending_up_rounded,
-      'expense' => Icons.trending_down_rounded,
-      'exchange' => Icons.swap_horiz_rounded,
-      'transfer' => Icons.compare_arrows_rounded,
-      _ => Icons.receipt_long_rounded,
-    };
-    final color = switch (tx.kind) {
-      'income' => const Color(0xFF22C55E),
-      'expense' => const Color(0xFFEF4444),
-      'transfer' => const Color(0xFF3B82F6),
-      'exchange' => const Color(0xFF8B5CF6),
-      _ => Theme.of(context).colorScheme.secondary,
-    };
+    final color = DomainColors.forTxKind(tx.kind);
+    final icon = DomainColors.iconForTxKind(tx.kind);
 
-    final categoryLabel = tx.categoryId == null
-        ? null
-        : categoryNames[tx.categoryId];
+    final categoryLabel =
+        tx.categoryId == null ? null : categoryNames[tx.categoryId];
     final typeLabel = tx.typeId == null ? null : typeNames[tx.typeId];
     final tag = [
       ?categoryLabel,
@@ -133,7 +226,14 @@ class _TransactionTile extends StatelessWidget {
 
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    return Card(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 5),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
@@ -155,7 +255,9 @@ class _TransactionTile extends StatelessWidget {
                   Row(
                     children: [
                       Text(
-                        tx.kind[0].toUpperCase() + tx.kind.substring(1),
+                        DomainColors.labelForTxKind(tx.kind),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: tt.titleSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -185,9 +287,7 @@ class _TransactionTile extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                     summary,
-                    style: tt.bodySmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                    ),
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -228,45 +328,6 @@ class _TransactionTile extends StatelessWidget {
                   ),
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _Empty extends StatelessWidget {
-  const _Empty();
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withValues(alpha: 0.5),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(Icons.receipt_long_rounded,
-                  size: 40, color: cs.primary),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              'No transactions yet',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Tap + to add income, expense, transfer, or exchange.',
-              textAlign: TextAlign.center,
-              style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
             ),
           ],
         ),

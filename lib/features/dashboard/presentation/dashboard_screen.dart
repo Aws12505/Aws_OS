@@ -1,5 +1,6 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
@@ -13,6 +14,8 @@ import '../../gym/presentation/providers.dart' as gym;
 import '../../notes/presentation/providers.dart' as notes;
 import '../../tasks/presentation/providers.dart' as tasks;
 import '../../../shared/widgets/quick_action_fab.dart';
+import 'debrief_providers.dart';
+import '../../../shared/design/tokens.dart';
 import 'package:go_router/go_router.dart';
 
 final _selectedDayProvider = StateProvider<DateTime>(
@@ -66,7 +69,10 @@ class _DashboardBody extends ConsumerWidget {
     final isToday = selected.isSameDay(DateTime.now());
     return SafeArea(
       bottom: false,
-      child: ListView(
+      child: RefreshIndicator(
+        onRefresh: () =>
+            ref.read(fin.recurrenceServiceProvider).materializeAll(),
+        child: ListView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
         children: [
           const _TopBar(),
@@ -75,12 +81,15 @@ class _DashboardBody extends ConsumerWidget {
           const _StatRow(),
           const _NeedsAttentionCard(),
           _DaySelector(selected: selected, isToday: isToday),
+          _DebriefCta(date: selected),
           _TransactionsForDayCard(date: selected),
           _TasksForDayCard(date: selected),
           _NotesForDayCard(date: selected),
           const _ExpensePieCard(),
           const _ProjectedBalanceCard(),
+          const _MentorsCard(),
         ],
+      ),
       ),
     );
   }
@@ -222,7 +231,10 @@ class _HeroBalance extends ConsumerWidget {
                     final formatted = NumberFormat.decimalPatternDigits(
                       decimalDigits: cur?.decimalPlaces ?? 2,
                     ).format(main.value);
-                    return RichText(
+                    return FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: RichText(
                       text: TextSpan(
                         children: [
                           TextSpan(
@@ -242,7 +254,7 @@ class _HeroBalance extends ConsumerWidget {
                           ),
                         ],
                       ),
-                    );
+                    ));
                   }),
                   if (entries.length > 1) ...[
                     const SizedBox(height: 14),
@@ -391,16 +403,23 @@ class _StatTile extends StatelessWidget {
                 child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(height: 12),
-              Text(
-                value,
-                style: tt.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
+              FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  style: tt.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.5,
+                  ),
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
                 style: tt.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -693,9 +712,12 @@ class _TasksForDayCard extends ConsumerWidget {
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => ref
-                        .read(tasks.tasksRepositoryProvider)
-                        .toggleCompletion(t.id, completed: !t.isCompleted),
+                    onTap: () {
+                      HapticFeedback.selectionClick();
+                      ref
+                          .read(tasks.tasksRepositoryProvider)
+                          .toggleCompletion(t.id, completed: !t.isCompleted);
+                    },
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       width: 22,
@@ -980,6 +1002,171 @@ class _ProjectedBalanceCard extends ConsumerWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── debrief CTA ──────────────────────────────────────────────────────────────
+
+class _DebriefCta extends ConsumerWidget {
+  const _DebriefCta({required this.date});
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final isToday = date.isSameDay(DateTime.now());
+    final reviewed = ref.watch(debriefForDayProvider(date)).value != null;
+    return GlassCard(
+      borderColor: cs.primary.withValues(alpha: 0.35),
+      onTap: () => context.push('/debrief?date=${date.toIso8601String()}'),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [cs.primary, Color.lerp(cs.primary, cs.tertiary, 0.6)!],
+              ),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              reviewed
+                  ? Icons.event_available_rounded
+                  : Icons.auto_awesome_rounded,
+              color: cs.onPrimary,
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isToday ? 'Close your day' : 'Debrief this day',
+                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  reviewed
+                      ? 'Reviewed — tap to revisit'
+                      : 'Reflect, see trends & plan tomorrow',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Icon(Icons.arrow_forward_rounded, color: cs.primary, size: 20),
+        ],
+      ),
+    );
+  }
+}
+
+// ── mentors ──────────────────────────────────────────────────────────────────
+
+class _MentorsCard extends StatelessWidget {
+  const _MentorsCard();
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _IconBadge(icon: Icons.psychology_rounded, color: cs.primary),
+              const SizedBox(width: 12),
+              Text('Mentors',
+                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.only(left: 4),
+            child: Text('Analyze your data, forecast trends & get advice',
+                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _MentorChip(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'Finance',
+                  color: DomainColors.income,
+                  onTap: () => context.push('/mentor?kind=finance'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MentorChip(
+                  icon: Icons.fitness_center_rounded,
+                  label: 'Gym',
+                  color: DomainColors.gym,
+                  onTap: () => context.push('/mentor?kind=gym'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MentorChip(
+                  icon: Icons.task_alt_rounded,
+                  label: 'Tasks',
+                  color: DomainColors.tasks,
+                  onTap: () => context.push('/mentor?kind=productivity'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MentorChip extends StatelessWidget {
+  const _MentorChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tt = Theme.of(context).textTheme;
+    return Material(
+      color: color.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(14),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(label,
+                  style: tt.labelMedium?.copyWith(
+                      fontWeight: FontWeight.w700, color: color)),
+            ],
+          ),
+        ),
       ),
     );
   }

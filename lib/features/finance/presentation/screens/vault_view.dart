@@ -81,8 +81,20 @@ class _VaultBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
       children: [
-        Card(
+        Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface.withValues(
+                alpha: Theme.of(context).brightness == Brightness.dark
+                    ? 0.55
+                    : 0.72),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .outlineVariant
+                    .withValues(alpha: 0.45)),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -233,7 +245,14 @@ class _AccountTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isPositive = balance >= 0;
-    return Card(
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      decoration: BoxDecoration(
+        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
@@ -265,12 +284,17 @@ class _AccountTile extends StatelessWidget {
                 ],
               ),
             ),
-            Text(
-              '$formatted $symbol',
-              style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-                color: isPositive ? cs.onSurface : cs.error,
-                letterSpacing: -0.3,
+            Flexible(
+              child: Text(
+                '$formatted $symbol',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.end,
+                style: tt.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: isPositive ? cs.onSurface : cs.error,
+                  letterSpacing: -0.3,
+                ),
               ),
             ),
           ],
