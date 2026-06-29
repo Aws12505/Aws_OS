@@ -3,6 +3,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import 'quick_action_fab.dart';
+
 class MainScaffold extends StatelessWidget {
   const MainScaffold({super.key, required this.child, required this.location});
 
@@ -60,6 +62,7 @@ class MainScaffold extends StatelessWidget {
     return Scaffold(
       extendBody: true,
       body: child,
+      floatingActionButton: const QuickActionFab(),
       bottomNavigationBar: ClipRRect(
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),

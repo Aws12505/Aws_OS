@@ -39,7 +39,7 @@ class MeasurementsView extends ConsumerWidget {
                 ),
                 icon: const Icon(Icons.add_rounded),
                 label: const Text('Manage types'),
-                onPressed: () => _showTypesSheet(context),
+                onPressed: () => showMeasurementTypesSheet(context),
               ),
             );
           }
@@ -68,7 +68,8 @@ class MeasurementsView extends ConsumerWidget {
               return ListView(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
                 children: [
-                  _ManageTypesCard(onTap: () => _showTypesSheet(context)),
+                  _ManageTypesCard(
+                      onTap: () => showMeasurementTypesSheet(context)),
                   if (trendTypes.isNotEmpty) ...[
                     const _SectionLabel('Trends'),
                     SizedBox(
@@ -108,21 +109,6 @@ class MeasurementsView extends ConsumerWidget {
               );
             },
           );
-        },
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: DomainColors.gym,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Entry'),
-        onPressed: () {
-          final types =
-              ref.read(measurementTypesStreamProvider).value ?? const [];
-          if (types.isEmpty) {
-            _showTypesSheet(context);
-          } else {
-            _showEntrySheet(context);
-          }
         },
       ),
     );
@@ -351,7 +337,7 @@ class _EntryTile extends StatelessWidget {
   }
 }
 
-void _showTypesSheet(BuildContext context) {
+void showMeasurementTypesSheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -363,7 +349,7 @@ void _showTypesSheet(BuildContext context) {
   );
 }
 
-void _showEntrySheet(BuildContext context) {
+void showMeasurementEntrySheet(BuildContext context) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -392,16 +378,32 @@ class _TypesSheet extends ConsumerWidget {
           Text('Measurement types',
               style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 12),
-          for (final t in types)
-            ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              title: Text(t.name),
-              subtitle: t.unit == null ? null : Text(t.unit!),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () =>
-                    ref.read(gymDaoProvider).deleteMeasurementType(t.id),
+          if (types.isNotEmpty)
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final t in types)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(t.name,
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                        subtitle: t.unit == null
+                            ? null
+                            : Text(t.unit!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => ref
+                              .read(gymDaoProvider)
+                              .deleteMeasurementType(t.id),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           const Divider(),

@@ -206,7 +206,9 @@ class _FormState extends ConsumerState<_Form> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  DropdownButton<RecurrenceFreq>(
+                  Expanded(
+                    child: DropdownButton<RecurrenceFreq>(
+                    isExpanded: true,
                     value: _freq,
                     onChanged: (v) {
                       if (v != null) setState(() => _freq = v);
@@ -221,6 +223,7 @@ class _FormState extends ConsumerState<_Form> {
                       DropdownMenuItem(
                           value: RecurrenceFreq.yearly, child: Text('years')),
                     ],
+                    ),
                   ),
                 ],
               ),

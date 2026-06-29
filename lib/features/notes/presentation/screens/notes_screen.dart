@@ -37,13 +37,6 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final mappingsAsync = ref.watch(noteTagsStreamProvider);
 
     return AppScaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: DomainColors.notes,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Note'),
-        onPressed: () => showNoteFormSheet(context),
-      ),
       body: Column(
         children: [
           const SectionHeader(kicker: 'Capture', title: 'Notes'),
@@ -319,7 +312,7 @@ class _NoteTile extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(
+    Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
       builder: (_) => _NoteViewer(note: note, tags: tags),
     ));
   }

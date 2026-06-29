@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../data/finance_dao.dart';
 import '../providers.dart';
-import '../widgets/add_transaction_chooser.dart';
 import 'accounts_screen.dart';
 import 'budgets_screen.dart';
 import 'categories_screen.dart';
@@ -108,11 +107,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Add'),
-        onPressed: () => showAddTransactionChooser(context),
-      ),
     );
   }
 }
@@ -130,7 +124,7 @@ class _ManageMenu extends StatelessWidget {
           'budgets': const BudgetsScreen(),
           'recurring': const RecurringScreen(),
         };
-        Navigator.of(context)
+        Navigator.of(context, rootNavigator: true)
             .push(MaterialPageRoute(builder: (_) => routes[v]!));
       },
       itemBuilder: (_) => const [

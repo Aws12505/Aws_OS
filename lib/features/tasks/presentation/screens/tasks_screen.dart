@@ -253,14 +253,6 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: accent,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text('Task'),
-        onPressed: () =>
-            showTaskFormSheet(context, workspaceId: active.id),
-      ),
     );
   }
 }
@@ -568,9 +560,10 @@ class _TaskTile extends ConsumerWidget {
                         showTaskFormSheet(context,
                             workspaceId: workspaceId, existing: task);
                       case 'history':
-                        Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) =>
-                                TaskHistoryScreen(taskId: task.id)));
+                        Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    TaskHistoryScreen(taskId: task.id)));
                       case 'delete':
                         final ok = await showDialog<bool>(
                           context: context,

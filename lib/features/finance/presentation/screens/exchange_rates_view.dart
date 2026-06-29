@@ -47,7 +47,11 @@ class ExchangeRatesView extends ConsumerWidget {
             return Card(
               child: ListTile(
                 leading: const Icon(Icons.swap_horiz),
-                title: Text('1 $from = $formatted $to'),
+                title: Text(
+                  '1 $from = $formatted $to',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 subtitle: Text(dateStr),
               ),
             );

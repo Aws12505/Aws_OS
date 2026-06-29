@@ -28,16 +28,11 @@ class ProgramsView extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        icon: const Icon(Icons.add),
-        label: const Text('Program'),
-        onPressed: () => _showProgramSheet(context),
-      ),
     );
   }
 }
 
-void _showProgramSheet(BuildContext context, {Program? existing}) {
+void showProgramFormSheet(BuildContext context, {Program? existing}) {
   showModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
@@ -193,7 +188,7 @@ class _ProgramTile extends ConsumerWidget {
           onSelected: (v) async {
             switch (v) {
               case 'edit':
-                _showProgramSheet(context, existing: program);
+                showProgramFormSheet(context, existing: program);
               case 'delete':
                 final ok = await showDialog<bool>(
                   context: context,
@@ -221,9 +216,11 @@ class _ProgramTile extends ConsumerWidget {
             PopupMenuItem(value: 'delete', child: Text('Delete')),
           ],
         ),
-        onTap: () => Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => ProgramDetailScreen(program: program),
-        )),
+        onTap: () => Navigator.of(context, rootNavigator: true).push(
+          MaterialPageRoute(
+            builder: (_) => ProgramDetailScreen(program: program),
+          ),
+        ),
       ),
     );
   }

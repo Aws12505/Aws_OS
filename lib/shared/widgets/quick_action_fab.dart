@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../features/finance/presentation/widgets/exchange_form_sheet.dart';
+import '../../features/mentor/data/forecast_service.dart';
 import '../../features/finance/presentation/widgets/income_expense_form_sheet.dart';
 import '../../features/finance/presentation/widgets/transfer_form_sheet.dart';
+import '../../features/gym/presentation/providers.dart';
+import '../../features/gym/presentation/screens/measurements_view.dart';
+import '../../features/gym/presentation/screens/programs_view.dart';
 import '../../features/notes/presentation/widgets/note_form_sheet.dart';
 import '../../features/tasks/presentation/providers.dart';
 import '../../features/tasks/presentation/widgets/task_form_sheet.dart';
@@ -36,52 +41,90 @@ class _QuickActionSheet extends StatelessWidget {
   const _QuickActionSheet({required this.ref});
   final WidgetRef ref;
 
-  static const _actions = <_Action>[
-    _Action(
-      icon: Icons.trending_down_rounded,
-      label: 'Expense',
-      sublabel: 'Money out',
-      color: Color(0xFFEF4444),
-      key: 'expense',
-    ),
-    _Action(
-      icon: Icons.trending_up_rounded,
-      label: 'Income',
-      sublabel: 'Money in',
-      color: Color(0xFF22C55E),
-      key: 'income',
-    ),
-    _Action(
-      icon: Icons.compare_arrows_rounded,
-      label: 'Transfer',
-      sublabel: 'Same currency',
-      color: Color(0xFF3B82F6),
-      key: 'transfer',
-    ),
-    _Action(
-      icon: Icons.swap_horiz_rounded,
-      label: 'Exchange',
-      sublabel: 'Cross currency',
-      color: Color(0xFF8B5CF6),
-      key: 'exchange',
-    ),
-    _Action(
-      icon: Icons.task_alt_rounded,
-      label: 'Task',
-      sublabel: 'Add to workspace',
-      color: Color(0xFF14B8A6),
-      key: 'task',
-    ),
-    _Action(
-      icon: Icons.sticky_note_2_rounded,
-      label: 'Note',
-      sublabel: 'Markdown note',
-      color: Color(0xFFF59E0B),
-      key: 'note',
-    ),
+  static const _sections = <_Section>[
+    _Section('Money', [
+      _Action(
+        icon: Icons.trending_down_rounded,
+        label: 'Expense',
+        sublabel: 'Money out',
+        color: Color(0xFFEF4444),
+        key: 'expense',
+      ),
+      _Action(
+        icon: Icons.trending_up_rounded,
+        label: 'Income',
+        sublabel: 'Money in',
+        color: Color(0xFF22C55E),
+        key: 'income',
+      ),
+      _Action(
+        icon: Icons.compare_arrows_rounded,
+        label: 'Transfer',
+        sublabel: 'Same currency',
+        color: Color(0xFF3B82F6),
+        key: 'transfer',
+      ),
+      _Action(
+        icon: Icons.swap_horiz_rounded,
+        label: 'Exchange',
+        sublabel: 'Cross currency',
+        color: Color(0xFF8B5CF6),
+        key: 'exchange',
+      ),
+    ]),
+    _Section('Plan', [
+      _Action(
+        icon: Icons.task_alt_rounded,
+        label: 'Task',
+        sublabel: 'Add to workspace',
+        color: Color(0xFF14B8A6),
+        key: 'task',
+      ),
+      _Action(
+        icon: Icons.sticky_note_2_rounded,
+        label: 'Note',
+        sublabel: 'Markdown note',
+        color: Color(0xFFF59E0B),
+        key: 'note',
+      ),
+    ]),
+    _Section('Gym', [
+      _Action(
+        icon: Icons.straighten_rounded,
+        label: 'Measurement',
+        sublabel: 'Log an entry',
+        color: Color(0xFF6366F1),
+        key: 'measurement',
+      ),
+      _Action(
+        icon: Icons.list_alt_rounded,
+        label: 'Program',
+        sublabel: 'New routine',
+        color: Color(0xFFEC4899),
+        key: 'program',
+      ),
+    ]),
+    _Section('More', [
+      _Action(
+        icon: Icons.psychology_rounded,
+        label: 'Mentor',
+        sublabel: 'AI advice',
+        color: Color(0xFF0EA5E9),
+        key: 'mentor',
+      ),
+      _Action(
+        icon: Icons.tune_rounded,
+        label: 'Manage',
+        sublabel: 'Accounts & more',
+        color: Color(0xFF64748B),
+        key: 'manage',
+      ),
+    ]),
   ];
 
   void _handleTap(BuildContext context, String key) {
+    // Capture the router before popping so navigation uses a live context.
+    final router = GoRouter.of(context);
     Navigator.pop(context);
     switch (key) {
       case 'expense':
@@ -101,7 +144,75 @@ class _QuickActionSheet extends StatelessWidget {
         }
       case 'note':
         showNoteFormSheet(context);
+      case 'measurement':
+        final types =
+            ref.read(measurementTypesStreamProvider).value ?? const [];
+        if (types.isEmpty) {
+          showMeasurementTypesSheet(context);
+        } else {
+          showMeasurementEntrySheet(context);
+        }
+      case 'program':
+        showProgramFormSheet(context);
+      case 'mentor':
+        _showMentorChooser(context, router);
+      case 'manage':
+        router.go('/finance');
     }
+  }
+
+  void _showMentorChooser(BuildContext context, GoRouter router) {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetCtx) {
+        final tt = Theme.of(sheetCtx).textTheme;
+        const accent = Color(0xFF0EA5E9);
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Ask a mentor',
+                    style: tt.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                ),
+                for (final kind in MentorKind.values)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        color: accent.withValues(alpha: 0.14),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(Icons.psychology_rounded,
+                          color: accent, size: 20),
+                    ),
+                    title: Text(kind.title,
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    subtitle: Text(kind.tagline),
+                    onTap: () {
+                      Navigator.pop(sheetCtx);
+                      router.push('/mentor?kind=${kind.name}');
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -116,7 +227,7 @@ class _QuickActionSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.only(bottom: 20),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
                   Text(
@@ -140,19 +251,44 @@ class _QuickActionSheet extends StatelessWidget {
                 ],
               ),
             ),
-            GridView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 3,
-                mainAxisSpacing: 12,
-                crossAxisSpacing: 12,
-                childAspectRatio: 1.0,
-              ),
-              itemCount: _actions.length,
-              itemBuilder: (_, i) => _ActionCard(
-                action: _actions[i],
-                onTap: () => _handleTap(context, _actions[i].key),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final section in _sections) ...[
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(2, 8, 2, 10),
+                        child: Text(
+                          section.title.toUpperCase(),
+                          style: tt.labelMedium?.copyWith(
+                            color: cs.onSurfaceVariant,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.8,
+                          ),
+                        ),
+                      ),
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 3,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          mainAxisExtent: 124,
+                        ),
+                        itemCount: section.actions.length,
+                        itemBuilder: (_, i) => _ActionCard(
+                          action: section.actions[i],
+                          onTap: () =>
+                              _handleTap(context, section.actions[i].key),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
           ],
@@ -207,6 +343,8 @@ class _ActionCard extends StatelessWidget {
                   color: cs.onSurface,
                 ),
                 textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Text(
@@ -225,6 +363,12 @@ class _ActionCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _Section {
+  const _Section(this.title, this.actions);
+  final String title;
+  final List<_Action> actions;
 }
 
 class _Action {

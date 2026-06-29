@@ -27,8 +27,8 @@ class VaultView extends ConsumerWidget {
             message:
                 'Add a currency before creating accounts (e.g. USD, SYP).',
             actionLabel: 'Add currency',
-            onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => const CurrenciesScreen())),
+            onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute(builder: (_) => const CurrenciesScreen())),
           );
         }
         return accountsAsync.when(
@@ -40,8 +40,8 @@ class VaultView extends ConsumerWidget {
                 title: 'No accounts yet',
                 message: 'Add at least one account to start tracking balances.',
                 actionLabel: 'Add account',
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => const AccountsScreen())),
+                onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(builder: (_) => const AccountsScreen())),
               );
             }
             final balances = balancesAsync.value ?? const <String, double>{};
@@ -180,12 +180,17 @@ class _TotalRow extends StatelessWidget {
               ),
             ),
           ),
-          const Spacer(),
-          Text(
-            '$text $symbol',
-            style: tt.titleMedium?.copyWith(
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.3,
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              '$text $symbol',
+              textAlign: TextAlign.end,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: tt.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.3,
+              ),
             ),
           ),
         ],

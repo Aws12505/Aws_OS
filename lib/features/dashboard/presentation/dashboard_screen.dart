@@ -13,7 +13,6 @@ import '../../finance/presentation/widgets/confirm_occurrence_sheet.dart';
 import '../../gym/presentation/providers.dart' as gym;
 import '../../notes/presentation/providers.dart' as notes;
 import '../../tasks/presentation/providers.dart' as tasks;
-import '../../../shared/widgets/quick_action_fab.dart';
 import 'debrief_providers.dart';
 import '../../../shared/design/tokens.dart';
 import 'package:go_router/go_router.dart';
@@ -53,9 +52,8 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Scaffold(
-      body: const _DashboardBody(),
-      floatingActionButton: const QuickActionFab(),
+    return const Scaffold(
+      body: _DashboardBody(),
     );
   }
 }
@@ -1162,6 +1160,9 @@ class _MentorChip extends StatelessWidget {
               Icon(icon, color: color, size: 22),
               const SizedBox(height: 6),
               Text(label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                   style: tt.labelMedium?.copyWith(
                       fontWeight: FontWeight.w700, color: color)),
             ],

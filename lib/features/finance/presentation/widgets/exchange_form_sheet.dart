@@ -207,7 +207,13 @@ class _FormState extends ConsumerState<_Form> {
                     children: [
                       const Icon(Icons.calculate_outlined),
                       const SizedBox(width: 12),
-                      Expanded(child: Text('Rate: $rateText')),
+                      Expanded(
+                        child: Text(
+                          'Rate: $rateText',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
