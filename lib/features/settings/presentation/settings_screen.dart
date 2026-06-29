@@ -8,6 +8,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/ai/ai_config.dart';
+import '../../../core/ai/ai_provider_presets.dart';
 import '../../../core/ai/ai_providers.dart';
 import '../../../core/ai/ai_service.dart';
 import '../../../core/providers/auth_provider.dart';
@@ -644,6 +645,32 @@ class _AiSectionState extends ConsumerState<_AiSection> {
     if (result != null) onSave(result);
   }
 
+  Future<void> _pickProvider() async {
+    final cfg = _cfg ?? AiConfig.empty;
+    final current = presetForBaseUrl(cfg.baseUrl);
+    final chosen = await showDialog<AiProviderPreset>(
+      context: context,
+      builder: (dCtx) => SimpleDialog(
+        title: const Text('Provider'),
+        children: [
+          for (final p in kAiProviderPresets)
+            ListTile(
+              title: Text(p.label),
+              subtitle: p.isCustom
+                  ? const Text('Enter base URL and model manually')
+                  : Text(p.baseUrl),
+              trailing: p == current
+                  ? const Icon(Icons.check_rounded)
+                  : null,
+              onTap: () => Navigator.pop(dCtx, p),
+            ),
+        ],
+      ),
+    );
+    if (chosen == null || chosen.isCustom) return;
+    await _save(baseUrl: chosen.baseUrl, model: chosen.defaultModel);
+  }
+
   Future<void> _test() async {
     final cfg = _cfg;
     final messenger = ScaffoldMessenger.of(context);
@@ -688,6 +715,13 @@ class _AiSectionState extends ConsumerState<_AiSection> {
         ),
         ListTile(
           enabled: cfg.enabled,
+          title: const Text('Provider'),
+          subtitle: Text(presetForBaseUrl(cfg.baseUrl).label),
+          trailing: const Icon(Icons.expand_more_rounded),
+          onTap: _pickProvider,
+        ),
+        ListTile(
+          enabled: cfg.enabled,
           title: const Text('Provider base URL'),
           subtitle: Text(cfg.baseUrl.isEmpty
               ? 'Not set — e.g. https://api.openai.com/v1'
@@ -715,7 +749,7 @@ class _AiSectionState extends ConsumerState<_AiSection> {
           enabled: cfg.enabled,
           title: const Text('API key'),
           subtitle: Text(cfg.apiKey.isEmpty
-              ? 'Not set (optional for local servers)'
+              ? 'Not set (required for Gemini/OpenAI, optional for local servers)'
               : '•••••••• set'),
           trailing: const Icon(Icons.key_rounded),
           onTap: () async {

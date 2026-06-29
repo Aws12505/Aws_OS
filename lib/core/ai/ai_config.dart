@@ -1,6 +1,8 @@
 /// Immutable AI configuration. The user brings their own OpenAI-compatible
-/// endpoint — OpenAI, OpenRouter, Groq, Together, a local Ollama/LM Studio
-/// server, etc. Nothing here is tied to a specific vendor.
+/// endpoint — OpenAI, Google Gemini (via its OpenAI-compatible endpoint),
+/// OpenRouter, Groq, Together, a local Ollama/LM Studio server, etc. Nothing
+/// here is tied to a specific vendor; one-tap presets live in
+/// `ai_provider_presets.dart`.
 class AiConfig {
   const AiConfig({
     required this.enabled,
