@@ -8,6 +8,7 @@ import '../../../../shared/widgets/app_background.dart';
 import '../providers.dart';
 import '../widgets/task_form_sheet.dart';
 import '../widgets/workspace_form_sheet.dart';
+import 'task_detail_screen.dart';
 import 'task_history_screen.dart';
 
 const _wsPalette = <Color>[
@@ -473,7 +474,10 @@ class _TaskTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final hasDates = task.dueAt != null || task.deadlineAt != null;
+    final hasCategory =
+        task.category != null && task.category!.trim().isNotEmpty;
+    final hasMeta =
+        task.dueAt != null || task.deadlineAt != null || hasCategory;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       decoration: BoxDecoration(
@@ -506,46 +510,66 @@ class _TaskTile extends ConsumerWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        task.title,
-                        style: tt.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: task.isCompleted
-                              ? cs.onSurfaceVariant
-                              : cs.onSurface,
-                          decoration: task.isCompleted
-                              ? TextDecoration.lineThrough
-                              : null,
-                          decorationColor: cs.onSurfaceVariant,
-                        ),
+                  child: GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => Navigator.of(context, rootNavigator: true).push(
+                      MaterialPageRoute(
+                        builder: (_) => TaskDetailScreen(taskId: task.id),
                       ),
-                      if (hasDates) ...[
-                        const SizedBox(height: 6),
-                        Wrap(
-                          spacing: 6,
-                          runSpacing: 4,
-                          children: [
-                            if (task.dueAt != null)
-                              _DateChip(
-                                icon: Icons.schedule_rounded,
-                                label:
-                                    'Due ${DateFormat.MMMd().format(task.dueAt!)}',
-                                color: const Color(0xFF3B82F6),
-                              ),
-                            if (task.deadlineAt != null)
-                              _DateChip(
-                                icon: Icons.flag_rounded,
-                                label:
-                                    'Deadline ${DateFormat.MMMd().format(task.deadlineAt!)}',
-                                color: const Color(0xFFEF4444),
-                              ),
-                          ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.title,
+                          style: tt.bodyLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: task.isCompleted
+                                ? cs.onSurfaceVariant
+                                : cs.onSurface,
+                            decoration: task.isCompleted
+                                ? TextDecoration.lineThrough
+                                : null,
+                            decorationColor: cs.onSurfaceVariant,
+                          ),
                         ),
+                        if (hasMeta) ...[
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 4,
+                            children: [
+                              if (hasCategory)
+                                _DateChip(
+                                  icon: Icons.label_rounded,
+                                  label: task.category!,
+                                  color: const Color(0xFF8B5CF6),
+                                ),
+                              if (task.recurrenceId != null)
+                                _DateChip(
+                                  icon: Icons.repeat_rounded,
+                                  label: 'Repeats',
+                                  color: const Color(0xFF14B8A6),
+                                ),
+                              if (task.dueAt != null)
+                                _DateChip(
+                                  icon: Icons.schedule_rounded,
+                                  label:
+                                      'Due ${DateFormat.MMMd().format(task.dueAt!)}',
+                                  color: const Color(0xFF3B82F6),
+                                ),
+                              if (task.deadlineAt != null)
+                                _DateChip(
+                                  icon: Icons.flag_rounded,
+                                  label:
+                                      'Deadline ${DateFormat.MMMd().format(task.deadlineAt!)}',
+                                  color: const Color(0xFFEF4444),
+                                ),
+                            ],
+                          ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 PopupMenuButton<String>(
@@ -553,6 +577,11 @@ class _TaskTile extends ConsumerWidget {
                       size: 18, color: cs.onSurfaceVariant),
                   onSelected: (v) async {
                     switch (v) {
+                      case 'details':
+                        Navigator.of(context, rootNavigator: true).push(
+                            MaterialPageRoute(
+                                builder: (_) =>
+                                    TaskDetailScreen(taskId: task.id)));
                       case 'subtask':
                         showTaskFormSheet(context,
                             workspaceId: workspaceId, parentTaskId: task.id);
@@ -591,6 +620,7 @@ class _TaskTile extends ConsumerWidget {
                     }
                   },
                   itemBuilder: (_) => const [
+                    PopupMenuItem(value: 'details', child: Text('Details')),
                     PopupMenuItem(value: 'subtask', child: Text('Add subtask')),
                     PopupMenuItem(value: 'edit', child: Text('Edit')),
                     PopupMenuItem(value: 'history', child: Text('History')),

@@ -79,6 +79,45 @@ class TasksDao extends DatabaseAccessor<AppDatabase> with _$TasksDaoMixin {
     );
   }
 
+  // -- Recurrences --------------------------------------------------------
+
+  Stream<List<TaskRecurrence>> watchRecurrences() =>
+      select(taskRecurrences).watch();
+
+  Future<TaskRecurrence?> getRecurrence(String id) =>
+      (select(taskRecurrences)..where((t) => t.id.equals(id)))
+          .getSingleOrNull();
+
+  Future<TaskRecurrence> upsertRecurrenceReturning(
+      TaskRecurrencesCompanion r) async {
+    final now = DateTime.now();
+    return into(taskRecurrences).insertReturning(
+      r.copyWith(updatedAt: Value(now)),
+      mode: InsertMode.insertOrReplace,
+    );
+  }
+
+  Future<void> updateRecurrenceNextDue(String id, DateTime? next) {
+    return (update(taskRecurrences)..where((t) => t.id.equals(id))).write(
+      TaskRecurrencesCompanion(
+        nextDueAt: Value(next),
+        updatedAt: Value(DateTime.now()),
+      ),
+    );
+  }
+
+  Future<void> endRecurrence(String id) {
+    final now = DateTime.now();
+    return (update(taskRecurrences)..where((t) => t.id.equals(id))).write(
+      TaskRecurrencesCompanion(endedAt: Value(now), updatedAt: Value(now)),
+    );
+  }
+
+  /// All tasks generated from (or anchoring) a given recurrence — used to
+  /// avoid materializing duplicate occurrences.
+  Future<List<Task>> getTasksForRecurrence(String recurrenceId) =>
+      (select(tasks)..where((t) => t.recurrenceId.equals(recurrenceId))).get();
+
   // -- History ------------------------------------------------------------
 
   Future<void> appendHistory({

@@ -13,6 +13,7 @@ import '../../finance/presentation/widgets/confirm_occurrence_sheet.dart';
 import '../../gym/presentation/providers.dart' as gym;
 import '../../notes/presentation/providers.dart' as notes;
 import '../../tasks/presentation/providers.dart' as tasks;
+import '../../tasks/presentation/screens/task_detail_screen.dart';
 import 'debrief_providers.dart';
 import '../../../shared/design/tokens.dart';
 import 'package:go_router/go_router.dart';
@@ -68,8 +69,10 @@ class _DashboardBody extends ConsumerWidget {
     return SafeArea(
       bottom: false,
       child: RefreshIndicator(
-        onRefresh: () =>
-            ref.read(fin.recurrenceServiceProvider).materializeAll(),
+        onRefresh: () => Future.wait([
+          ref.read(fin.recurrenceServiceProvider).materializeAll(),
+          ref.read(tasks.taskRecurrenceServiceProvider).materializeAll(),
+        ]),
         child: ListView(
         padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
         children: [
@@ -584,6 +587,9 @@ class _TransactionsForDayCard extends ConsumerWidget {
     final cats =
         ref.watch(fin.allCategoriesProvider).value ?? const <Category>[];
     final catNames = {for (final c in cats) c.id: c.name};
+    final currencies =
+        ref.watch(fin.currenciesStreamProvider).value ?? const <Currency>[];
+    final byCur = {for (final c in currencies) c.id: c};
     final dayTxs =
         txs.where((t) => t.transaction.occurredAt.isSameDay(date)).toList();
     if (dayTxs.isEmpty) return const SizedBox.shrink();
@@ -643,15 +649,58 @@ class _TransactionsForDayCard extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Text(DateFormat.Hm().format(t.transaction.occurredAt),
-                      style:
-                          tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 132),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          _amountLabel(t, byCur),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: tt.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: _txColor(t.transaction.kind),
+                          ),
+                        ),
+                        Text(DateFormat.Hm().format(t.transaction.occurredAt),
+                            style: tt.bodySmall
+                                ?.copyWith(color: cs.onSurfaceVariant)),
+                      ],
+                    ),
+                  ),
                 ],
               ),
             ),
         ],
       ),
     );
+  }
+
+  /// Compact signed amount per currency for a transaction. Falls back to the
+  /// gross moved amount when legs net to zero (e.g. a same-currency transfer).
+  String _amountLabel(TransactionWithLegs t, Map<String, Currency> byCur) {
+    final net = <String, double>{};
+    for (final l in t.legs) {
+      net[l.currencyId] = (net[l.currencyId] ?? 0) + l.amount;
+    }
+    final allZero = net.values.every((v) => v.abs() < 1e-9);
+    if (allZero && t.legs.isNotEmpty) {
+      net.clear();
+      for (final l in t.legs) {
+        if (l.amount > 0) net[l.currencyId] = (net[l.currencyId] ?? 0) + l.amount;
+      }
+    }
+    final parts = <String>[];
+    net.forEach((curId, amount) {
+      final c = byCur[curId];
+      final dp = c?.decimalPlaces ?? 2;
+      final formatted =
+          NumberFormat.decimalPatternDigits(decimalDigits: dp).format(amount);
+      final sign = amount > 0 ? '+' : '';
+      parts.add('$sign$formatted ${c?.symbol ?? c?.code ?? ''}'.trim());
+    });
+    return parts.join('  ');
   }
 }
 
@@ -740,17 +789,40 @@ class _TasksForDayCard extends ConsumerWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      t.title,
-                      style: tt.bodyMedium?.copyWith(
-                        color:
-                            t.isCompleted ? cs.onSurfaceVariant : cs.onSurface,
-                        decoration: t.isCompleted
-                            ? TextDecoration.lineThrough
-                            : null,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () =>
+                          Navigator.of(context, rootNavigator: true).push(
+                        MaterialPageRoute(
+                          builder: (_) => TaskDetailScreen(taskId: t.id),
+                        ),
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t.title,
+                            style: tt.bodyMedium?.copyWith(
+                              color: t.isCompleted
+                                  ? cs.onSurfaceVariant
+                                  : cs.onSurface,
+                              decoration: t.isCompleted
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (_taskSubtitle(t) != null)
+                            Text(
+                              _taskSubtitle(t)!,
+                              style: tt.bodySmall
+                                  ?.copyWith(color: cs.onSurfaceVariant),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -759,6 +831,20 @@ class _TasksForDayCard extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  /// A compact "category • due time" subtitle, or null when there's nothing
+  /// extra to show.
+  String? _taskSubtitle(Task t) {
+    final bits = <String>[];
+    if (t.category != null && t.category!.trim().isNotEmpty) {
+      bits.add(t.category!.trim());
+    }
+    final due = t.dueAt;
+    if (due != null && (due.hour != 0 || due.minute != 0)) {
+      bits.add(DateFormat.Hm().format(due));
+    }
+    return bits.isEmpty ? null : bits.join('  •  ');
   }
 }
 

@@ -39,8 +39,10 @@ class TasksRepository {
     String? parentTaskId,
     required String title,
     String? bodyMd,
+    String? category,
     DateTime? dueAt,
     DateTime? deadlineAt,
+    String? recurrenceId,
     int sortOrder = 0,
   }) async {
     final saved = await dao.upsertTaskReturning(TasksCompanion(
@@ -49,8 +51,10 @@ class TasksRepository {
       parentTaskId: Value(parentTaskId),
       title: Value(title),
       bodyMd: Value(bodyMd),
+      category: Value(category),
       dueAt: Value(dueAt),
       deadlineAt: Value(deadlineAt),
+      recurrenceId: Value(recurrenceId),
       sortOrder: Value(sortOrder),
     ));
     await dao.appendHistory(
@@ -59,12 +63,36 @@ class TasksRepository {
       snapshot: {
         'title': title,
         'workspaceId': workspaceId,
+        'category': ?category,
         if (dueAt != null) 'dueAt': dueAt.toIso8601String(),
         if (deadlineAt != null) 'deadlineAt': deadlineAt.toIso8601String(),
       },
     );
     return saved;
   }
+
+  // -- Recurrences --------------------------------------------------------
+
+  Stream<List<TaskRecurrence>> watchRecurrences() => dao.watchRecurrences();
+  Future<TaskRecurrence?> getRecurrence(String id) => dao.getRecurrence(id);
+
+  Future<TaskRecurrence> upsertRecurrence({
+    String? id,
+    required String ruleJson,
+    required String templateJson,
+    required DateTime startDate,
+    DateTime? nextDueAt,
+  }) {
+    return dao.upsertRecurrenceReturning(TaskRecurrencesCompanion(
+      id: id == null ? const Value.absent() : Value(id),
+      ruleJson: Value(ruleJson),
+      templateJson: Value(templateJson),
+      startDate: Value(startDate),
+      nextDueAt: Value(nextDueAt),
+    ));
+  }
+
+  Future<void> endRecurrence(String id) => dao.endRecurrence(id);
 
   Future<void> toggleCompletion(String id, {required bool completed}) async {
     await dao.setCompletion(id, completed);

@@ -6564,6 +6564,17 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _categoryMeta = const VerificationMeta(
+    'category',
+  );
+  @override
+  late final GeneratedColumn<String> category = GeneratedColumn<String>(
+    'category',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _dueAtMeta = const VerificationMeta('dueAt');
   @override
   late final GeneratedColumn<DateTime> dueAt = GeneratedColumn<DateTime>(
@@ -6644,6 +6655,7 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
     parentTaskId,
     title,
     bodyMd,
+    category,
     dueAt,
     deadlineAt,
     isCompleted,
@@ -6710,6 +6722,12 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
       context.handle(
         _bodyMdMeta,
         bodyMd.isAcceptableOrUnknown(data['body_md']!, _bodyMdMeta),
+      );
+    }
+    if (data.containsKey('category')) {
+      context.handle(
+        _categoryMeta,
+        category.isAcceptableOrUnknown(data['category']!, _categoryMeta),
       );
     }
     if (data.containsKey('due_at')) {
@@ -6794,6 +6812,10 @@ class $TasksTable extends Tasks with TableInfo<$TasksTable, Task> {
         DriftSqlType.string,
         data['${effectivePrefix}body_md'],
       ),
+      category: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}category'],
+      ),
       dueAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}due_at'],
@@ -6835,6 +6857,7 @@ class Task extends DataClass implements Insertable<Task> {
   final String? parentTaskId;
   final String title;
   final String? bodyMd;
+  final String? category;
   final DateTime? dueAt;
   final DateTime? deadlineAt;
   final bool isCompleted;
@@ -6849,6 +6872,7 @@ class Task extends DataClass implements Insertable<Task> {
     this.parentTaskId,
     required this.title,
     this.bodyMd,
+    this.category,
     this.dueAt,
     this.deadlineAt,
     required this.isCompleted,
@@ -6869,6 +6893,9 @@ class Task extends DataClass implements Insertable<Task> {
     map['title'] = Variable<String>(title);
     if (!nullToAbsent || bodyMd != null) {
       map['body_md'] = Variable<String>(bodyMd);
+    }
+    if (!nullToAbsent || category != null) {
+      map['category'] = Variable<String>(category);
     }
     if (!nullToAbsent || dueAt != null) {
       map['due_at'] = Variable<DateTime>(dueAt);
@@ -6900,6 +6927,9 @@ class Task extends DataClass implements Insertable<Task> {
       bodyMd: bodyMd == null && nullToAbsent
           ? const Value.absent()
           : Value(bodyMd),
+      category: category == null && nullToAbsent
+          ? const Value.absent()
+          : Value(category),
       dueAt: dueAt == null && nullToAbsent
           ? const Value.absent()
           : Value(dueAt),
@@ -6930,6 +6960,7 @@ class Task extends DataClass implements Insertable<Task> {
       parentTaskId: serializer.fromJson<String?>(json['parentTaskId']),
       title: serializer.fromJson<String>(json['title']),
       bodyMd: serializer.fromJson<String?>(json['bodyMd']),
+      category: serializer.fromJson<String?>(json['category']),
       dueAt: serializer.fromJson<DateTime?>(json['dueAt']),
       deadlineAt: serializer.fromJson<DateTime?>(json['deadlineAt']),
       isCompleted: serializer.fromJson<bool>(json['isCompleted']),
@@ -6949,6 +6980,7 @@ class Task extends DataClass implements Insertable<Task> {
       'parentTaskId': serializer.toJson<String?>(parentTaskId),
       'title': serializer.toJson<String>(title),
       'bodyMd': serializer.toJson<String?>(bodyMd),
+      'category': serializer.toJson<String?>(category),
       'dueAt': serializer.toJson<DateTime?>(dueAt),
       'deadlineAt': serializer.toJson<DateTime?>(deadlineAt),
       'isCompleted': serializer.toJson<bool>(isCompleted),
@@ -6966,6 +6998,7 @@ class Task extends DataClass implements Insertable<Task> {
     Value<String?> parentTaskId = const Value.absent(),
     String? title,
     Value<String?> bodyMd = const Value.absent(),
+    Value<String?> category = const Value.absent(),
     Value<DateTime?> dueAt = const Value.absent(),
     Value<DateTime?> deadlineAt = const Value.absent(),
     bool? isCompleted,
@@ -6980,6 +7013,7 @@ class Task extends DataClass implements Insertable<Task> {
     parentTaskId: parentTaskId.present ? parentTaskId.value : this.parentTaskId,
     title: title ?? this.title,
     bodyMd: bodyMd.present ? bodyMd.value : this.bodyMd,
+    category: category.present ? category.value : this.category,
     dueAt: dueAt.present ? dueAt.value : this.dueAt,
     deadlineAt: deadlineAt.present ? deadlineAt.value : this.deadlineAt,
     isCompleted: isCompleted ?? this.isCompleted,
@@ -7000,6 +7034,7 @@ class Task extends DataClass implements Insertable<Task> {
           : this.parentTaskId,
       title: data.title.present ? data.title.value : this.title,
       bodyMd: data.bodyMd.present ? data.bodyMd.value : this.bodyMd,
+      category: data.category.present ? data.category.value : this.category,
       dueAt: data.dueAt.present ? data.dueAt.value : this.dueAt,
       deadlineAt: data.deadlineAt.present
           ? data.deadlineAt.value
@@ -7027,6 +7062,7 @@ class Task extends DataClass implements Insertable<Task> {
           ..write('parentTaskId: $parentTaskId, ')
           ..write('title: $title, ')
           ..write('bodyMd: $bodyMd, ')
+          ..write('category: $category, ')
           ..write('dueAt: $dueAt, ')
           ..write('deadlineAt: $deadlineAt, ')
           ..write('isCompleted: $isCompleted, ')
@@ -7046,6 +7082,7 @@ class Task extends DataClass implements Insertable<Task> {
     parentTaskId,
     title,
     bodyMd,
+    category,
     dueAt,
     deadlineAt,
     isCompleted,
@@ -7064,6 +7101,7 @@ class Task extends DataClass implements Insertable<Task> {
           other.parentTaskId == this.parentTaskId &&
           other.title == this.title &&
           other.bodyMd == this.bodyMd &&
+          other.category == this.category &&
           other.dueAt == this.dueAt &&
           other.deadlineAt == this.deadlineAt &&
           other.isCompleted == this.isCompleted &&
@@ -7080,6 +7118,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
   final Value<String?> parentTaskId;
   final Value<String> title;
   final Value<String?> bodyMd;
+  final Value<String?> category;
   final Value<DateTime?> dueAt;
   final Value<DateTime?> deadlineAt;
   final Value<bool> isCompleted;
@@ -7095,6 +7134,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentTaskId = const Value.absent(),
     this.title = const Value.absent(),
     this.bodyMd = const Value.absent(),
+    this.category = const Value.absent(),
     this.dueAt = const Value.absent(),
     this.deadlineAt = const Value.absent(),
     this.isCompleted = const Value.absent(),
@@ -7111,6 +7151,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     this.parentTaskId = const Value.absent(),
     required String title,
     this.bodyMd = const Value.absent(),
+    this.category = const Value.absent(),
     this.dueAt = const Value.absent(),
     this.deadlineAt = const Value.absent(),
     this.isCompleted = const Value.absent(),
@@ -7128,6 +7169,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Expression<String>? parentTaskId,
     Expression<String>? title,
     Expression<String>? bodyMd,
+    Expression<String>? category,
     Expression<DateTime>? dueAt,
     Expression<DateTime>? deadlineAt,
     Expression<bool>? isCompleted,
@@ -7144,6 +7186,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       if (parentTaskId != null) 'parent_task_id': parentTaskId,
       if (title != null) 'title': title,
       if (bodyMd != null) 'body_md': bodyMd,
+      if (category != null) 'category': category,
       if (dueAt != null) 'due_at': dueAt,
       if (deadlineAt != null) 'deadline_at': deadlineAt,
       if (isCompleted != null) 'is_completed': isCompleted,
@@ -7162,6 +7205,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
     Value<String?>? parentTaskId,
     Value<String>? title,
     Value<String?>? bodyMd,
+    Value<String?>? category,
     Value<DateTime?>? dueAt,
     Value<DateTime?>? deadlineAt,
     Value<bool>? isCompleted,
@@ -7178,6 +7222,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
       parentTaskId: parentTaskId ?? this.parentTaskId,
       title: title ?? this.title,
       bodyMd: bodyMd ?? this.bodyMd,
+      category: category ?? this.category,
       dueAt: dueAt ?? this.dueAt,
       deadlineAt: deadlineAt ?? this.deadlineAt,
       isCompleted: isCompleted ?? this.isCompleted,
@@ -7211,6 +7256,9 @@ class TasksCompanion extends UpdateCompanion<Task> {
     }
     if (bodyMd.present) {
       map['body_md'] = Variable<String>(bodyMd.value);
+    }
+    if (category.present) {
+      map['category'] = Variable<String>(category.value);
     }
     if (dueAt.present) {
       map['due_at'] = Variable<DateTime>(dueAt.value);
@@ -7246,6 +7294,7 @@ class TasksCompanion extends UpdateCompanion<Task> {
           ..write('parentTaskId: $parentTaskId, ')
           ..write('title: $title, ')
           ..write('bodyMd: $bodyMd, ')
+          ..write('category: $category, ')
           ..write('dueAt: $dueAt, ')
           ..write('deadlineAt: $deadlineAt, ')
           ..write('isCompleted: $isCompleted, ')
@@ -19782,6 +19831,7 @@ typedef $$TasksTableCreateCompanionBuilder =
       Value<String?> parentTaskId,
       required String title,
       Value<String?> bodyMd,
+      Value<String?> category,
       Value<DateTime?> dueAt,
       Value<DateTime?> deadlineAt,
       Value<bool> isCompleted,
@@ -19799,6 +19849,7 @@ typedef $$TasksTableUpdateCompanionBuilder =
       Value<String?> parentTaskId,
       Value<String> title,
       Value<String?> bodyMd,
+      Value<String?> category,
       Value<DateTime?> dueAt,
       Value<DateTime?> deadlineAt,
       Value<bool> isCompleted,
@@ -19901,6 +19952,11 @@ class $$TasksTableFilterComposer extends Composer<_$AppDatabase, $TasksTable> {
 
   ColumnFilters<String> get bodyMd => $composableBuilder(
     column: $table.bodyMd,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get category => $composableBuilder(
+    column: $table.category,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -20040,6 +20096,11 @@ class $$TasksTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get category => $composableBuilder(
+    column: $table.category,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get dueAt => $composableBuilder(
     column: $table.dueAt,
     builder: (column) => ColumnOrderings(column),
@@ -20140,6 +20201,9 @@ class $$TasksTableAnnotationComposer
 
   GeneratedColumn<String> get bodyMd =>
       $composableBuilder(column: $table.bodyMd, builder: (column) => column);
+
+  GeneratedColumn<String> get category =>
+      $composableBuilder(column: $table.category, builder: (column) => column);
 
   GeneratedColumn<DateTime> get dueAt =>
       $composableBuilder(column: $table.dueAt, builder: (column) => column);
@@ -20273,6 +20337,7 @@ class $$TasksTableTableManager
                 Value<String?> parentTaskId = const Value.absent(),
                 Value<String> title = const Value.absent(),
                 Value<String?> bodyMd = const Value.absent(),
+                Value<String?> category = const Value.absent(),
                 Value<DateTime?> dueAt = const Value.absent(),
                 Value<DateTime?> deadlineAt = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
@@ -20288,6 +20353,7 @@ class $$TasksTableTableManager
                 parentTaskId: parentTaskId,
                 title: title,
                 bodyMd: bodyMd,
+                category: category,
                 dueAt: dueAt,
                 deadlineAt: deadlineAt,
                 isCompleted: isCompleted,
@@ -20305,6 +20371,7 @@ class $$TasksTableTableManager
                 Value<String?> parentTaskId = const Value.absent(),
                 required String title,
                 Value<String?> bodyMd = const Value.absent(),
+                Value<String?> category = const Value.absent(),
                 Value<DateTime?> dueAt = const Value.absent(),
                 Value<DateTime?> deadlineAt = const Value.absent(),
                 Value<bool> isCompleted = const Value.absent(),
@@ -20320,6 +20387,7 @@ class $$TasksTableTableManager
                 parentTaskId: parentTaskId,
                 title: title,
                 bodyMd: bodyMd,
+                category: category,
                 dueAt: dueAt,
                 deadlineAt: deadlineAt,
                 isCompleted: isCompleted,

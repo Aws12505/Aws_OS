@@ -39,6 +39,7 @@ class Tasks extends Table with SyncableColumns {
       'NULL REFERENCES tasks(id) ON DELETE CASCADE')();
   TextColumn get title => text()();
   TextColumn get bodyMd => text().nullable()();
+  TextColumn get category => text().nullable()();
   DateTimeColumn get dueAt => dateTime().nullable()();
   DateTimeColumn get deadlineAt => dateTime().nullable()();
   BoolColumn get isCompleted => boolean().withDefault(const Constant(false))();

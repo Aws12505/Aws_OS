@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../core/providers/auth_provider.dart';
 import '../core/providers/reminder_time_provider.dart';
 import '../features/finance/presentation/providers.dart';
+import '../features/tasks/presentation/providers.dart' as tasks;
 import '../shared/widgets/app_background.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -32,6 +33,8 @@ class _AwsOsAppState extends ConsumerState<AwsOsApp>
           .read(recurrenceServiceProvider)
           .setReminderTime(time.hour, time.minute);
       unawaited(ref.read(recurrenceServiceProvider).materializeAll());
+      // Generate upcoming recurring-task instances on boot.
+      unawaited(ref.read(tasks.taskRecurrenceServiceProvider).materializeAll());
     });
   }
 

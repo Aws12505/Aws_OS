@@ -53,7 +53,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -68,6 +68,10 @@ class AppDatabase extends _$AppDatabase {
           // v3: per-category budgets.
           if (from < 3) {
             await m.createTable(budgets);
+          }
+          // v4: optional category label on tasks.
+          if (from < 4) {
+            await m.addColumn(tasks, tasks.category);
           }
         },
         beforeOpen: (details) async {
