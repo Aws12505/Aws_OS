@@ -32,7 +32,7 @@ const kAiProviderPresets = <AiProviderPreset>[
     // internally when this hostname is present.
     baseUrl: 'https://generativelanguage.googleapis.com',
     // Editable; the user can switch to gemini-2.5-flash, gemini-2.0-flash, etc.
-    defaultModel: 'gemini-2.0-flash',
+    defaultModel: 'gemini-3.5-flash',
   ),
   AiProviderPreset(
     label: 'OpenAI',
