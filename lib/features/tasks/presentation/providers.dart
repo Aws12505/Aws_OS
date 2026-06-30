@@ -5,6 +5,7 @@ import '../../../core/providers/database_provider.dart';
 import '../data/task_recurrence_service.dart';
 import '../data/tasks_dao.dart';
 import '../data/tasks_repository.dart';
+import 'task_filter.dart';
 
 final tasksDaoProvider = Provider<TasksDao>((ref) {
   return TasksDao(ref.watch(databaseProvider));
@@ -48,4 +49,17 @@ final allTasksStreamProvider = StreamProvider<List<Task>>((ref) {
 final taskHistoryStreamProvider =
     StreamProvider.family<List<TaskHistoryData>, String>((ref, taskId) {
   return ref.watch(tasksRepositoryProvider).watchHistoryForTask(taskId);
+});
+
+/// Ephemeral filter state — resets on cold start.
+final taskFilterProvider = StateProvider<TaskFilter>((ref) => const TaskFilter());
+
+/// Filtered task list per workspace — replaces [tasksForWorkspaceProvider] in the UI.
+final filteredTasksForWorkspaceProvider =
+    Provider.family<AsyncValue<List<Task>>, String>((ref, workspaceId) {
+  final tasksAsync = ref.watch(tasksForWorkspaceProvider(workspaceId));
+  final filter = ref.watch(taskFilterProvider);
+  return tasksAsync.whenData(
+    (tasks) => tasks.where(filter.matches).toList(),
+  );
 });

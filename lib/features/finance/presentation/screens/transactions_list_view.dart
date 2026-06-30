@@ -4,10 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
+import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 
@@ -23,6 +25,9 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   final _search = TextEditingController();
   String _query = '';
   String _kind = 'all'; // all | income | expense | transfer | exchange
+  DatePreset _datePreset = DatePreset.all;
+  DateTime? _customFrom;
+  DateTime? _customTo;
 
   static const _kinds = ['all', 'income', 'expense', 'transfer', 'exchange'];
 
@@ -30,6 +35,24 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCustomRange() async {
+    final from = await pickDate(context, initial: _customFrom ?? DateTime.now());
+    if (from == null || !mounted) return;
+    final to = await pickDate(context, initial: _customTo ?? from, firstDate: from);
+    if (to == null) return;
+    setState(() {
+      _datePreset = DatePreset.custom;
+      _customFrom = from;
+      _customTo = to;
+    });
+  }
+
+  bool _inDateRange(DateTime d) {
+    final range = datePresetRange(_datePreset, customFrom: _customFrom, customTo: _customTo);
+    if (range == null) return true;
+    return !d.isBefore(range.$1) && !d.isAfter(range.$2);
   }
 
   @override
@@ -98,6 +121,40 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
             ],
           ),
         ),
+        SizedBox(
+          height: 44,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              for (final preset in DatePreset.values)
+                Padding(
+                  padding: const EdgeInsets.only(right: AppSpacing.sm),
+                  child: preset == DatePreset.custom
+                      ? AppChip(
+                          label: _datePreset == DatePreset.custom &&
+                                  _customFrom != null
+                              ? '${DateFormat.MMMd().format(_customFrom!)} – ${DateFormat.MMMd().format(_customTo ?? _customFrom!)}'
+                              : 'Custom…',
+                          icon: Icons.date_range_rounded,
+                          color: DomainColors.tasks,
+                          selected: _datePreset == DatePreset.custom,
+                          onTap: _pickCustomRange,
+                        )
+                      : AppChip(
+                          label: preset.label,
+                          color: DomainColors.tasks,
+                          selected: _datePreset == preset,
+                          onTap: () => setState(() {
+                            _datePreset = preset;
+                            _customFrom = null;
+                            _customTo = null;
+                          }),
+                        ),
+                ),
+            ],
+          ),
+        ),
         const SizedBox(height: 4),
         Expanded(
           child: txAsync.when(
@@ -114,6 +171,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
               }
               final filtered = items.where((e) {
                 if (_kind != 'all' && e.transaction.kind != _kind) return false;
+                if (!_inDateRange(e.transaction.occurredAt)) return false;
                 if (_query.isEmpty) return true;
                 final hay = StringBuffer()
                   ..write(e.transaction.kind)

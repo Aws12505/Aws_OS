@@ -5,11 +5,13 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
+import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
 import '../providers.dart';
 import '../widgets/note_form_sheet.dart';
 
@@ -23,11 +25,32 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   String? _filterTagId;
   final _search = TextEditingController();
   String _query = '';
+  DatePreset _datePreset = DatePreset.all;
+  DateTime? _customFrom;
+  DateTime? _customTo;
 
   @override
   void dispose() {
     _search.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickCustomRange() async {
+    final from = await pickDate(context, initial: _customFrom ?? DateTime.now());
+    if (from == null || !mounted) return;
+    final to = await pickDate(context, initial: _customTo ?? from, firstDate: from);
+    if (to == null) return;
+    setState(() {
+      _datePreset = DatePreset.custom;
+      _customFrom = from;
+      _customTo = to;
+    });
+  }
+
+  bool _inDateRange(DateTime d) {
+    final range = datePresetRange(_datePreset, customFrom: _customFrom, customTo: _customTo);
+    if (range == null) return true;
+    return !d.isBefore(range.$1) && !d.isAfter(range.$2);
   }
 
   @override
@@ -98,6 +121,40 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               },
             ),
           ),
+          SizedBox(
+            height: 44,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+              children: [
+                for (final preset in DatePreset.values)
+                  Padding(
+                    padding: const EdgeInsets.only(right: AppSpacing.sm),
+                    child: preset == DatePreset.custom
+                        ? AppChip(
+                            label: _datePreset == DatePreset.custom &&
+                                    _customFrom != null
+                                ? '${DateFormat.MMMd().format(_customFrom!)} – ${DateFormat.MMMd().format(_customTo ?? _customFrom!)}'
+                                : 'Custom…',
+                            icon: Icons.date_range_rounded,
+                            color: DomainColors.notes,
+                            selected: _datePreset == DatePreset.custom,
+                            onTap: _pickCustomRange,
+                          )
+                        : AppChip(
+                            label: preset.label,
+                            color: DomainColors.notes,
+                            selected: _datePreset == preset,
+                            onTap: () => setState(() {
+                              _datePreset = preset;
+                              _customFrom = null;
+                              _customTo = null;
+                            }),
+                          ),
+                  ),
+              ],
+            ),
+          ),
           Expanded(
             child: notesAsync.when(
               loading: () => const AppLoading(),
@@ -121,11 +178,18 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                           n.contentMd.toLowerCase().contains(_query))
                       .toList();
                 }
+                if (_datePreset != DatePreset.all) {
+                  filtered = filtered
+                      .where((n) => _inDateRange(n.occurredAt))
+                      .toList();
+                }
                 filtered = filtered.toList()
                   ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
 
                 if (filtered.isEmpty) {
-                  final searching = _query.isNotEmpty || _filterTagId != null;
+                  final searching = _query.isNotEmpty ||
+                      _filterTagId != null ||
+                      _datePreset != DatePreset.all;
                   return AppEmptyState(
                     icon: searching
                         ? Icons.search_off_rounded

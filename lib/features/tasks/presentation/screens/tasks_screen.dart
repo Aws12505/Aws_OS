@@ -6,6 +6,8 @@ import 'package:intl/intl.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/widgets/app_background.dart';
 import '../providers.dart';
+import '../task_filter.dart';
+import '../widgets/task_filter_sheet.dart';
 import '../widgets/task_form_sheet.dart';
 import '../widgets/workspace_form_sheet.dart';
 import 'task_detail_screen.dart';
@@ -241,6 +243,7 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
                   },
                 ),
               ),
+              const _FilterBar(),
               Expanded(
                 child: PageView.builder(
                   controller: _pageController,
@@ -407,7 +410,7 @@ class _WorkspaceTaskList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(tasksForWorkspaceProvider(workspace.id));
+    final async = ref.watch(filteredTasksForWorkspaceProvider(workspace.id));
     return async.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => Center(child: Text(e.toString())),
@@ -459,6 +462,200 @@ class _WorkspaceTaskList extends ConsumerWidget {
     );
   }
 }
+
+// ── filter bar ───────────────────────────────────────────────────────────────
+
+class _FilterBar extends ConsumerWidget {
+  const _FilterBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final filter = ref.watch(taskFilterProvider);
+
+    void update(TaskFilter f) =>
+        ref.read(taskFilterProvider.notifier).state = f;
+
+    const statusOptions = [
+      (TaskStatusFilter.active, 'Active', Icons.check_circle_outline_rounded),
+      (TaskStatusFilter.all, 'All', Icons.list_rounded),
+      (TaskStatusFilter.completed, 'Done', Icons.check_circle_rounded),
+    ];
+
+    const dateOptions = [
+      (TaskDateFilter.today, 'Today'),
+      (TaskDateFilter.tomorrow, 'Tomorrow'),
+      (TaskDateFilter.thisWeek, 'This Week'),
+      (TaskDateFilter.thisMonth, 'This Month'),
+      (TaskDateFilter.overdue, 'Overdue'),
+      (TaskDateFilter.noDate, 'No Date'),
+    ];
+
+    final activeCount = filter.activeCount;
+
+    return SizedBox(
+      height: 46,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+        children: [
+          // Clear chip
+          if (!filter.isDefault) ...[
+            _FilterChip(
+              label: 'Clear',
+              icon: Icons.close_rounded,
+              selected: false,
+              color: cs.error,
+              onTap: () => update(const TaskFilter()),
+            ),
+            const SizedBox(width: 6),
+            Container(
+                width: 1,
+                height: 24,
+                color: cs.outlineVariant.withValues(alpha: 0.5),
+                margin: const EdgeInsets.symmetric(horizontal: 4)),
+          ],
+
+          // Status chips
+          ...statusOptions.map((opt) {
+            final (s, label, icon) = opt;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _FilterChip(
+                label: label,
+                icon: icon,
+                selected: filter.status == s,
+                color: cs.primary,
+                onTap: () => update(filter.copyWith(status: s)),
+              ),
+            );
+          }),
+
+          Container(
+              width: 1,
+              height: 24,
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+              margin: const EdgeInsets.symmetric(horizontal: 4)),
+
+          // Date chips
+          ...dateOptions.map((opt) {
+            final (d, label) = opt;
+            return Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: _FilterChip(
+                label: label,
+                selected: filter.dateFilter == d,
+                color: const Color(0xFF3B82F6),
+                onTap: () => update(filter.copyWith(
+                  dateFilter: d,
+                  customRangeStart: null,
+                  customRangeEnd: null,
+                )),
+              ),
+            );
+          }),
+
+          Container(
+              width: 1,
+              height: 24,
+              color: cs.outlineVariant.withValues(alpha: 0.5),
+              margin: const EdgeInsets.symmetric(horizontal: 4)),
+
+          // Advanced filter button with badge
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              _FilterChip(
+                label: 'Filters',
+                icon: Icons.tune_rounded,
+                selected: activeCount > 0,
+                color: cs.tertiary,
+                onTap: () => showTaskFilterSheet(context),
+              ),
+              if (activeCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: cs.tertiary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$activeCount',
+                      style: TextStyle(
+                          fontSize: 9,
+                          color: cs.onTertiary,
+                          fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  const _FilterChip({
+    required this.label,
+    required this.selected,
+    required this.color,
+    required this.onTap,
+    this.icon,
+  });
+
+  final String label;
+  final bool selected;
+  final Color color;
+  final VoidCallback onTap;
+  final IconData? icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final bg = selected
+        ? color.withValues(alpha: 0.15)
+        : cs.surface.withValues(alpha: 0.5);
+    final fg = selected ? color : cs.onSurfaceVariant;
+    final border =
+        selected ? color.withValues(alpha: 0.45) : cs.outlineVariant.withValues(alpha: 0.4);
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: border),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: fg,
+                    fontWeight:
+                        selected ? FontWeight.w700 : FontWeight.w600,
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── per-workspace list ───────────────────────────────────────────────────────
 
 class _TaskTile extends ConsumerWidget {
   const _TaskTile({

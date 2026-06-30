@@ -6,17 +6,47 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
+import '../../../../shared/utils/date_preset.dart';
+import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
 import '../../../../shared/widgets/sparkline.dart';
 import '../providers.dart';
 
-class MeasurementsView extends ConsumerWidget {
+class MeasurementsView extends ConsumerStatefulWidget {
   const MeasurementsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MeasurementsView> createState() => _MeasurementsViewState();
+}
+
+class _MeasurementsViewState extends ConsumerState<MeasurementsView> {
+  DatePreset _datePreset = DatePreset.all;
+  DateTime? _customFrom;
+  DateTime? _customTo;
+
+  bool _inRange(DateTime d) {
+    final range = datePresetRange(_datePreset, customFrom: _customFrom, customTo: _customTo);
+    if (range == null) return true;
+    return !d.isBefore(range.$1) && !d.isAfter(range.$2);
+  }
+
+  Future<void> _pickCustomRange() async {
+    final from = await pickDate(context, initial: _customFrom ?? DateTime.now());
+    if (from == null || !mounted) return;
+    final to = await pickDate(context, initial: _customTo ?? from, firstDate: from);
+    if (to == null) return;
+    setState(() {
+      _datePreset = DatePreset.custom;
+      _customFrom = from;
+      _customTo = to;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final typesAsync = ref.watch(measurementTypesStreamProvider);
     final entriesAsync = ref.watch(measurementEntriesStreamProvider);
     final valuesAsync = ref.watch(measurementValuesStreamProvider);
@@ -46,7 +76,7 @@ class MeasurementsView extends ConsumerWidget {
           return entriesAsync.when(
             loading: () => const AppLoading(),
             error: (e, _) => AppErrorView(error: e),
-            data: (entries) {
+            data: (allEntries) {
               final byEntry = <String, List<MeasurementValue>>{};
               for (final v
                   in (valuesAsync.value ?? const <MeasurementValue>[])) {
@@ -54,8 +84,8 @@ class MeasurementsView extends ConsumerWidget {
               }
               final typesById = {for (final t in types) t.id: t};
 
-              // Chronological value series per type (oldest → newest).
-              final entriesAsc = entries.reversed.toList();
+              // Chronological value series per type (oldest → newest) — unfiltered for trends.
+              final entriesAsc = allEntries.reversed.toList();
               final seriesByType = <String, List<double>>{};
               for (final e in entriesAsc) {
                 for (final v in (byEntry[e.id] ?? const [])) {
@@ -65,11 +95,49 @@ class MeasurementsView extends ConsumerWidget {
               final trendTypes =
                   types.where((t) => (seriesByType[t.id] ?? const []).isNotEmpty);
 
+              // Date-filtered entries for the History section.
+              final entries = allEntries.where((e) => _inRange(e.takenAt)).toList();
+
               return ListView(
                 padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
                 children: [
                   _ManageTypesCard(
                       onTap: () => showMeasurementTypesSheet(context)),
+                  // Date filter chips
+                  SizedBox(
+                    height: 44,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      children: [
+                        for (final preset in DatePreset.values)
+                          Padding(
+                            padding: const EdgeInsets.only(right: 8),
+                            child: preset == DatePreset.custom
+                                ? AppChip(
+                                    label: _datePreset == DatePreset.custom &&
+                                            _customFrom != null
+                                        ? '${DateFormat.MMMd().format(_customFrom!)} – ${DateFormat.MMMd().format(_customTo ?? _customFrom!)}'
+                                        : 'Custom…',
+                                    icon: Icons.date_range_rounded,
+                                    color: DomainColors.gym,
+                                    selected: _datePreset == DatePreset.custom,
+                                    onTap: _pickCustomRange,
+                                  )
+                                : AppChip(
+                                    label: preset.label,
+                                    color: DomainColors.gym,
+                                    selected: _datePreset == preset,
+                                    onTap: () => setState(() {
+                                      _datePreset = preset;
+                                      _customFrom = null;
+                                      _customTo = null;
+                                    }),
+                                  ),
+                          ),
+                      ],
+                    ),
+                  ),
                   if (trendTypes.isNotEmpty) ...[
                     const _SectionLabel('Trends'),
                     SizedBox(

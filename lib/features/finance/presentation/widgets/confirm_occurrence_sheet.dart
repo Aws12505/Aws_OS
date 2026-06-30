@@ -86,7 +86,14 @@ class _SheetState extends ConsumerState<_Sheet> {
         amount: isExpense ? -value : value,
       ));
     }
-    if (overrideLegs.isEmpty) return;
+    if (overrideLegs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Enter a valid amount for at least one account.'),
+        ),
+      );
+      return;
+    }
     await ref.read(recurrenceServiceProvider).confirmOccurrence(
           widget.occurrence.id,
           overrideLegs: overrideLegs,
@@ -111,9 +118,13 @@ class _SheetState extends ConsumerState<_Sheet> {
         ref.watch(currenciesStreamProvider).value ?? const <Currency>[];
     final byCur = {for (final c in currencies) c.id: c};
     final rec = _rec;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-      child: SingleChildScrollView(
+    final cs = Theme.of(context).colorScheme;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.9,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -128,37 +139,57 @@ class _SheetState extends ConsumerState<_Sheet> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text('Effective date'),
-              subtitle: Text(DateFormat.yMMMd().add_Hm().format(_date)),
-              trailing: const Icon(Icons.event),
-              onTap: () async {
-                final d = await showDatePicker(
-                  context: context,
-                  initialDate: _date,
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2100),
-                );
-                if (d != null) {
-                  setState(() => _date =
-                      DateTime(d.year, d.month, d.day, _date.hour, _date.minute));
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            for (var i = 0; i < _lines.length; i++)
-              _LineRow(
-                line: _lines[i],
-                accounts: accounts,
-                currencies: byCur,
-                onChanged: () => setState(() {}),
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Effective date'),
+                      subtitle:
+                          Text(DateFormat.yMMMd().add_Hm().format(_date)),
+                      trailing: const Icon(Icons.event),
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: _date,
+                          firstDate: DateTime(2000),
+                          lastDate: DateTime(2100),
+                        );
+                        if (d != null) {
+                          setState(() => _date = DateTime(
+                              d.year, d.month, d.day, _date.hour, _date.minute));
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 8),
+                    for (var i = 0; i < _lines.length; i++)
+                      _LineRow(
+                        line: _lines[i],
+                        accounts: accounts,
+                        currencies: byCur,
+                        onChanged: () => setState(() {}),
+                      ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Leave the amount as-is to confirm the usual amount, '
+                      'or edit it to record a different amount this month.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _note,
+                      maxLines: 2,
+                      decoration:
+                          const InputDecoration(labelText: 'Note (optional)'),
+                    ),
+                  ],
+                ),
               ),
-            const SizedBox(height: 8),
-            TextFormField(
-              controller: _note,
-              maxLines: 2,
-              decoration: const InputDecoration(labelText: 'Note (optional)'),
             ),
             const SizedBox(height: 16),
             Row(
@@ -167,7 +198,7 @@ class _SheetState extends ConsumerState<_Sheet> {
                   child: OutlinedButton.icon(
                     onPressed: _skip,
                     icon: const Icon(Icons.skip_next),
-                    label: const Text('Skip this one'),
+                    label: const Text('Skip this month'),
                   ),
                 ),
                 const SizedBox(width: 12),

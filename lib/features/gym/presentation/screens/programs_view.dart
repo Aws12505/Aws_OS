@@ -4,27 +4,74 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_chip.dart';
 import '../providers.dart';
 import 'program_detail_screen.dart';
 
-class ProgramsView extends ConsumerWidget {
+enum _ProgramStatus { all, active, completed }
+
+class ProgramsView extends ConsumerStatefulWidget {
   const ProgramsView({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ProgramsView> createState() => _ProgramsViewState();
+}
+
+class _ProgramsViewState extends ConsumerState<ProgramsView> {
+  _ProgramStatus _status = _ProgramStatus.all;
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(programsStreamProvider);
     return Scaffold(
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text(e.toString())),
-        data: (programs) {
-          if (programs.isEmpty) {
-            return const _ProgramsEmpty();
-          }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 120),
-            itemCount: programs.length,
-            itemBuilder: (_, i) => _ProgramTile(program: programs[i]),
+        data: (allPrograms) {
+          final programs = switch (_status) {
+            _ProgramStatus.all => allPrograms,
+            _ProgramStatus.active =>
+              allPrograms.where((p) => p.endedAt == null).toList(),
+            _ProgramStatus.completed =>
+              allPrograms.where((p) => p.endedAt != null).toList(),
+          };
+          return Column(
+            children: [
+              SizedBox(
+                height: 44,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
+                  children: [
+                    for (final s in _ProgramStatus.values)
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppSpacing.sm),
+                        child: AppChip(
+                          label: switch (s) {
+                            _ProgramStatus.all => 'All',
+                            _ProgramStatus.active => 'Active',
+                            _ProgramStatus.completed => 'Completed',
+                          },
+                          color: DomainColors.gym,
+                          selected: _status == s,
+                          onTap: () => setState(() => _status = s),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: programs.isEmpty
+                    ? const _ProgramsEmpty()
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 120),
+                        itemCount: programs.length,
+                        itemBuilder: (_, i) =>
+                            _ProgramTile(program: programs[i]),
+                      ),
+              ),
+            ],
           );
         },
       ),
