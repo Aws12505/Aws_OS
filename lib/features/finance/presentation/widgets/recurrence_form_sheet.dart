@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../data/finance_repository.dart';
 import '../../data/recurrence_service.dart';
 import '../providers.dart';
@@ -13,7 +14,7 @@ Future<void> showRecurrenceFormSheet(
   BuildContext context, {
   Recurrence? existing,
 }) {
-  return showModalBottomSheet<void>(
+  return showAppModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

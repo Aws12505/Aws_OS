@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import 'exchange_form_sheet.dart';
 import 'income_expense_form_sheet.dart';
 import 'recurrence_form_sheet.dart';
 import 'transfer_form_sheet.dart';
 
 Future<void> showAddTransactionChooser(BuildContext context) {
-  return showModalBottomSheet<void>(
+  return showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     builder: (sheetCtx) => SafeArea(

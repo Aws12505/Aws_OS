@@ -13,6 +13,7 @@ import '../../features/notes/presentation/widgets/note_form_sheet.dart';
 import '../../features/tasks/presentation/providers.dart';
 import '../../features/tasks/presentation/widgets/task_form_sheet.dart';
 import '../../features/tasks/presentation/widgets/workspace_form_sheet.dart';
+import 'app_modal_sheet.dart';
 
 class QuickActionFab extends ConsumerWidget {
   const QuickActionFab({super.key});
@@ -27,7 +28,7 @@ class QuickActionFab extends ConsumerWidget {
   }
 
   void _show(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
+    showAppModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -162,7 +163,7 @@ class _QuickActionSheet extends StatelessWidget {
   }
 
   void _showMentorChooser(BuildContext context, GoRouter router) {
-    showModalBottomSheet<void>(
+    showAppModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
       useSafeArea: true,

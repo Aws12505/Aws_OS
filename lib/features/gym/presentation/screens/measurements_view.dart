@@ -8,6 +8,7 @@ import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
 import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
@@ -406,7 +407,7 @@ class _EntryTile extends StatelessWidget {
 }
 
 void showMeasurementTypesSheet(BuildContext context) {
-  showModalBottomSheet<void>(
+  showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
@@ -418,7 +419,7 @@ void showMeasurementTypesSheet(BuildContext context) {
 }
 
 void showMeasurementEntrySheet(BuildContext context) {
-  showModalBottomSheet<void>(
+  showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

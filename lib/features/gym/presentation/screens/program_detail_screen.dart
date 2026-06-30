@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 import 'day_detail_screen.dart';
 
@@ -59,7 +60,7 @@ void _showDayForm(
   ProgramDay? existing,
 }) {
   final controller = TextEditingController(text: existing?.name ?? '');
-  showModalBottomSheet<void>(
+  showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

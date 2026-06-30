@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
@@ -198,7 +199,7 @@ Future<void> _showCategoryForm(
   Category? existing,
 }) {
   final controller = TextEditingController(text: existing?.name ?? '');
-  return showModalBottomSheet<void>(
+  return showAppModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
@@ -256,7 +257,7 @@ Future<void> _showTypeForm(
   CategoryType? existing,
 }) {
   final controller = TextEditingController(text: existing?.name ?? '');
-  return showModalBottomSheet<void>(
+  return showAppModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

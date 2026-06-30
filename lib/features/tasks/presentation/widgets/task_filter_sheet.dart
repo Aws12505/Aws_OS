@@ -3,12 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
 import '../providers.dart';
 import '../task_filter.dart';
 
 void showTaskFilterSheet(BuildContext context) {
-  showModalBottomSheet(
+  showAppModalBottomSheet(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,

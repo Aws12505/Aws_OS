@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 
 Future<void> showNoteFormSheet(BuildContext context, {Note? existing}) async {
@@ -14,7 +15,7 @@ Future<void> showNoteFormSheet(BuildContext context, {Note? existing}) async {
         .getTagIdsForNote(existing.id);
   }
   if (!context.mounted) return;
-  await showModalBottomSheet<void>(
+  await showAppModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,

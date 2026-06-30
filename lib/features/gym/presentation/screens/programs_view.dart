@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
 import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 import 'program_detail_screen.dart';
 
@@ -80,7 +81,7 @@ class _ProgramsViewState extends ConsumerState<ProgramsView> {
 }
 
 void showProgramFormSheet(BuildContext context, {Program? existing}) {
-  showModalBottomSheet<void>(
+  showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,

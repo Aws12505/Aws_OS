@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 
 class DayDetailScreen extends ConsumerWidget {
@@ -138,7 +139,7 @@ void _showAddExercise(
 }) {
   final name = TextEditingController(text: existing?.exerciseName ?? '');
   int sets = existing?.targetSets ?? 3;
-  showModalBottomSheet<void>(
+  showAppModalBottomSheet<void>(
     context: context,
     showDragHandle: true,
     isScrollControlled: true,
