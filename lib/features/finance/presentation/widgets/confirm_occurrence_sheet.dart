@@ -54,8 +54,11 @@ class _SheetState extends ConsumerState<_Sheet> {
         final tpl = RecurrenceService.decodeTemplateLegs(r.templateLegsJson);
         _lines
           ..clear()
-          ..addAll(tpl.map((l) =>
-              _LineDraft(accountId: l.accountId, amount: l.amount.abs())));
+          ..addAll(tpl.map((l) => _LineDraft(
+                accountId: l.accountId,
+                currencyId: l.currencyId,
+                amount: l.amount.abs(),
+              )));
       });
     });
   }
@@ -76,14 +79,14 @@ class _SheetState extends ConsumerState<_Sheet> {
     final isExpense = rec.kind == 'expense';
     for (final line in _lines) {
       final accId = line.accountId;
-      if (accId == null) continue;
+      final currencyId = line.currencyId;
+      if (accId == null || currencyId == null) continue;
       final raw = line.controller.text.trim();
       final value = double.tryParse(raw.replaceAll(',', '.'));
       if (value == null || value <= 0) continue;
-      final account = accounts.firstWhere((a) => a.id == accId);
       overrideLegs.add(TxLegDraft(
         accountId: accId,
-        currencyId: account.currencyId,
+        currencyId: currencyId,
         amount: isExpense ? -value : value,
       ));
     }
@@ -95,26 +98,40 @@ class _SheetState extends ConsumerState<_Sheet> {
       );
       return;
     }
-    await ref.read(recurrenceServiceProvider).confirmOccurrence(
-          widget.occurrence.id,
-          overrideLegs: overrideLegs,
-          overrideNote: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          overrideDate: _date,
-        );
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await ref.read(recurrenceServiceProvider).confirmOccurrence(
+            widget.occurrence.id,
+            overrideLegs: overrideLegs,
+            overrideNote: _note.text.trim().isEmpty ? null : _note.text.trim(),
+            overrideDate: _date,
+          );
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not confirm: $e')),
+      );
+    }
   }
 
   Future<void> _skip() async {
-    await ref
-        .read(recurrenceServiceProvider)
-        .skipOccurrence(widget.occurrence.id);
-    if (mounted) Navigator.of(context).pop();
+    try {
+      await ref
+          .read(recurrenceServiceProvider)
+          .skipOccurrence(widget.occurrence.id);
+      if (mounted) Navigator.of(context).pop();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not skip: $e')),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final accounts =
-        ref.watch(accountsStreamProvider).value ?? const <Account>[];
+    final accounts = ref.watch(allAccountsIncludingArchivedStreamProvider).value ??
+        const <Account>[];
     final currencies =
         ref.watch(currenciesStreamProvider).value ?? const <Currency>[];
     final byCur = {for (final c in currencies) c.id: c};
@@ -220,11 +237,12 @@ class _SheetState extends ConsumerState<_Sheet> {
 }
 
 class _LineDraft {
-  _LineDraft({this.accountId, double? amount})
+  _LineDraft({this.accountId, this.currencyId, double? amount})
       : controller = TextEditingController(
           text: amount == null ? '' : amount.toString(),
         );
   String? accountId;
+  String? currencyId;
   final TextEditingController controller;
   void dispose() => controller.dispose();
 }
@@ -259,12 +277,14 @@ class _LineRow extends StatelessWidget {
                   DropdownMenuItem(
                     value: a.id,
                     child: Text(
-                        '${a.name} (${currencies[a.currencyId]?.code ?? '?'})',
+                        '${a.name} (${currencies[a.currencyId]?.code ?? '?'})'
+                        '${a.archived ? ' — archived' : ''}',
                         overflow: TextOverflow.ellipsis),
                   ),
               ],
               onChanged: (v) {
                 line.accountId = v;
+                line.currencyId = accounts.where((a) => a.id == v).firstOrNull?.currencyId;
                 onChanged();
               },
             ),

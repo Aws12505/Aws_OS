@@ -131,6 +131,8 @@ class FinanceRepository {
   Stream<List<ScheduledOccurrence>> watchPendingOccurrencesUpTo(
           DateTime end) =>
       dao.watchPendingOccurrencesUpTo(end);
+  Stream<List<ScheduledOccurrence>> watchAllPendingOccurrences() =>
+      dao.watchAllPendingOccurrences();
   Stream<List<ScheduledOccurrence>> watchOccurrencesForRecurrence(String id) =>
       dao.watchOccurrencesForRecurrence(id);
 
@@ -187,6 +189,8 @@ class FinanceRepository {
     String? note,
     String? categoryId,
     String? typeId,
+    String? recurrenceId,
+    String? scheduledOccurrenceId,
   }) {
     assert(kind == 'income' || kind == 'expense');
     final txId = newUuid();
@@ -198,6 +202,8 @@ class FinanceRepository {
         note: Value(note),
         categoryId: Value(categoryId),
         typeId: Value(typeId),
+        recurrenceId: Value(recurrenceId),
+        scheduledOccurrenceId: Value(scheduledOccurrenceId),
       ),
       legs: [
         for (final l in legs)

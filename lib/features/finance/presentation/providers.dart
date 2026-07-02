@@ -23,6 +23,14 @@ final accountsStreamProvider = StreamProvider<List<Account>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAccounts();
 });
 
+/// Every account, including archived ones. A recurring entry's template can
+/// reference an account that was archived after the recurrence was created —
+/// confirming an occurrence must still be able to resolve it.
+final allAccountsIncludingArchivedStreamProvider =
+    StreamProvider<List<Account>>((ref) {
+  return ref.watch(financeRepositoryProvider).watchAccounts(includeArchived: true);
+});
+
 final accountBalancesStreamProvider =
     StreamProvider<Map<String, double>>((ref) {
   return ref.watch(financeRepositoryProvider).watchAccountBalances();
@@ -94,6 +102,22 @@ final pendingOccurrencesProvider =
   return ref
       .watch(financeRepositoryProvider)
       .watchPendingOccurrencesUpTo(endOfToday);
+});
+
+/// Every pending occurrence regardless of due date — the full "needs review"
+/// queue. Each entry can be reviewed independently and in any order.
+final allPendingOccurrencesProvider =
+    StreamProvider<List<ScheduledOccurrence>>((ref) {
+  return ref.watch(financeRepositoryProvider).watchAllPendingOccurrences();
+});
+
+/// Every occurrence (any status) belonging to a single recurrence, oldest
+/// first — powers the per-recurrence review/history drill-down.
+final occurrencesForRecurrenceProvider =
+    StreamProvider.family<List<ScheduledOccurrence>, String>((ref, recurrenceId) {
+  return ref
+      .watch(financeRepositoryProvider)
+      .watchOccurrencesForRecurrence(recurrenceId);
 });
 
 /// Pending occurrences within the next `days` (used by dashboard projections).

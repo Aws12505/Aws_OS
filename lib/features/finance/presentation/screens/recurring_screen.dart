@@ -6,6 +6,7 @@ import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
 import '../providers.dart';
 import '../widgets/confirm_occurrence_sheet.dart';
+import '../widgets/occurrence_history_sheet.dart';
 import '../widgets/recurrence_form_sheet.dart';
 
 class RecurringScreen extends ConsumerWidget {
@@ -14,7 +15,10 @@ class RecurringScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recsAsync = ref.watch(recurrencesStreamProvider);
-    final pendingAsync = ref.watch(pendingOccurrencesProvider);
+    final pendingAsync = ref.watch(allPendingOccurrencesProvider);
+    final recsById = {
+      for (final r in recsAsync.value ?? const <Recurrence>[]) r.id: r,
+    };
     return Scaffold(
       appBar: AppBar(
         title: const Text('Recurring'),
@@ -42,18 +46,24 @@ class RecurringScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Needs your attention',
+                      Text('Needs your review',
                           style: Theme.of(context).textTheme.titleMedium),
                       const SizedBox(height: 4),
-                      Text('${pending.length} pending occurrence(s) today or earlier.',
+                      Text(
+                          '${pending.length} pending occurrence(s). Review any of them, in any order.',
                           style: Theme.of(context).textTheme.bodySmall),
                       const Divider(),
                       for (final o in pending)
                         ListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
-                          title:
-                              Text(DateFormat.yMMMd().format(o.dueAt)),
+                          title: Text(
+                              recsById[o.recurrenceId]?.noteTemplate ??
+                                  (recsById[o.recurrenceId]?.kind == 'income'
+                                      ? 'Income'
+                                      : 'Expense')),
+                          subtitle:
+                              Text('Due ${DateFormat.yMMMd().format(o.dueAt)}'),
                           trailing: FilledButton(
                             onPressed: () => showConfirmOccurrenceSheet(
                               context,
@@ -146,6 +156,8 @@ class _RecurrenceTile extends ConsumerWidget {
         trailing: PopupMenuButton<String>(
           onSelected: (v) async {
             switch (v) {
+              case 'occurrences':
+                showOccurrenceHistorySheet(context, recurrence: recurrence);
               case 'edit':
                 showRecurrenceFormSheet(context, existing: recurrence);
               case 'delete':
@@ -173,6 +185,7 @@ class _RecurrenceTile extends ConsumerWidget {
             }
           },
           itemBuilder: (_) => const [
+            PopupMenuItem(value: 'occurrences', child: Text('View occurrences')),
             PopupMenuItem(value: 'edit', child: Text('Edit')),
             PopupMenuItem(value: 'delete', child: Text('Delete')),
           ],

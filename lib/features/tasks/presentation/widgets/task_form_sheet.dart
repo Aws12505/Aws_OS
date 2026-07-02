@@ -48,6 +48,7 @@ class _FormState extends ConsumerState<_Form> {
   late final TextEditingController _title;
   late final TextEditingController _body;
   late final TextEditingController _category;
+  late String _workspaceId;
   DateTime? _dueAt;
   DateTime? _deadlineAt;
 
@@ -73,6 +74,7 @@ class _FormState extends ConsumerState<_Form> {
     _title = TextEditingController(text: e?.title ?? '');
     _body = TextEditingController(text: e?.bodyMd ?? '');
     _category = TextEditingController(text: e?.category ?? '');
+    _workspaceId = e?.workspaceId ?? widget.workspaceId;
     _dueAt = e?.dueAt;
     _deadlineAt = e?.deadlineAt;
     if (e?.recurrenceId != null) _prefillRecurrence(e!.recurrenceId!);
@@ -137,7 +139,7 @@ class _FormState extends ConsumerState<_Form> {
               : const [],
         );
         final template = TaskRecurrenceService.encodeTemplate(
-          workspaceId: widget.workspaceId,
+          workspaceId: _workspaceId,
           title: _title.text.trim(),
           bodyMd: _body.text.trim().isEmpty ? null : _body.text.trim(),
           category: category,
@@ -160,7 +162,7 @@ class _FormState extends ConsumerState<_Form> {
 
     final saved = await repo.saveTask(
       id: widget.existing?.id,
-      workspaceId: widget.workspaceId,
+      workspaceId: _workspaceId,
       parentTaskId: widget.parentTaskId ?? widget.existing?.parentTaskId,
       title: _title.text.trim(),
       bodyMd: _body.text.trim().isEmpty ? null : _body.text.trim(),
@@ -186,6 +188,8 @@ class _FormState extends ConsumerState<_Form> {
   @override
   Widget build(BuildContext context) {
     final categories = ref.watch(taskCategoriesProvider);
+    final workspaces =
+        ref.watch(workspacesStreamProvider).value ?? const <Workspace>[];
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
       child: SingleChildScrollView(
@@ -218,6 +222,26 @@ class _FormState extends ConsumerState<_Form> {
                   hintText: 'Markdown supported',
                 ),
               ),
+              if (!_isSubtask && workspaces.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: workspaces.any((w) => w.id == _workspaceId)
+                      ? _workspaceId
+                      : null,
+                  decoration: const InputDecoration(
+                    labelText: 'Workspace',
+                    prefixIcon: Icon(Icons.folder_outlined),
+                  ),
+                  items: [
+                    for (final w in workspaces)
+                      DropdownMenuItem(value: w.id, child: Text(w.name)),
+                  ],
+                  onChanged: (v) {
+                    if (v != null) setState(() => _workspaceId = v);
+                  },
+                  validator: (v) => v == null ? 'Required' : null,
+                ),
+              ],
               const SizedBox(height: 12),
               _CategoryField(
                 controller: _category,

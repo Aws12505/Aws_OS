@@ -122,6 +122,8 @@ class RecurrenceService {
       note: note,
       categoryId: rec.categoryId,
       typeId: rec.typeId,
+      recurrenceId: rec.id,
+      scheduledOccurrenceId: occurrenceId,
     );
     await dao.markOccurrenceStatus(occurrenceId, 'confirmed', txId);
     await notifications.cancelForOccurrence(occurrenceId);

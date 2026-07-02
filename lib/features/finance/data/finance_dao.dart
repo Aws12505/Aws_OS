@@ -176,6 +176,15 @@ class FinanceDao extends DatabaseAccessor<AppDatabase> with _$FinanceDaoMixin {
         .watch();
   }
 
+  /// Every pending occurrence regardless of due date — the full review queue,
+  /// independent of the "due today or earlier" window used for reminders.
+  Stream<List<ScheduledOccurrence>> watchAllPendingOccurrences() {
+    return (select(scheduledOccurrences)
+          ..where((t) => t.status.equals('pending'))
+          ..orderBy([(t) => OrderingTerm.asc(t.dueAt)]))
+        .watch();
+  }
+
   Stream<List<ScheduledOccurrence>> watchOccurrencesForRecurrence(
       String recurrenceId) {
     return (select(scheduledOccurrences)
