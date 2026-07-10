@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/widgets/segmented_control.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 import 'accounts_screen.dart';
 import 'budgets_screen.dart';
 import 'categories_screen.dart';
 import 'currencies_screen.dart';
+import 'finance_insights_view.dart';
 import 'recurring_screen.dart';
 import 'exchange_rates_view.dart';
 import 'transactions_list_view.dart';
@@ -24,17 +26,18 @@ class FinanceScreen extends ConsumerStatefulWidget {
 class _FinanceScreenState extends ConsumerState<FinanceScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabs;
-  static const _labels = ['Vault', 'Activity', 'Rates'];
+  static const _labels = ['Vault', 'Activity', 'Insights', 'Rates'];
   static const _icons = [
     Icons.account_balance_wallet_rounded,
     Icons.swap_vert_rounded,
+    Icons.insights_rounded,
     Icons.currency_exchange_rounded,
   ];
 
   @override
   void initState() {
     super.initState();
-    _tabs = TabController(length: 3, vsync: this);
+    _tabs = TabController(length: 4, vsync: this);
     _tabs.addListener(() => setState(() {}));
   }
 
@@ -62,18 +65,22 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('MONEY',
-                            style: tt.labelSmall?.copyWith(
-                              color: cs.primary,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.6,
-                            )),
+                        Text(
+                          'MONEY',
+                          style: tt.labelSmall?.copyWith(
+                            color: cs.primary,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 1.6,
+                          ),
+                        ),
                         const SizedBox(height: 2),
-                        Text('Finance',
-                            style: tt.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.6,
-                            )),
+                        Text(
+                          'Finance',
+                          style: tt.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.6,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -87,7 +94,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
               ),
             ),
             const _MonthSummary(),
-            _Segmented(
+            SegmentedControl(
               labels: _labels,
               icons: _icons,
               index: _tabs.index,
@@ -100,6 +107,7 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
                 children: const [
                   VaultView(),
                   TransactionsListView(),
+                  FinanceInsightsView(),
                   ExchangeRatesView(),
                 ],
               ),
@@ -124,8 +132,10 @@ class _ManageMenu extends StatelessWidget {
           'budgets': const BudgetsScreen(),
           'recurring': const RecurringScreen(),
         };
-        Navigator.of(context, rootNavigator: true)
-            .push(MaterialPageRoute(builder: (_) => routes[v]!));
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).push(MaterialPageRoute(builder: (_) => routes[v]!));
       },
       itemBuilder: (_) => const [
         PopupMenuItem(value: 'currencies', child: Text('Manage currencies')),
@@ -144,7 +154,8 @@ class _MonthSummary extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final txs = ref.watch(recentTransactionsStreamProvider).value ??
+    final txs =
+        ref.watch(recentTransactionsStreamProvider).value ??
         const <TransactionWithLegs>[];
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
@@ -225,105 +236,28 @@ class _FlowChip extends StatelessWidget {
             children: [
               Icon(icon, size: 13, color: color),
               const SizedBox(width: 4),
-              Text(label,
-                  style: tt.labelSmall?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                label,
+                style: tt.labelSmall?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 4),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(value,
-                style: tt.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                  color: color,
-                  letterSpacing: -0.3,
-                )),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _Segmented extends StatelessWidget {
-  const _Segmented({
-    required this.labels,
-    required this.icons,
-    required this.index,
-    required this.onTap,
-  });
-  final List<String> labels;
-  final List<IconData> icons;
-  final int index;
-  final ValueChanged<int> onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-      ),
-      child: Row(
-        children: [
-          for (var i = 0; i < labels.length; i++)
-            Expanded(
-              child: GestureDetector(
-                onTap: () => onTap(i),
-                behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: i == index ? cs.primary : Colors.transparent,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: i == index
-                        ? [
-                            BoxShadow(
-                              color: cs.primary.withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(icons[i],
-                          size: 16,
-                          color: i == index
-                              ? cs.onPrimary
-                              : cs.onSurfaceVariant),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: Text(
-                          labels[i],
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: tt.labelLarge?.copyWith(
-                            color: i == index
-                                ? cs.onPrimary
-                                : cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+            child: Text(
+              value,
+              style: tt.titleMedium?.copyWith(
+                fontWeight: FontWeight.w800,
+                color: color,
+                letterSpacing: -0.3,
               ),
             ),
+          ),
         ],
       ),
     );

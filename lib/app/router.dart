@@ -12,6 +12,7 @@ import '../features/gym/presentation/screens/gym_screen.dart';
 import '../features/notes/presentation/screens/notes_screen.dart';
 import '../features/settings/presentation/lock_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/sharing/presentation/sharing_screen.dart';
 import '../features/tasks/presentation/screens/tasks_screen.dart';
 import '../shared/widgets/main_scaffold.dart';
 
@@ -53,6 +54,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/notes',
             pageBuilder: (c, s) => const NoTransitionPage(child: NotesScreen()),
+          ),
+          GoRoute(
+            path: '/sharing',
+            pageBuilder: (c, s) =>
+                const NoTransitionPage(child: SharingScreen()),
           ),
         ],
       ),

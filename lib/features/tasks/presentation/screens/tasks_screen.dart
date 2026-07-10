@@ -472,96 +472,13 @@ class _FilterBar extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final filter = ref.watch(taskFilterProvider);
+    final activeCount = filter.activeCount +
+        (filter.status != TaskStatusFilter.active ? 1 : 0);
 
-    void update(TaskFilter f) =>
-        ref.read(taskFilterProvider.notifier).state = f;
-
-    const statusOptions = [
-      (TaskStatusFilter.active, 'Active', Icons.check_circle_outline_rounded),
-      (TaskStatusFilter.all, 'All', Icons.list_rounded),
-      (TaskStatusFilter.completed, 'Done', Icons.check_circle_rounded),
-    ];
-
-    const dateOptions = [
-      (TaskDateFilter.today, 'Today'),
-      (TaskDateFilter.tomorrow, 'Tomorrow'),
-      (TaskDateFilter.thisWeek, 'This Week'),
-      (TaskDateFilter.thisMonth, 'This Month'),
-      (TaskDateFilter.overdue, 'Overdue'),
-      (TaskDateFilter.noDate, 'No Date'),
-    ];
-
-    final activeCount = filter.activeCount;
-
-    return SizedBox(
-      height: 46,
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
+      child: Row(
         children: [
-          // Clear chip
-          if (!filter.isDefault) ...[
-            _FilterChip(
-              label: 'Clear',
-              icon: Icons.close_rounded,
-              selected: false,
-              color: cs.error,
-              onTap: () => update(const TaskFilter()),
-            ),
-            const SizedBox(width: 6),
-            Container(
-                width: 1,
-                height: 24,
-                color: cs.outlineVariant.withValues(alpha: 0.5),
-                margin: const EdgeInsets.symmetric(horizontal: 4)),
-          ],
-
-          // Status chips
-          ...statusOptions.map((opt) {
-            final (s, label, icon) = opt;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: _FilterChip(
-                label: label,
-                icon: icon,
-                selected: filter.status == s,
-                color: cs.primary,
-                onTap: () => update(filter.copyWith(status: s)),
-              ),
-            );
-          }),
-
-          Container(
-              width: 1,
-              height: 24,
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-              margin: const EdgeInsets.symmetric(horizontal: 4)),
-
-          // Date chips
-          ...dateOptions.map((opt) {
-            final (d, label) = opt;
-            return Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: _FilterChip(
-                label: label,
-                selected: filter.dateFilter == d,
-                color: const Color(0xFF3B82F6),
-                onTap: () => update(filter.copyWith(
-                  dateFilter: d,
-                  customRangeStart: null,
-                  customRangeEnd: null,
-                )),
-              ),
-            );
-          }),
-
-          Container(
-              width: 1,
-              height: 24,
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-              margin: const EdgeInsets.symmetric(horizontal: 4)),
-
-          // Advanced filter button with badge
           Stack(
             clipBehavior: Clip.none,
             children: [
@@ -585,14 +502,24 @@ class _FilterBar extends ConsumerWidget {
                     child: Text(
                       '$activeCount',
                       style: TextStyle(
-                          fontSize: 9,
-                          color: cs.onTertiary,
-                          fontWeight: FontWeight.w800),
+                        fontSize: 9,
+                        color: cs.onTertiary,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
             ],
           ),
+          const Spacer(),
+          if (!filter.isDefault)
+            TextButton.icon(
+              onPressed: () =>
+                  ref.read(taskFilterProvider.notifier).state =
+                      const TaskFilter(),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Clear'),
+            ),
         ],
       ),
     );

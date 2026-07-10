@@ -13,6 +13,7 @@ void showTaskFilterSheet(BuildContext context) {
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
+    showDragHandle: false,
     backgroundColor: Colors.transparent,
     builder: (_) => const _TaskFilterSheet(),
   );

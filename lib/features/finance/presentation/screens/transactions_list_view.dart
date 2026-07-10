@@ -4,14 +4,14 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
-import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
-import '../../../../shared/widgets/date_time_picker.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
+import '../transaction_filter.dart';
+import '../widgets/transaction_filter_sheet.dart';
 
 class TransactionsListView extends ConsumerStatefulWidget {
   const TransactionsListView({super.key});
@@ -24,12 +24,6 @@ class TransactionsListView extends ConsumerStatefulWidget {
 class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   final _search = TextEditingController();
   String _query = '';
-  String _kind = 'all'; // all | income | expense | transfer | exchange
-  DatePreset _datePreset = DatePreset.all;
-  DateTime? _customFrom;
-  DateTime? _customTo;
-
-  static const _kinds = ['all', 'income', 'expense', 'transfer', 'exchange'];
 
   @override
   void dispose() {
@@ -37,30 +31,13 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
     super.dispose();
   }
 
-  Future<void> _pickCustomRange() async {
-    final from = await pickDate(context, initial: _customFrom ?? DateTime.now());
-    if (from == null || !mounted) return;
-    final to = await pickDate(context, initial: _customTo ?? from, firstDate: from);
-    if (to == null) return;
-    setState(() {
-      _datePreset = DatePreset.custom;
-      _customFrom = from;
-      _customTo = to;
-    });
-  }
-
-  bool _inDateRange(DateTime d) {
-    final range = datePresetRange(_datePreset, customFrom: _customFrom, customTo: _customTo);
-    if (range == null) return true;
-    return !d.isBefore(range.$1) && !d.isAfter(range.$2);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final filter = ref.watch(transactionFilterProvider);
     final txAsync = ref.watch(recentTransactionsStreamProvider);
     final currencies = {
-      for (final c in (ref.watch(currenciesStreamProvider).value ??
-          const <Currency>[]))
+      for (final c
+          in (ref.watch(currenciesStreamProvider).value ?? const <Currency>[]))
         c.id: c,
     };
     final accounts = {
@@ -102,59 +79,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
             ),
           ),
         ),
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: [
-              for (final k in _kinds)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: AppChip(
-                    label: k == 'all' ? 'All' : DomainColors.labelForTxKind(k),
-                    color: k == 'all' ? null : DomainColors.forTxKind(k),
-                    selected: _kind == k,
-                    onTap: () => setState(() => _kind = k),
-                  ),
-                ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 44,
-          child: ListView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            children: [
-              for (final preset in DatePreset.values)
-                Padding(
-                  padding: const EdgeInsets.only(right: AppSpacing.sm),
-                  child: preset == DatePreset.custom
-                      ? AppChip(
-                          label: _datePreset == DatePreset.custom &&
-                                  _customFrom != null
-                              ? '${DateFormat.MMMd().format(_customFrom!)} – ${DateFormat.MMMd().format(_customTo ?? _customFrom!)}'
-                              : 'Custom…',
-                          icon: Icons.date_range_rounded,
-                          color: DomainColors.tasks,
-                          selected: _datePreset == DatePreset.custom,
-                          onTap: _pickCustomRange,
-                        )
-                      : AppChip(
-                          label: preset.label,
-                          color: DomainColors.tasks,
-                          selected: _datePreset == preset,
-                          onTap: () => setState(() {
-                            _datePreset = preset;
-                            _customFrom = null;
-                            _customTo = null;
-                          }),
-                        ),
-                ),
-            ],
-          ),
-        ),
+        const _FilterBar(),
         const SizedBox(height: 4),
         Expanded(
           child: txAsync.when(
@@ -170,8 +95,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                 );
               }
               final filtered = items.where((e) {
-                if (_kind != 'all' && e.transaction.kind != _kind) return false;
-                if (!_inDateRange(e.transaction.occurredAt)) return false;
+                if (!filter.matches(e)) return false;
                 if (_query.isEmpty) return true;
                 final hay = StringBuffer()
                   ..write(e.transaction.kind)
@@ -226,11 +150,13 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
         content: const Text('This cannot be undone.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dCtx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(dCtx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(dCtx, true),
-              child: const Text('Delete')),
+            onPressed: () => Navigator.pop(dCtx, true),
+            child: const Text('Delete'),
+          ),
         ],
       ),
     );
@@ -239,6 +165,72 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
           .read(financeRepositoryProvider)
           .deleteTransaction(entry.transaction.id);
     }
+  }
+}
+
+/// A single "Filters" button (with an active-count badge) that opens the full
+/// filter sheet, plus a Clear action when any filter is active. All filter
+/// dimensions live in the sheet now.
+class _FilterBar extends ConsumerWidget {
+  const _FilterBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final filter = ref.watch(transactionFilterProvider);
+    final activeCount = (filter.kind != 'all' ? 1 : 0) + filter.activeCount;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
+      child: Row(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AppChip(
+                label: 'Filters',
+                icon: Icons.tune_rounded,
+                color: cs.tertiary,
+                selected: activeCount > 0,
+                onTap: () => showTransactionFilterSheet(context),
+              ),
+              if (activeCount > 0)
+                Positioned(top: -2, right: -2, child: _CountBadge(activeCount)),
+            ],
+          ),
+          const Spacer(),
+          if (!filter.isDefault)
+            TextButton.icon(
+              onPressed: () =>
+                  ref.read(transactionFilterProvider.notifier).state =
+                      const TransactionFilter(),
+              icon: const Icon(Icons.close_rounded, size: 16),
+              label: const Text('Clear'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CountBadge extends StatelessWidget {
+  const _CountBadge(this.count);
+  final int count;
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(color: cs.tertiary, shape: BoxShape.circle),
+      child: Text(
+        '$count',
+        style: TextStyle(
+          fontSize: 9,
+          color: cs.onTertiary,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
   }
 }
 
@@ -262,25 +254,26 @@ class _TransactionTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = entry.transaction;
-    final summary = entry.legs.map((l) {
-      final cur = currencies[l.currencyId];
-      final acc = accounts[l.accountId];
-      final dp = cur?.decimalPlaces ?? 2;
-      final amt =
-          NumberFormat.decimalPatternDigits(decimalDigits: dp).format(l.amount);
-      return '${acc?.name ?? '?'}: $amt ${cur?.code ?? ''}';
-    }).join('  •  ');
+    final summary = entry.legs
+        .map((l) {
+          final cur = currencies[l.currencyId];
+          final acc = accounts[l.accountId];
+          final dp = cur?.decimalPlaces ?? 2;
+          final amt = NumberFormat.decimalPatternDigits(
+            decimalDigits: dp,
+          ).format(l.amount);
+          return '${acc?.name ?? '?'}: $amt ${cur?.code ?? ''}';
+        })
+        .join('  •  ');
 
     final color = DomainColors.forTxKind(tx.kind);
     final icon = DomainColors.iconForTxKind(tx.kind);
 
-    final categoryLabel =
-        tx.categoryId == null ? null : categoryNames[tx.categoryId];
+    final categoryLabel = tx.categoryId == null
+        ? null
+        : categoryNames[tx.categoryId];
     final typeLabel = tx.typeId == null ? null : typeNames[tx.typeId];
-    final tag = [
-      ?categoryLabel,
-      ?typeLabel,
-    ].join(' / ');
+    final tag = [?categoryLabel, ?typeLabel].join(' / ');
 
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
@@ -325,7 +318,9 @@ class _TransactionTile extends StatelessWidget {
                         Flexible(
                           child: Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 1),
+                              horizontal: 6,
+                              vertical: 1,
+                            ),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerHighest,
                               borderRadius: BorderRadius.circular(4),
@@ -377,8 +372,11 @@ class _TransactionTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 IconButton(
-                  icon: Icon(Icons.delete_outline_rounded,
-                      size: 18, color: cs.error),
+                  icon: Icon(
+                    Icons.delete_outline_rounded,
+                    size: 18,
+                    color: cs.error,
+                  ),
                   onPressed: onDelete,
                   style: IconButton.styleFrom(
                     minimumSize: const Size(32, 32),

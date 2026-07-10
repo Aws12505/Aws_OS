@@ -16,6 +16,8 @@ class NotificationService {
   static const String _channelName = 'Reminders';
   static const String _channelDesc =
       'Scheduled income & expense reminders, repeating until you act.';
+  static const String _transferChannelId = 'transfers';
+  static const String _transferChannelName = 'Transfers';
   static const int _daysBefore = 1;
   static const int _daysAfter = 30;
 
@@ -38,6 +40,14 @@ class NotificationService {
           _channelId,
           _channelName,
           description: _channelDesc,
+          importance: Importance.high,
+        ),
+      );
+      await androidImpl.createNotificationChannel(
+        const AndroidNotificationChannel(
+          _transferChannelId,
+          _transferChannelName,
+          description: 'Nearby sharing transfers',
           importance: Importance.high,
         ),
       );
@@ -98,6 +108,27 @@ class NotificationService {
   }
 
   Future<void> cancelAll() => _plugin.cancelAll();
+
+  /// Immediate notification for an incoming / ongoing nearby transfer.
+  Future<void> showTransfer({required String title, required String body}) async {
+    await init();
+    try {
+      await _plugin.show(
+        id: 90001,
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            _transferChannelId,
+            _transferChannelName,
+            channelDescription: 'Nearby sharing transfers',
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+        ),
+      );
+    } catch (_) {}
+  }
 
   int _notificationId(String occurrenceId, int dayOffset) {
     // Combine a stable hash of the UUID with the offset, masked to 31 bits.

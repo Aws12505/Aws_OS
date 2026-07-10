@@ -42,6 +42,10 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Shizuku — app-clone (OBB / Android-data access without root), used by the
+    // com.aws.aws_os/shizuku MethodChannel.
+    implementation("dev.rikka.shizuku:api:13.1.5")
+    implementation("dev.rikka.shizuku:provider:13.1.5")
 }
 
 flutter {

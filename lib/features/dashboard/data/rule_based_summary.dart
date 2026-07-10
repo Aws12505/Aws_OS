@@ -14,10 +14,12 @@ abstract final class RuleBasedSummary {
     }
 
     if (s.transactionCount > 0) {
-      final net = s.netByCurrency.entries.map((e) {
-        final sign = e.value > 0 ? '+' : '';
-        return '$sign${e.value.toStringAsFixed(2)} ${e.key}';
-      }).join(', ');
+      final net = s.netByCurrency.entries
+          .map((e) {
+            final sign = e.value > 0 ? '+' : '';
+            return '$sign${e.value.toStringAsFixed(2)} ${e.key}';
+          })
+          .join(', ');
       final top = s.topExpenseCategories.isNotEmpty
           ? ' Top spend: ${s.topExpenseCategories.first.name}.'
           : '';
@@ -34,6 +36,10 @@ abstract final class RuleBasedSummary {
 
     final mood = s.debrief?.mood;
     if (mood != null) parts.add('Mood $mood/5.');
+    final energy = s.debrief?.energy;
+    if (energy != null) parts.add('Energy $energy/5.');
+
+    if (s.taskStreak >= 3) parts.add('${s.taskStreak}-day task streak.');
 
     // A gentle nudge for tomorrow.
     if (s.tasksDue > 0 && s.taskCompletion < 0.5) {

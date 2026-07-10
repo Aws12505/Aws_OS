@@ -120,6 +120,13 @@ class _QuickActionSheet extends StatelessWidget {
         color: Color(0xFF64748B),
         key: 'manage',
       ),
+      _Action(
+        icon: Icons.wifi_tethering_rounded,
+        label: 'Share',
+        sublabel: 'Nearby devices',
+        color: Color(0xFF10B981),
+        key: 'share',
+      ),
     ]),
   ];
 
@@ -159,6 +166,8 @@ class _QuickActionSheet extends StatelessWidget {
         _showMentorChooser(context, router);
       case 'manage':
         router.go('/finance');
+      case 'share':
+        router.push('/sharing');
     }
   }
 

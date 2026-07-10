@@ -1,4 +1,3 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../core/db/app_database.dart';
 import '../../../core/utils/date_ext.dart';
+import '../../../shared/widgets/charts/category_donut.dart';
 import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/segmented_control.dart';
+import '../../../shared/widgets/stat_tile.dart';
+import '../../finance/data/finance_breakdown.dart';
 import '../../finance/data/finance_dao.dart';
 import '../../finance/presentation/providers.dart' as fin;
 import '../../finance/presentation/widgets/confirm_occurrence_sheet.dart';
@@ -15,6 +18,7 @@ import '../../notes/presentation/providers.dart' as notes;
 import '../../tasks/presentation/providers.dart' as tasks;
 import '../../tasks/presentation/screens/task_detail_screen.dart';
 import 'debrief_providers.dart';
+import 'insights_view.dart';
 import '../../../shared/design/tokens.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,24 +26,8 @@ final _selectedDayProvider = StateProvider<DateTime>(
   (_) => DateTime.now().atStartOfDay,
 );
 
-Color _txColor(String kind) => switch (kind) {
-      'income' => const Color(0xFF22C55E),
-      'expense' => const Color(0xFFEF4444),
-      'transfer' => const Color(0xFF3B82F6),
-      'exchange' => const Color(0xFF8B5CF6),
-      _ => const Color(0xFF6B7280),
-    };
-
-IconData _txIcon(String kind) => switch (kind) {
-      'income' => Icons.trending_up_rounded,
-      'expense' => Icons.trending_down_rounded,
-      'transfer' => Icons.compare_arrows_rounded,
-      'exchange' => Icons.swap_horiz_rounded,
-      _ => Icons.receipt_long_rounded,
-    };
-
-String _txLabel(String kind) =>
-    kind.isEmpty ? kind : kind[0].toUpperCase() + kind.substring(1);
+/// 0 = Overview (today's cards), 1 = Insights (analytics).
+final _dashboardTabProvider = StateProvider<int>((_) => 0);
 
 String _greeting() {
   final h = DateTime.now().hour;
@@ -53,9 +41,7 @@ class DashboardScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return const Scaffold(
-      body: _DashboardBody(),
-    );
+    return const Scaffold(body: _DashboardBody());
   }
 }
 
@@ -64,20 +50,46 @@ class _DashboardBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final selected = ref.watch(_selectedDayProvider);
-    final isToday = selected.isSameDay(DateTime.now());
+    final tab = ref.watch(_dashboardTabProvider);
     return SafeArea(
       bottom: false,
-      child: RefreshIndicator(
-        onRefresh: () => Future.wait([
-          ref.read(fin.recurrenceServiceProvider).materializeAll(),
-          ref.read(tasks.taskRecurrenceServiceProvider).materializeAll(),
-        ]),
-        child: ListView(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+      child: Column(
         children: [
           const _TopBar(),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
+          SegmentedControl(
+            labels: const ['Overview', 'Insights'],
+            icons: const [Icons.dashboard_rounded, Icons.insights_rounded],
+            index: tab,
+            onTap: (i) => ref.read(_dashboardTabProvider.notifier).state = i,
+          ),
+          Expanded(
+            child: tab == 0 ? const _OverviewView() : const InsightsView(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The original "today"-focused dashboard: hero balance, stat tiles, the day
+/// selector and its per-day cards. Extracted verbatim so the Insights tab can
+/// sit beside it under the segmented toggle.
+class _OverviewView extends ConsumerWidget {
+  const _OverviewView();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final selected = ref.watch(_selectedDayProvider);
+    final isToday = selected.isSameDay(DateTime.now());
+    return RefreshIndicator(
+      onRefresh: () => Future.wait([
+        ref.read(fin.recurrenceServiceProvider).materializeAll(),
+        ref.read(tasks.taskRecurrenceServiceProvider).materializeAll(),
+      ]),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+        children: [
           const _HeroBalance(),
           const _StatRow(),
           const _NeedsAttentionCard(),
@@ -86,11 +98,10 @@ class _DashboardBody extends ConsumerWidget {
           _TransactionsForDayCard(date: selected),
           _TasksForDayCard(date: selected),
           _NotesForDayCard(date: selected),
-          const _ExpensePieCard(),
+          const _SpendingBreakdownCard(),
           const _ProjectedBalanceCard(),
           const _MentorsCard(),
         ],
-      ),
       ),
     );
   }
@@ -160,8 +171,11 @@ class _HeroBalance extends ConsumerWidget {
     final byCur = {for (final c in currencies) c.id: c};
     final totals = <String, double>{};
     for (final a in accounts) {
-      totals.update(a.currencyId, (v) => v + (balances[a.id] ?? 0),
-          ifAbsent: () => balances[a.id] ?? 0);
+      totals.update(
+        a.currencyId,
+        (v) => v + (balances[a.id] ?? 0),
+        ifAbsent: () => balances[a.id] ?? 0,
+      );
     }
     final entries = totals.entries.toList();
 
@@ -178,10 +192,7 @@ class _HeroBalance extends ConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(28),
               gradient: LinearGradient(
-                colors: [
-                  cs.primary,
-                  Color.lerp(cs.primary, cs.tertiary, 0.6)!,
-                ],
+                colors: [cs.primary, Color.lerp(cs.primary, cs.tertiary, 0.6)!],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -198,9 +209,11 @@ class _HeroBalance extends ConsumerWidget {
               children: [
                 Row(
                   children: [
-                    Icon(Icons.account_balance_wallet_rounded,
-                        size: 16,
-                        color: cs.onPrimary.withValues(alpha: 0.8)),
+                    Icon(
+                      Icons.account_balance_wallet_rounded,
+                      size: 16,
+                      color: cs.onPrimary.withValues(alpha: 0.8),
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'TOTAL VAULT',
@@ -211,9 +224,11 @@ class _HeroBalance extends ConsumerWidget {
                       ),
                     ),
                     const Spacer(),
-                    Icon(Icons.arrow_outward_rounded,
-                        size: 18,
-                        color: cs.onPrimary.withValues(alpha: 0.8)),
+                    Icon(
+                      Icons.arrow_outward_rounded,
+                      size: 18,
+                      color: cs.onPrimary.withValues(alpha: 0.8),
+                    ),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -226,37 +241,40 @@ class _HeroBalance extends ConsumerWidget {
                     ),
                   )
                 else ...[
-                  Builder(builder: (_) {
-                    final main = entries.first;
-                    final cur = byCur[main.key];
-                    final formatted = NumberFormat.decimalPatternDigits(
-                      decimalDigits: cur?.decimalPlaces ?? 2,
-                    ).format(main.value);
-                    return FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: formatted,
-                            style: tt.displaySmall?.copyWith(
-                              color: cs.onPrimary,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -1,
-                            ),
+                  Builder(
+                    builder: (_) {
+                      final main = entries.first;
+                      final cur = byCur[main.key];
+                      final formatted = NumberFormat.decimalPatternDigits(
+                        decimalDigits: cur?.decimalPlaces ?? 2,
+                      ).format(main.value);
+                      return FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: RichText(
+                          text: TextSpan(
+                            children: [
+                              TextSpan(
+                                text: formatted,
+                                style: tt.displaySmall?.copyWith(
+                                  color: cs.onPrimary,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: -1,
+                                ),
+                              ),
+                              TextSpan(
+                                text: '  ${cur?.symbol ?? cur?.code ?? ''}',
+                                style: tt.titleMedium?.copyWith(
+                                  color: cs.onPrimary.withValues(alpha: 0.85),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
-                          TextSpan(
-                            text: '  ${cur?.symbol ?? cur?.code ?? ''}',
-                            style: tt.titleMedium?.copyWith(
-                              color: cs.onPrimary.withValues(alpha: 0.85),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ));
-                  }),
+                        ),
+                      );
+                    },
+                  ),
                   if (entries.length > 1) ...[
                     const SizedBox(height: 14),
                     Wrap(
@@ -266,7 +284,9 @@ class _HeroBalance extends ConsumerWidget {
                         for (final e in entries.skip(1))
                           Container(
                             padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 5),
+                              horizontal: 10,
+                              vertical: 5,
+                            ),
                             decoration: BoxDecoration(
                               color: cs.onPrimary.withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(10),
@@ -302,9 +322,11 @@ class _StatRow extends ConsumerWidget {
     final today = DateTime.now().atStartOfDay;
     final allTasks =
         ref.watch(tasks.allTasksStreamProvider).value ?? const <Task>[];
-    final todays = allTasks.where((t) =>
-        (t.dueAt != null && t.dueAt!.isSameDay(today)) ||
-        (t.deadlineAt != null && t.deadlineAt!.isSameDay(today)));
+    final todays = allTasks.where(
+      (t) =>
+          (t.dueAt != null && t.dueAt!.isSameDay(today)) ||
+          (t.deadlineAt != null && t.deadlineAt!.isSameDay(today)),
+    );
     final taskDone = todays.where((t) => t.isCompleted).length;
     final taskTotal = todays.length;
 
@@ -319,7 +341,7 @@ class _StatRow extends ConsumerWidget {
       child: Row(
         children: [
           Expanded(
-            child: _StatTile(
+            child: StatTile(
               icon: Icons.task_alt_rounded,
               color: const Color(0xFF14B8A6),
               label: "Today's tasks",
@@ -327,111 +349,31 @@ class _StatRow extends ConsumerWidget {
               sub: taskTotal == 0
                   ? 'Nothing due'
                   : taskDone == taskTotal
-                      ? 'All done'
-                      : '${taskTotal - taskDone} left',
+                  ? 'All done'
+                  : '${taskTotal - taskDone} left',
               onTap: () => context.go('/tasks'),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: _StatTile(
+            child: StatTile(
               icon: Icons.fitness_center_rounded,
               color: const Color(0xFFEF4444),
               label: 'Last workout',
               value: gymDays == null
                   ? '—'
                   : gymDays == 0
-                      ? 'Today'
-                      : '${gymDays}d',
+                  ? 'Today'
+                  : '${gymDays}d',
               sub: gymDays == null
                   ? 'No sessions'
                   : gymDays == 0
-                      ? 'Great job'
-                      : 'days ago',
+                  ? 'Great job'
+                  : 'days ago',
               onTap: () => context.go('/gym'),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  const _StatTile({
-    required this.icon,
-    required this.color,
-    required this.label,
-    required this.value,
-    required this.sub,
-    required this.onTap,
-  });
-  final IconData icon;
-  final Color color;
-  final String label;
-  final String value;
-  final String sub;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Material(
-      color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-      borderRadius: BorderRadius.circular(20),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.45),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(height: 12),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: tt.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: tt.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                sub,
-                style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
@@ -454,8 +396,7 @@ class _DaySelector extends ConsumerWidget {
         decoration: BoxDecoration(
           color: cs.surface.withValues(alpha: 0.7),
           borderRadius: BorderRadius.circular(16),
-          border:
-              Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
         ),
         child: Row(
           children: [
@@ -482,9 +423,7 @@ class _DaySelector extends ConsumerWidget {
                 child: Column(
                   children: [
                     Text(
-                      isToday
-                          ? 'Today'
-                          : DateFormat('EEEE').format(selected),
+                      isToday ? 'Today' : DateFormat('EEEE').format(selected),
                       style: tt.labelMedium?.copyWith(
                         color: isToday ? cs.primary : cs.onSurfaceVariant,
                         fontWeight: FontWeight.w700,
@@ -520,7 +459,8 @@ class _NeedsAttentionCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending = ref.watch(fin.pendingOccurrencesProvider).value ??
+    final pending =
+        ref.watch(fin.pendingOccurrencesProvider).value ??
         const <ScheduledOccurrence>[];
     if (pending.isEmpty) return const SizedBox.shrink();
     final tt = Theme.of(context).textTheme;
@@ -532,7 +472,10 @@ class _NeedsAttentionCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _IconBadge(icon: Icons.notifications_active_rounded, color: amber),
+              _IconBadge(
+                icon: Icons.notifications_active_rounded,
+                color: amber,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
@@ -549,9 +492,11 @@ class _NeedsAttentionCard extends ConsumerWidget {
               padding: const EdgeInsets.only(top: 6),
               child: Row(
                 children: [
-                  Icon(Icons.schedule_rounded,
-                      size: 14,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  Icon(
+                    Icons.schedule_rounded,
+                    size: 14,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   const SizedBox(width: 6),
                   Expanded(child: Text(DateFormat.yMMMd().format(o.dueAt))),
                   FilledButton(
@@ -582,7 +527,8 @@ class _TransactionsForDayCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final txs = ref.watch(fin.recentTransactionsStreamProvider).value ??
+    final txs =
+        ref.watch(fin.recentTransactionsStreamProvider).value ??
         const <TransactionWithLegs>[];
     final cats =
         ref.watch(fin.allCategoriesProvider).value ?? const <Category>[];
@@ -590,8 +536,9 @@ class _TransactionsForDayCard extends ConsumerWidget {
     final currencies =
         ref.watch(fin.currenciesStreamProvider).value ?? const <Currency>[];
     final byCur = {for (final c in currencies) c.id: c};
-    final dayTxs =
-        txs.where((t) => t.transaction.occurredAt.isSameDay(date)).toList();
+    final dayTxs = txs
+        .where((t) => t.transaction.occurredAt.isSameDay(date))
+        .toList();
     if (dayTxs.isEmpty) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
@@ -601,11 +548,12 @@ class _TransactionsForDayCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              _IconBadge(
-                  icon: Icons.receipt_long_rounded, color: cs.tertiary),
+              _IconBadge(icon: Icons.receipt_long_rounded, color: cs.tertiary),
               const SizedBox(width: 12),
-              Text('Transactions',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Transactions',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
               MiniPill(label: '${dayTxs.length}', color: cs.tertiary),
             ],
@@ -620,29 +568,37 @@ class _TransactionsForDayCard extends ConsumerWidget {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: _txColor(t.transaction.kind)
-                          .withValues(alpha: 0.12),
+                      color: DomainColors.forTxKind(
+                        t.transaction.kind,
+                      ).withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(11),
                     ),
-                    child: Icon(_txIcon(t.transaction.kind),
-                        color: _txColor(t.transaction.kind), size: 18),
+                    child: Icon(
+                      DomainColors.iconForTxKind(t.transaction.kind),
+                      color: DomainColors.forTxKind(t.transaction.kind),
+                      size: 18,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_txLabel(t.transaction.kind),
-                            style: tt.bodyMedium
-                                ?.copyWith(fontWeight: FontWeight.w600)),
+                        Text(
+                          DomainColors.labelForTxKind(t.transaction.kind),
+                          style: tt.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                         if (catNames[t.transaction.categoryId] != null ||
                             t.transaction.note != null)
                           Text(
                             catNames[t.transaction.categoryId] ??
                                 t.transaction.note ??
                                 '',
-                            style: tt.bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
+                            style: tt.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -660,12 +616,15 @@ class _TransactionsForDayCard extends ConsumerWidget {
                           overflow: TextOverflow.ellipsis,
                           style: tt.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w700,
-                            color: _txColor(t.transaction.kind),
+                            color: DomainColors.forTxKind(t.transaction.kind),
                           ),
                         ),
-                        Text(DateFormat.Hm().format(t.transaction.occurredAt),
-                            style: tt.bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant)),
+                        Text(
+                          DateFormat.Hm().format(t.transaction.occurredAt),
+                          style: tt.bodySmall?.copyWith(
+                            color: cs.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -688,15 +647,18 @@ class _TransactionsForDayCard extends ConsumerWidget {
     if (allZero && t.legs.isNotEmpty) {
       net.clear();
       for (final l in t.legs) {
-        if (l.amount > 0) net[l.currencyId] = (net[l.currencyId] ?? 0) + l.amount;
+        if (l.amount > 0) {
+          net[l.currencyId] = (net[l.currencyId] ?? 0) + l.amount;
+        }
       }
     }
     final parts = <String>[];
     net.forEach((curId, amount) {
       final c = byCur[curId];
       final dp = c?.decimalPlaces ?? 2;
-      final formatted =
-          NumberFormat.decimalPatternDigits(decimalDigits: dp).format(amount);
+      final formatted = NumberFormat.decimalPatternDigits(
+        decimalDigits: dp,
+      ).format(amount);
       final sign = amount > 0 ? '+' : '';
       parts.add('$sign$formatted ${c?.symbol ?? c?.code ?? ''}'.trim());
     });
@@ -715,9 +677,11 @@ class _TasksForDayCard extends ConsumerWidget {
     final allTasks =
         ref.watch(tasks.allTasksStreamProvider).value ?? const <Task>[];
     final today = allTasks
-        .where((t) =>
-            (t.dueAt != null && t.dueAt!.isSameDay(date)) ||
-            (t.deadlineAt != null && t.deadlineAt!.isSameDay(date)))
+        .where(
+          (t) =>
+              (t.dueAt != null && t.dueAt!.isSameDay(date)) ||
+              (t.deadlineAt != null && t.deadlineAt!.isSameDay(date)),
+        )
         .toList();
     if (today.isEmpty) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
@@ -733,13 +697,18 @@ class _TasksForDayCard extends ConsumerWidget {
             children: [
               _IconBadge(icon: Icons.task_alt_rounded, color: teal),
               const SizedBox(width: 12),
-              Text('Tasks',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Tasks',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
-              Text('$done / ${today.length}',
-                  style: tt.labelMedium?.copyWith(
-                      color: cs.onSurfaceVariant,
-                      fontWeight: FontWeight.w600)),
+              Text(
+                '$done / ${today.length}',
+                style: tt.labelMedium?.copyWith(
+                  color: cs.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -782,8 +751,11 @@ class _TasksForDayCard extends ConsumerWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: t.isCompleted
-                          ? const Icon(Icons.check_rounded,
-                              size: 14, color: Colors.white)
+                          ? const Icon(
+                              Icons.check_rounded,
+                              size: 14,
+                              color: Colors.white,
+                            )
                           : null,
                     ),
                   ),
@@ -793,10 +765,10 @@ class _TasksForDayCard extends ConsumerWidget {
                       behavior: HitTestBehavior.opaque,
                       onTap: () =>
                           Navigator.of(context, rootNavigator: true).push(
-                        MaterialPageRoute(
-                          builder: (_) => TaskDetailScreen(taskId: t.id),
-                        ),
-                      ),
+                            MaterialPageRoute(
+                              builder: (_) => TaskDetailScreen(taskId: t.id),
+                            ),
+                          ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -816,8 +788,9 @@ class _TasksForDayCard extends ConsumerWidget {
                           if (_taskSubtitle(t) != null)
                             Text(
                               _taskSubtitle(t)!,
-                              style: tt.bodySmall
-                                  ?.copyWith(color: cs.onSurfaceVariant),
+                              style: tt.bodySmall?.copyWith(
+                                color: cs.onSurfaceVariant,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -871,8 +844,10 @@ class _NotesForDayCard extends ConsumerWidget {
             children: [
               _IconBadge(icon: Icons.sticky_note_2_rounded, color: violet),
               const SizedBox(width: 12),
-              Text('Notes',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Notes',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -898,16 +873,18 @@ class _NotesForDayCard extends ConsumerWidget {
                           n.title?.isNotEmpty == true
                               ? n.title!
                               : _firstLine(n.contentMd),
-                          style: tt.bodyMedium
-                              ?.copyWith(fontWeight: FontWeight.w600),
+                          style: tt.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
                         if (n.title?.isNotEmpty == true)
                           Text(
                             _firstLine(n.contentMd),
-                            style: tt.bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
+                            style: tt.bodySmall?.copyWith(
+                              color: cs.onSurfaceVariant,
+                            ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -930,124 +907,151 @@ class _NotesForDayCard extends ConsumerWidget {
 
 // ── expense pie ──────────────────────────────────────────────────────────────
 
-class _ExpensePieCard extends ConsumerWidget {
-  const _ExpensePieCard();
+/// This-month income/expense broken down by category or subcategory (type),
+/// as a clean donut. Per currency — never mixes currencies.
+class _SpendingBreakdownCard extends ConsumerStatefulWidget {
+  const _SpendingBreakdownCard();
+  @override
+  ConsumerState<_SpendingBreakdownCard> createState() =>
+      _SpendingBreakdownCardState();
+}
 
-  static const _palette = [
-    Color(0xFFEF4444),
-    Color(0xFF3B82F6),
-    Color(0xFF8B5CF6),
-    Color(0xFF14B8A6),
-    Color(0xFFF59E0B),
-    Color(0xFF22C55E),
-    Color(0xFFEC4899),
-    Color(0xFF06B6D4),
-  ];
+class _SpendingBreakdownCardState
+    extends ConsumerState<_SpendingBreakdownCard> {
+  String _kind = 'expense';
+  bool _byType = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final txs = ref.watch(fin.recentTransactionsStreamProvider).value ??
+  Widget build(BuildContext context) {
+    final txs =
+        ref.watch(fin.recentTransactionsStreamProvider).value ??
         const <TransactionWithLegs>[];
-    final cats =
-        ref.watch(fin.allCategoriesProvider).value ?? const <Category>[];
-    final catNames = {for (final c in cats) c.id: c.name};
     final now = DateTime.now();
     final monthStart = DateTime(now.year, now.month, 1);
-    final perCategory = <String, double>{};
-    for (final t in txs) {
-      if (t.transaction.kind != 'expense') continue;
-      if (t.transaction.occurredAt.isBefore(monthStart)) continue;
-      final name = catNames[t.transaction.categoryId] ?? 'Other';
-      final total = t.legs.fold<double>(0, (s, l) => s + l.amount.abs());
-      perCategory.update(name, (v) => v + total, ifAbsent: () => total);
+
+    final hasAny = txs.any(
+      (t) =>
+          (t.transaction.kind == 'income' ||
+              t.transaction.kind == 'expense') &&
+          !t.transaction.occurredAt.isBefore(monthStart),
+    );
+    if (!hasAny) return const SizedBox.shrink();
+
+    final cats =
+        ref.watch(fin.allCategoriesProvider).value ?? const <Category>[];
+    final types =
+        ref.watch(fin.allTypesProvider).value ?? const <CategoryType>[];
+    final currencies = {
+      for (final c
+          in (ref.watch(fin.currenciesStreamProvider).value ??
+              const <Currency>[]))
+        c.id: c,
+    };
+    final catNames = {for (final c in cats) c.id: c.name};
+    final typeNames = {for (final t in types) t.id: t.name};
+
+    final curId = dominantCurrencyFor(txs: txs, kind: _kind, from: monthStart);
+    final cur = curId != null ? currencies[curId] : null;
+    final slices = curId == null
+        ? const <BreakdownSlice>[]
+        : categoryBreakdown(
+            txs: txs,
+            kind: _kind,
+            currencyId: curId,
+            byType: _byType,
+            catNames: catNames,
+            typeNames: typeNames,
+            from: monthStart,
+          );
+
+    final data = <DonutDatum>[];
+    final capped = slices.length > 6 ? slices.sublist(0, 6) : slices;
+    for (var i = 0; i < capped.length; i++) {
+      data.add(
+        DonutDatum(
+          label: capped[i].label,
+          value: capped[i].amount,
+          color: ChartPalette.at(i),
+        ),
+      );
     }
-    if (perCategory.isEmpty) return const SizedBox.shrink();
+    if (slices.length > 6) {
+      final other = slices.sublist(6).fold<double>(0, (s, x) => s + x.amount);
+      data.add(DonutDatum(label: 'Other', value: other, color: ChartPalette.at(6)));
+    }
+    final total = slices.fold<double>(0, (s, x) => s + x.amount);
+    final nf = NumberFormat.compact();
+
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final entries = perCategory.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
-    final sections = <PieChartSectionData>[];
-    for (var i = 0; i < entries.length; i++) {
-      sections.add(PieChartSectionData(
-        value: entries[i].value,
-        color: _palette[i % _palette.length],
-        radius: 50,
-        showTitle: false,
-      ));
-    }
+    final income = _kind == 'income';
+
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _IconBadge(icon: Icons.pie_chart_rounded, color: cs.error),
+              _IconBadge(
+                icon: income
+                    ? Icons.trending_up_rounded
+                    : Icons.donut_large_rounded,
+                color: income ? DomainColors.income : cs.error,
+              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Expenses',
-                        style: tt.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
-                    Text(DateFormat('MMMM y').format(now),
-                        style: tt.bodySmall
-                            ?.copyWith(color: cs.onSurfaceVariant)),
+                    Text(
+                      income ? 'Income' : 'Spending',
+                      style: tt.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    Text(
+                      '${DateFormat('MMMM y').format(now)}'
+                      '${cur != null ? ' · ${cur.code}' : ''}',
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
                   ],
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 14),
+          SegmentedControl(
+            margin: EdgeInsets.zero,
+            labels: const ['Expense', 'Income'],
+            index: income ? 1 : 0,
+            onTap: (i) => setState(() => _kind = i == 1 ? 'income' : 'expense'),
+          ),
+          const SizedBox(height: 8),
+          SegmentedControl(
+            margin: EdgeInsets.zero,
+            labels: const ['By category', 'By type'],
+            index: _byType ? 1 : 0,
+            onTap: (i) => setState(() => _byType = i == 1),
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              SizedBox(
-                width: 128,
-                height: 128,
-                child: PieChart(PieChartData(
-                  sections: sections,
-                  sectionsSpace: 2,
-                  centerSpaceRadius: 32,
-                  borderData: FlBorderData(show: false),
-                )),
-              ),
-              const SizedBox(width: 20),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (var i = 0; i < entries.length && i < 5; i++)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 6),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: _palette[i % _palette.length],
-                                borderRadius: BorderRadius.circular(3),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(entries[i].key,
-                                  style: tt.bodySmall,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis),
-                            ),
-                          ],
-                        ),
-                      ),
-                    if (entries.length > 5)
-                      Text('+${entries.length - 5} more',
-                          style: tt.bodySmall
-                              ?.copyWith(color: cs.onSurfaceVariant)),
-                  ],
+          if (slices.isEmpty)
+            SizedBox(
+              height: 120,
+              child: Center(
+                child: Text(
+                  'No ${income ? 'income' : 'expenses'} in '
+                  '${DateFormat('MMMM').format(now)}',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                 ),
               ),
-            ],
-          ),
+            )
+          else
+            CategoryDonut(
+              data: data,
+              centerValue: nf.format(total),
+              centerLabel: cur?.code,
+              legendValue: nf.format,
+            ),
         ],
       ),
     );
@@ -1061,7 +1065,8 @@ class _ProjectedBalanceCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final pending = ref.watch(fin.pendingOccurrencesWindowProvider(90)).value ??
+    final pending =
+        ref.watch(fin.pendingOccurrencesWindowProvider(90)).value ??
         const <ScheduledOccurrence>[];
     if (pending.isEmpty) return const SizedBox.shrink();
     final today = DateTime.now().atStartOfDay;
@@ -1077,11 +1082,14 @@ class _ProjectedBalanceCard extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Upcoming recurring',
-                    style:
-                        tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
-                Text('$upcoming in the next 90 days',
-                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+                Text(
+                  'Upcoming recurring',
+                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  '$upcoming in the next 90 days',
+                  style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                ),
               ],
             ),
           ),
@@ -1167,15 +1175,19 @@ class _MentorsCard extends StatelessWidget {
             children: [
               _IconBadge(icon: Icons.psychology_rounded, color: cs.primary),
               const SizedBox(width: 12),
-              Text('Mentors',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Mentors',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
             ],
           ),
           const SizedBox(height: 6),
           Padding(
             padding: const EdgeInsets.only(left: 4),
-            child: Text('Analyze your data, forecast trends & get advice',
-                style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
+            child: Text(
+              'Analyze your data, forecast trends & get advice',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
           ),
           const SizedBox(height: 14),
           Row(
@@ -1245,12 +1257,16 @@ class _MentorChip extends StatelessWidget {
             children: [
               Icon(icon, color: color, size: 22),
               const SizedBox(height: 6),
-              Text(label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  textAlign: TextAlign.center,
-                  style: tt.labelMedium?.copyWith(
-                      fontWeight: FontWeight.w700, color: color)),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: tt.labelMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
             ],
           ),
         ),

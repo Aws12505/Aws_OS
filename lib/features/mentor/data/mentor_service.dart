@@ -11,25 +11,26 @@ class MentorService {
   final AiService _ai;
 
   String systemFor(MentorKind kind) => switch (kind) {
-        MentorKind.finance =>
-          'You are a sharp, practical personal-finance mentor. You receive the '
-              "user's real recent cash flow, balance, projections and top "
-              'spending. Give a brief, concrete assessment and 3–5 prioritized, '
-              'specific recommendations grounded in these exact numbers. '
-              'Reference figures. No generic platitudes, no disclaimers.',
-        MentorKind.gym =>
-          'You are an experienced strength & conditioning coach. You receive the '
-              "user's real training frequency, streak and body-measurement "
-              'trends with 4-week projections. Give a brief assessment and 3–5 '
-              'specific, actionable coaching cues grounded in these numbers '
-              '(frequency, progression, plateaus). No generic advice, no medical '
-              'disclaimers.',
-        MentorKind.productivity =>
-          'You are a pragmatic productivity coach. You receive the user\'s task '
-              'completion stats and trend. Give a brief assessment and 3–5 '
-              'specific, actionable suggestions grounded in the numbers. No '
-              'platitudes.',
-      };
+    MentorKind.finance =>
+      'You are a sharp, practical personal-finance mentor. You receive the '
+          "user's real recent cash flow, balance, projections, top spending, "
+          'and this-month budget adherence. Give a brief, concrete assessment '
+          'and 3–5 prioritized, specific recommendations grounded in these '
+          'exact numbers. Reference figures. No generic platitudes, no '
+          'disclaimers.',
+    MentorKind.gym =>
+      'You are an experienced strength & conditioning coach. You receive the '
+          "user's real training frequency, streak, body-measurement trends, "
+          'and per-exercise strength progression (top-set weight and '
+          'estimated 1RM). Give a brief assessment and 3–5 specific, '
+          'actionable coaching cues grounded in these numbers (frequency, '
+          'progression, plateaus). No generic advice, no medical disclaimers.',
+    MentorKind.productivity =>
+      'You are a pragmatic productivity coach. You receive the user\'s task '
+          'completion stats and trend. Give a brief assessment and 3–5 '
+          'specific, actionable suggestions grounded in the numbers. No '
+          'platitudes.',
+  };
 
   Future<String> advise(MentorKind kind, String context) {
     return _ai.complete(system: systemFor(kind), prompt: context);
@@ -43,17 +44,23 @@ class MentorService {
       ..writeln('Currency: ${f.currencyCode}')
       ..writeln('Current balance: ${n.format(f.currentBalance)}')
       ..writeln('Average monthly net: ${n.format(f.avgMonthlyNet)}')
-      ..writeln('Projected balance: +1mo ${n.format(f.projected[1] ?? 0)}, '
-          '+3mo ${n.format(f.projected[3] ?? 0)}, '
-          '+6mo ${n.format(f.projected[6] ?? 0)}');
+      ..writeln(
+        'Projected balance: +1mo ${n.format(f.projected[1] ?? 0)}, '
+        '+3mo ${n.format(f.projected[3] ?? 0)}, '
+        '+6mo ${n.format(f.projected[6] ?? 0)}',
+      );
     if (f.runwayMonths != null) {
-      b.writeln('Runway at current burn: ${f.runwayMonths!.toStringAsFixed(1)} months');
+      b.writeln(
+        'Runway at current burn: ${f.runwayMonths!.toStringAsFixed(1)} months',
+      );
     }
     b.writeln('Monthly history:');
     for (final m in f.months) {
-      b.writeln('  ${DateFormat('MMM yyyy').format(m.month)}: '
-          'in ${n.format(m.income)}, out ${n.format(m.expense)}, '
-          'net ${n.format(m.net)}');
+      b.writeln(
+        '  ${DateFormat('MMM yyyy').format(m.month)}: '
+        'in ${n.format(m.income)}, out ${n.format(m.expense)}, '
+        'net ${n.format(m.net)}',
+      );
     }
     if (f.topCategories.isNotEmpty) {
       b.writeln('Top spending:');
@@ -61,13 +68,31 @@ class MentorService {
         b.writeln('  ${c.name}: ${n.format(c.amount)}');
       }
     }
+    if (f.budgets.isNotEmpty) {
+      b.writeln('This month vs budget:');
+      for (final bud in f.budgets) {
+        final flag = bud.over ? ' — OVER' : '';
+        b.writeln(
+          '  ${bud.name}: ${n.format(bud.spent)} of '
+          '${n.format(bud.limit)} (${(bud.fraction * 100).round()}%)$flag',
+        );
+      }
+    }
+    if (f.otherBalances.isNotEmpty) {
+      final parts = f.otherBalances.entries
+          .map((e) => '${n.format(e.value)} ${e.key}')
+          .join(', ');
+      b.writeln('Also held (other currencies, not analyzed here): $parts');
+    }
     return b.toString();
   }
 
   String gymContext(GymForecast g) {
     final b = StringBuffer()
-      ..writeln('Training: ${g.totalSessions} sessions in the last ${g.weeks} '
-          'weeks (${g.sessionsPerWeek.toStringAsFixed(1)} per week).')
+      ..writeln(
+        'Training: ${g.totalSessions} sessions in the last ${g.weeks} '
+        'weeks (${g.sessionsPerWeek.toStringAsFixed(1)} per week).',
+      )
       ..writeln('Current weekly streak: ${g.currentWeekStreak} weeks.');
     if (g.lastSessionDaysAgo != null) {
       b.writeln('Last session: ${g.lastSessionDaysAgo} days ago.');
@@ -76,9 +101,24 @@ class MentorService {
       b.writeln('Body measurements (latest, weekly trend, 4-week projection):');
       for (final m in g.measurements) {
         final s = m.slopePerWeek >= 0 ? '+' : '';
-        b.writeln('  ${m.name}: ${_t(m.latest)}${m.unit}, '
-            '$s${m.slopePerWeek.toStringAsFixed(2)}${m.unit}/wk → '
-            '~${_t(m.projected4w)}${m.unit}');
+        b.writeln(
+          '  ${m.name}: ${_t(m.latest)}${m.unit}, '
+          '$s${m.slopePerWeek.toStringAsFixed(2)}${m.unit}/wk → '
+          '~${_t(m.projected4w)}${m.unit}',
+        );
+      }
+    }
+    if (g.lifts.isNotEmpty) {
+      b.writeln(
+        'Strength progression (latest top set → estimated 1RM, '
+        'change over N logged entries):',
+      );
+      for (final l in g.lifts) {
+        final s = l.change >= 0 ? '+' : '';
+        b.writeln(
+          '  ${l.name}: ${_t(l.latestWeight)} top set → '
+          '~${_t(l.est1RM)} est-1RM ($s${_t(l.change)} over ${l.entries})',
+        );
       }
     }
     return b.toString();
@@ -86,11 +126,15 @@ class MentorService {
 
   String productivityContext(ProductivityForecast p) {
     return (StringBuffer()
-          ..writeln('Last ${p.windowDays} days: ${p.done}/${p.due} tasks '
-              'completed (${(p.completionRate * 100).round()}%).')
+          ..writeln(
+            'Last ${p.windowDays} days: ${p.done}/${p.due} tasks '
+            'completed (${(p.completionRate * 100).round()}%).',
+          )
           ..writeln('Currently overdue: ${p.overdue}.')
-          ..writeln('Daily completion trend slope: '
-              '${p.slopePerDay.toStringAsFixed(3)} per day.'))
+          ..writeln(
+            'Daily completion trend slope: '
+            '${p.slopePerDay.toStringAsFixed(3)} per day.',
+          ))
         .toString();
   }
 
@@ -100,17 +144,31 @@ class MentorService {
     final n = NumberFormat.decimalPatternDigits(decimalDigits: f.decimals);
     final tips = <String>[];
     if (f.runwayMonths != null) {
-      tips.add('You\'re spending more than you earn — about '
-          '${f.runwayMonths!.toStringAsFixed(1)} months of runway at this rate. '
-          'Trimming your top category would extend it.');
+      tips.add(
+        'You\'re spending more than you earn — about '
+        '${f.runwayMonths!.toStringAsFixed(1)} months of runway at this rate. '
+        'Trimming your top category would extend it.',
+      );
     } else {
-      tips.add('You\'re net-positive (~${n.format(f.avgMonthlyNet)} '
-          '${f.currencyCode}/mo). On this pace you\'d reach '
-          '${n.format(f.projected[6] ?? f.currentBalance)} in ~6 months.');
+      tips.add(
+        'You\'re net-positive (~${n.format(f.avgMonthlyNet)} '
+        '${f.currencyCode}/mo). On this pace you\'d reach '
+        '${n.format(f.projected[6] ?? f.currentBalance)} in ~6 months.',
+      );
     }
     if (f.topCategories.isNotEmpty) {
-      tips.add('Biggest outflow: ${f.topCategories.first.name} '
-          '(${n.format(f.topCategories.first.amount)}). Set a monthly cap here.');
+      tips.add(
+        'Biggest outflow: ${f.topCategories.first.name} '
+        '(${n.format(f.topCategories.first.amount)}). Set a monthly cap here.',
+      );
+    }
+    final over = f.budgets.where((x) => x.over).toList();
+    if (over.isNotEmpty) {
+      final x = over.first;
+      tips.add(
+        'Over budget on ${x.name}: ${n.format(x.spent)} of '
+        '${n.format(x.limit)} this month. Rein it in before month-end.',
+      );
     }
     tips.add('Automate a fixed transfer to savings right after income lands.');
     return _bullets(tips);
@@ -119,32 +177,68 @@ class MentorService {
   String gymTips(GymForecast g) {
     final tips = <String>[];
     if (g.sessionsPerWeek < 2) {
-      tips.add('Frequency is low (${g.sessionsPerWeek.toStringAsFixed(1)}/week). '
-          'Target 3 short sessions a week — consistency beats intensity.');
+      tips.add(
+        'Frequency is low (${g.sessionsPerWeek.toStringAsFixed(1)}/week). '
+        'Target 3 short sessions a week — consistency beats intensity.',
+      );
     } else {
-      tips.add('Solid frequency (${g.sessionsPerWeek.toStringAsFixed(1)}/week). '
-          'Keep the ${g.currentWeekStreak}-week streak alive.');
+      tips.add(
+        'Solid frequency (${g.sessionsPerWeek.toStringAsFixed(1)}/week). '
+        'Keep the ${g.currentWeekStreak}-week streak alive.',
+      );
     }
     final moving = g.measurements.where((m) => m.slopePerWeek.abs() > 1e-6);
     if (moving.isNotEmpty) {
       final m = moving.first;
       final dir = m.slopePerWeek >= 0 ? 'rising' : 'falling';
-      tips.add('${m.name} is $dir ~${m.slopePerWeek.abs().toStringAsFixed(2)}'
-          '${m.unit}/wk → about ${_t(m.projected4w)}${m.unit} in a month.');
+      tips.add(
+        '${m.name} is $dir ~${m.slopePerWeek.abs().toStringAsFixed(2)}'
+        '${m.unit}/wk → about ${_t(m.projected4w)}${m.unit} in a month.',
+      );
     }
-    tips.add('Log each session\'s actual sets/reps to drive progressive overload.');
+    if (g.lifts.isNotEmpty) {
+      final stalled = g.lifts
+          .where((l) => l.entries >= 3 && l.change.abs() < 1e-9)
+          .toList();
+      final rising = g.lifts.where((l) => l.change > 0).toList();
+      if (stalled.isNotEmpty) {
+        final l = stalled.first;
+        tips.add(
+          '${l.name} has stalled at ${_t(l.latestWeight)} across '
+          '${l.entries} logs — change reps, tempo, or add a small load to '
+          'break the plateau.',
+        );
+      } else if (rising.isNotEmpty) {
+        final l = rising.first;
+        tips.add(
+          '${l.name} is progressing (+${_t(l.change)} to '
+          '${_t(l.latestWeight)}). Keep the small increments coming.',
+        );
+      }
+    } else {
+      tips.add(
+        'After you hit a set, edit its weight/reps to log it — that '
+        'builds your progression history.',
+      );
+    }
     return _bullets(tips);
   }
 
   String productivityTips(ProductivityForecast p) {
     final tips = <String>[];
-    tips.add('You\'re completing ${(p.completionRate * 100).round()}% of due '
-        'tasks. ${p.completionRate < 0.6 ? 'Schedule fewer, finish more.' : 'Great follow-through.'}');
+    tips.add(
+      'You\'re completing ${(p.completionRate * 100).round()}% of due '
+      'tasks. ${p.completionRate < 0.6 ? 'Schedule fewer, finish more.' : 'Great follow-through.'}',
+    );
     if (p.overdue > 0) {
-      tips.add('${p.overdue} task(s) overdue — clear or reschedule them first to '
-          'reset momentum.');
+      tips.add(
+        '${p.overdue} task(s) overdue — clear or reschedule them first to '
+        'reset momentum.',
+      );
     }
-    tips.add('Each evening, carry unfinished tasks to tomorrow and cap the list.');
+    tips.add(
+      'Each evening, carry unfinished tasks to tomorrow and cap the list.',
+    );
     return _bullets(tips);
   }
 

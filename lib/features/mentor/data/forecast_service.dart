@@ -3,22 +3,23 @@ import 'dart:math' as math;
 import '../../../core/db/app_database.dart';
 import '../../../core/utils/date_ext.dart';
 import '../../finance/data/finance_dao.dart';
+import '../../gym/data/gym_progression_service.dart';
 
 /// The mentor domains the user can consult.
 enum MentorKind { finance, gym, productivity }
 
 extension MentorKindX on MentorKind {
   String get title => switch (this) {
-        MentorKind.finance => 'Finance mentor',
-        MentorKind.gym => 'Gym mentor',
-        MentorKind.productivity => 'Productivity mentor',
-      };
+    MentorKind.finance => 'Finance mentor',
+    MentorKind.gym => 'Gym mentor',
+    MentorKind.productivity => 'Productivity mentor',
+  };
 
   String get tagline => switch (this) {
-        MentorKind.finance => 'Cash-flow analysis & forecasts',
-        MentorKind.gym => 'Training & body-trend coaching',
-        MentorKind.productivity => 'Focus & follow-through',
-      };
+    MentorKind.finance => 'Cash-flow analysis & forecasts',
+    MentorKind.gym => 'Training & body-trend coaching',
+    MentorKind.productivity => 'Focus & follow-through',
+  };
 }
 
 class MonthlyFlow {
@@ -39,6 +40,20 @@ class CategorySpend {
   final double amount;
 }
 
+/// This-month spend against a category budget (analyzed currency).
+class BudgetStatus {
+  const BudgetStatus({
+    required this.name,
+    required this.limit,
+    required this.spent,
+  });
+  final String name;
+  final double limit;
+  final double spent;
+  bool get over => spent > limit;
+  double get fraction => limit <= 0 ? 0 : spent / limit;
+}
+
 class FinanceForecast {
   const FinanceForecast({
     required this.hasData,
@@ -51,6 +66,8 @@ class FinanceForecast {
     required this.projected,
     required this.runwayMonths,
     required this.topCategories,
+    this.budgets = const [],
+    this.otherBalances = const {},
   });
 
   final bool hasData;
@@ -63,6 +80,12 @@ class FinanceForecast {
   final Map<int, double> projected; // months-ahead -> projected balance
   final double? runwayMonths; // null unless burning down
   final List<CategorySpend> topCategories;
+
+  /// This-month budget adherence, worst-offenders first.
+  final List<BudgetStatus> budgets;
+
+  /// Balances in currencies other than the analyzed one (code -> balance).
+  final Map<String, double> otherBalances;
 
   bool get growing => avgMonthlyNet >= 0;
 
@@ -102,6 +125,23 @@ class MeasurementTrend {
   double get change => latest - first;
 }
 
+/// Compact per-movement strength progression, derived from the append-only
+/// set-edit history (top-set weight → Epley estimated 1RM).
+class LiftProgress {
+  const LiftProgress({
+    required this.name,
+    required this.latestWeight,
+    required this.est1RM,
+    required this.change,
+    required this.entries,
+  });
+  final String name;
+  final double latestWeight;
+  final double est1RM;
+  final double change; // latest top set − first
+  final int entries; // logged change-points
+}
+
 class GymForecast {
   const GymForecast({
     required this.hasData,
@@ -111,6 +151,7 @@ class GymForecast {
     required this.currentWeekStreak,
     required this.lastSessionDaysAgo,
     required this.measurements,
+    this.lifts = const [],
   });
   final bool hasData;
   final int totalSessions;
@@ -119,6 +160,9 @@ class GymForecast {
   final int currentWeekStreak;
   final int? lastSessionDaysAgo;
   final List<MeasurementTrend> measurements;
+
+  /// Per-exercise strength progression (top movements by estimated 1RM).
+  final List<LiftProgress> lifts;
 
   static const empty = GymForecast(
     hasData: false,
@@ -176,16 +220,25 @@ class ForecastService {
     required List<Category> categories,
     required DateTime now,
     int monthsBack = 6,
+    String? forCurrencyId,
+    List<Budget> budgets = const [],
   }) {
     final totals = <String, double>{};
     for (final a in accounts) {
-      totals.update(a.currencyId, (v) => v + (balances[a.id] ?? 0),
-          ifAbsent: () => balances[a.id] ?? 0);
+      totals.update(
+        a.currencyId,
+        (v) => v + (balances[a.id] ?? 0),
+        ifAbsent: () => balances[a.id] ?? 0,
+      );
     }
     if (totals.isEmpty) return FinanceForecast.empty;
-    final primary = totals.entries
-        .reduce((a, b) => a.value.abs() >= b.value.abs() ? a : b)
-        .key;
+    // Analyze a caller-chosen currency when given (per-currency insights),
+    // otherwise the dominant one by absolute balance.
+    final primary =
+        forCurrencyId ??
+        totals.entries
+            .reduce((a, b) => a.value.abs() >= b.value.abs() ? a : b)
+            .key;
     final cur = {for (final c in currencies) c.id: c}[primary];
     final catName = {for (final c in categories) c.id: c.name};
 
@@ -216,7 +269,7 @@ class ForecastService {
     final avg = completed.isEmpty
         ? 0.0
         : completed.map((m) => m.net).reduce((a, b) => a + b) /
-            completed.length;
+              completed.length;
     final balance = totals[primary] ?? 0;
     final projected = {
       for (final n in [1, 3, 6]) n: balance + avg * n,
@@ -232,17 +285,59 @@ class ForecastService {
       for (final leg in t.legs) {
         if (leg.currencyId != primary) continue;
         final id = t.transaction.categoryId ?? '';
-        perCat.update(id, (v) => v + leg.amount.abs(),
-            ifAbsent: () => leg.amount.abs());
+        perCat.update(
+          id,
+          (v) => v + leg.amount.abs(),
+          ifAbsent: () => leg.amount.abs(),
+        );
       }
     }
-    final topCats = perCat.entries
-        .map((e) => CategorySpend(
-              e.key.isEmpty ? 'Uncategorized' : (catName[e.key] ?? 'Uncategorized'),
-              e.value,
-            ))
-        .toList()
-      ..sort((a, b) => b.amount.compareTo(a.amount));
+    final topCats =
+        perCat.entries
+            .map(
+              (e) => CategorySpend(
+                e.key.isEmpty
+                    ? 'Uncategorized'
+                    : (catName[e.key] ?? 'Uncategorized'),
+                e.value,
+              ),
+            )
+            .toList()
+          ..sort((a, b) => b.amount.compareTo(a.amount));
+
+    // Balances held in currencies other than the analyzed one.
+    final codeById = {for (final c in currencies) c.id: c.code};
+    final otherBalances = <String, double>{};
+    for (final e in totals.entries) {
+      if (e.key == primary || e.value.abs() < 1e-9) continue;
+      otherBalances[codeById[e.key] ?? e.key] = e.value;
+    }
+
+    // This-month budget adherence (spend in the analyzed currency per category).
+    final monthStart = DateTime(now.year, now.month, 1);
+    final spendByCat = <String, double>{};
+    for (final t in txs) {
+      if (t.transaction.kind != 'expense') continue;
+      if (t.transaction.occurredAt.isBefore(monthStart)) continue;
+      final cid = t.transaction.categoryId;
+      if (cid == null) continue;
+      for (final leg in t.legs) {
+        if (leg.currencyId != primary) continue;
+        spendByCat.update(
+          cid,
+          (v) => v + leg.amount.abs(),
+          ifAbsent: () => leg.amount.abs(),
+        );
+      }
+    }
+    final budgetStatuses = <BudgetStatus>[
+      for (final bud in budgets)
+        BudgetStatus(
+          name: catName[bud.categoryId] ?? 'Category',
+          limit: bud.amount,
+          spent: spendByCat[bud.categoryId] ?? 0,
+        ),
+    ]..sort((a, b) => b.fraction.compareTo(a.fraction));
 
     final hasData =
         balance != 0 || months.any((m) => m.income > 0 || m.expense > 0);
@@ -258,6 +353,8 @@ class ForecastService {
       projected: projected,
       runwayMonths: runway,
       topCategories: topCats.take(5).toList(),
+      budgets: budgetStatuses,
+      otherBalances: otherBalances,
     );
   }
 
@@ -268,10 +365,13 @@ class ForecastService {
     required List<MeasurementType> types,
     required DateTime now,
     int weeksBack = 8,
+    List<DayExercise> exercises = const [],
+    List<ExerciseSetPrescription> prescriptions = const [],
   }) {
     final windowStart = now.addDays(-7 * weeksBack);
-    final recent =
-        sessions.where((s) => !s.playedAt.isBefore(windowStart)).length;
+    final recent = sessions
+        .where((s) => !s.playedAt.isBefore(windowStart))
+        .length;
     final perWeek = recent / weeksBack;
     final lastDays = sessions.isEmpty
         ? null
@@ -308,26 +408,51 @@ class ForecastService {
       if (pts.isEmpty) continue;
       final series = pts.map((p) => p.value).toList();
       final slope = _slopePerWeek(pts);
-      trends.add(MeasurementTrend(
-        name: t.name,
-        unit: t.unit ?? '',
-        first: series.first,
-        latest: series.last,
-        slopePerWeek: slope,
-        projected4w: series.last + slope * 4,
-        count: series.length,
-        series: series,
-      ));
+      trends.add(
+        MeasurementTrend(
+          name: t.name,
+          unit: t.unit ?? '',
+          first: series.first,
+          latest: series.last,
+          slopePerWeek: slope,
+          projected4w: series.last + slope * 4,
+          count: series.length,
+          series: series,
+        ),
+      );
     }
 
+    // Per-movement strength progression from the append-only set-edit history.
+    const prog = GymProgressionService();
+    final lifts = <LiftProgress>[];
+    for (final name in prog.exerciseNames(exercises, prescriptions)) {
+      final p = prog.build(
+        name: name,
+        exercises: exercises,
+        prescriptions: prescriptions,
+      );
+      if (!p.hasPoints) continue;
+      lifts.add(
+        LiftProgress(
+          name: name,
+          latestWeight: p.latestWeight,
+          est1RM: p.latest1RM,
+          change: p.weightChange,
+          entries: p.points.length,
+        ),
+      );
+    }
+    lifts.sort((a, b) => b.est1RM.compareTo(a.est1RM));
+
     return GymForecast(
-      hasData: sessions.isNotEmpty || trends.isNotEmpty,
+      hasData: sessions.isNotEmpty || trends.isNotEmpty || lifts.isNotEmpty,
       totalSessions: recent,
       weeks: weeksBack,
       sessionsPerWeek: perWeek,
       currentWeekStreak: streak,
       lastSessionDaysAgo: lastDays,
       measurements: trends,
+      lifts: lifts.take(6).toList(),
     );
   }
 
@@ -341,9 +466,11 @@ class ForecastService {
     var totalDue = 0, totalDone = 0;
     for (var i = windowDays - 1; i >= 0; i--) {
       final day = today.addDays(-i);
-      final due = tasks.where((t) =>
-          (t.dueAt != null && t.dueAt!.isSameDay(day)) ||
-          (t.deadlineAt != null && t.deadlineAt!.isSameDay(day)));
+      final due = tasks.where(
+        (t) =>
+            (t.dueAt != null && t.dueAt!.isSameDay(day)) ||
+            (t.deadlineAt != null && t.deadlineAt!.isSameDay(day)),
+      );
       final d = due.length;
       final done = due.where((t) => t.isCompleted).length;
       totalDue += d;

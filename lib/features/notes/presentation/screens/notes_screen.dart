@@ -5,14 +5,15 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/tokens.dart';
-import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/glass.dart';
+import '../note_filter.dart';
 import '../providers.dart';
+import '../widgets/note_filter_sheet.dart';
 import '../widgets/note_form_sheet.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
@@ -22,12 +23,8 @@ class NotesScreen extends ConsumerStatefulWidget {
 }
 
 class _NotesScreenState extends ConsumerState<NotesScreen> {
-  String? _filterTagId;
   final _search = TextEditingController();
   String _query = '';
-  DatePreset _datePreset = DatePreset.all;
-  DateTime? _customFrom;
-  DateTime? _customTo;
 
   @override
   void dispose() {
@@ -35,26 +32,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     super.dispose();
   }
 
-  Future<void> _pickCustomRange() async {
-    final from = await pickDate(context, initial: _customFrom ?? DateTime.now());
-    if (from == null || !mounted) return;
-    final to = await pickDate(context, initial: _customTo ?? from, firstDate: from);
-    if (to == null) return;
-    setState(() {
-      _datePreset = DatePreset.custom;
-      _customFrom = from;
-      _customTo = to;
-    });
-  }
-
-  bool _inDateRange(DateTime d) {
-    final range = datePresetRange(_datePreset, customFrom: _customFrom, customTo: _customTo);
-    if (range == null) return true;
-    return !d.isBefore(range.$1) && !d.isAfter(range.$2);
-  }
-
   @override
   Widget build(BuildContext context) {
+    final filter = ref.watch(noteFilterProvider);
     final notesAsync = ref.watch(notesStreamProvider);
     final tagsAsync = ref.watch(tagsStreamProvider);
     final mappingsAsync = ref.watch(noteTagsStreamProvider);
@@ -67,8 +47,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
               controller: _search,
-              onChanged: (v) =>
-                  setState(() => _query = v.trim().toLowerCase()),
+              onChanged: (v) => setState(() => _query = v.trim().toLowerCase()),
               decoration: InputDecoration(
                 hintText: 'Search notes',
                 isDense: true,
@@ -85,76 +64,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               ),
             ),
           ),
-          SizedBox(
-            height: 48,
-            child: tagsAsync.when(
-              loading: () => const SizedBox.shrink(),
-              error: (e, _) => const SizedBox.shrink(),
-              data: (tags) {
-                if (tags.isEmpty) return const SizedBox.shrink();
-                return ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(right: AppSpacing.sm),
-                      child: AppChip(
-                        label: 'All',
-                        color: DomainColors.notes,
-                        selected: _filterTagId == null,
-                        onTap: () => setState(() => _filterTagId = null),
-                      ),
-                    ),
-                    for (final t in tags)
-                      Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.sm),
-                        child: AppChip(
-                          label: t.name,
-                          color: DomainColors.notes,
-                          selected: _filterTagId == t.id,
-                          onTap: () => setState(() => _filterTagId =
-                              _filterTagId == t.id ? null : t.id),
-                        ),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-          SizedBox(
-            height: 44,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              children: [
-                for (final preset in DatePreset.values)
-                  Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm),
-                    child: preset == DatePreset.custom
-                        ? AppChip(
-                            label: _datePreset == DatePreset.custom &&
-                                    _customFrom != null
-                                ? '${DateFormat.MMMd().format(_customFrom!)} – ${DateFormat.MMMd().format(_customTo ?? _customFrom!)}'
-                                : 'Custom…',
-                            icon: Icons.date_range_rounded,
-                            color: DomainColors.notes,
-                            selected: _datePreset == DatePreset.custom,
-                            onTap: _pickCustomRange,
-                          )
-                        : AppChip(
-                            label: preset.label,
-                            color: DomainColors.notes,
-                            selected: _datePreset == preset,
-                            onTap: () => setState(() {
-                              _datePreset = preset;
-                              _customFrom = null;
-                              _customTo = null;
-                            }),
-                          ),
-                  ),
-              ],
-            ),
-          ),
+          const _FilterBar(),
           Expanded(
             child: notesAsync.when(
               loading: () => const AppLoading(),
@@ -165,38 +75,27 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 for (final m in mappings) {
                   tagsForNote.putIfAbsent(m.noteId, () => []).add(m.tagId);
                 }
-                var filtered = _filterTagId == null
-                    ? notes
-                    : notes
-                        .where((n) => (tagsForNote[n.id] ?? const [])
-                            .contains(_filterTagId))
-                        .toList();
-                if (_query.isNotEmpty) {
-                  filtered = filtered
-                      .where((n) =>
-                          (n.title ?? '').toLowerCase().contains(_query) ||
-                          n.contentMd.toLowerCase().contains(_query))
-                      .toList();
-                }
-                if (_datePreset != DatePreset.all) {
-                  filtered = filtered
-                      .where((n) => _inDateRange(n.occurredAt))
-                      .toList();
-                }
-                filtered = filtered.toList()
-                  ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+
+                final filtered =
+                    notes.where((n) {
+                        if (!filter.matches(n, tagsForNote[n.id] ?? const [])) {
+                          return false;
+                        }
+                        if (_query.isEmpty) return true;
+                        return (n.title ?? '').toLowerCase().contains(_query) ||
+                            n.contentMd.toLowerCase().contains(_query);
+                      }).toList()
+                      ..sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
 
                 if (filtered.isEmpty) {
-                  final searching = _query.isNotEmpty ||
-                      _filterTagId != null ||
-                      _datePreset != DatePreset.all;
+                  final searching = _query.isNotEmpty || !filter.isDefault;
                   return AppEmptyState(
                     icon: searching
                         ? Icons.search_off_rounded
                         : Icons.sticky_note_2_rounded,
                     title: searching ? 'No matching notes' : 'No notes yet',
                     message: searching
-                        ? 'Try a different search or tag.'
+                        ? 'Try a different search or filter.'
                         : 'Capture a thought, idea, or journal entry.',
                     accent: DomainColors.notes,
                     action: searching
@@ -217,7 +116,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   for (final t in (tagsAsync.value ?? const <Tag>[])) t.id: t,
                 };
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(8, 8, 8, 110),
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 110),
                   itemCount: filtered.length,
                   itemBuilder: (_, i) => _NoteTile(
                     note: filtered[i],
@@ -237,6 +136,71 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
   }
 }
 
+// ── filter bar ───────────────────────────────────────────────────────────────
+
+class _FilterBar extends ConsumerWidget {
+  const _FilterBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final filter = ref.watch(noteFilterProvider);
+    final activeCount = filter.activeCount;
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
+      child: Row(
+        children: [
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              AppChip(
+                label: 'Filters',
+                icon: Icons.tune_rounded,
+                color: DomainColors.notes,
+                selected: activeCount > 0,
+                onTap: () => showNoteFilterSheet(context),
+              ),
+              if (activeCount > 0)
+                Positioned(
+                  top: -2,
+                  right: -2,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: DomainColors.notes,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Text(
+                      '$activeCount',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (!filter.isDefault) ...[
+            const SizedBox(width: 10),
+            AppChip(
+              label: 'Clear',
+              icon: Icons.close_rounded,
+              color: cs.error,
+              onTap: () => ref.read(noteFilterProvider.notifier).state =
+                  const NoteFilter(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ── note tile ────────────────────────────────────────────────────────────────
+
 class _NoteTile extends ConsumerWidget {
   const _NoteTile({required this.note, required this.tags});
   final Note note;
@@ -249,136 +213,119 @@ class _NoteTile extends ConsumerWidget {
     final title = note.title?.isNotEmpty == true
         ? note.title!
         : _firstLine(note.contentMd);
-    final preview =
-        note.title?.isNotEmpty == true ? _firstLine(note.contentMd) : null;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+    final preview = note.title?.isNotEmpty == true
+        ? _firstLine(note.contentMd)
+        : null;
+    return GlassCard(
+      onTap: () => _openViewer(context),
+      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 3,
+            height: tags.isNotEmpty ? 80 : 44,
+            decoration: BoxDecoration(
+              color: DomainColors.notes,
+              borderRadius: BorderRadius.circular(2),
+            ),
           ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () => _openViewer(context),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-            child: Row(
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 3,
-                  height: tags.isNotEmpty ? 80 : 44,
-                  decoration: BoxDecoration(
-                    color: DomainColors.notes,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: tt.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      DateFormat.MMMd().format(note.occurredAt),
+                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    ),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        Icons.more_vert_rounded,
+                        size: 18,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      onSelected: (v) async {
+                        switch (v) {
+                          case 'edit':
+                            showNoteFormSheet(context, existing: note);
+                          case 'delete':
+                            await ref
+                                .read(notesRepositoryProvider)
+                                .deleteNote(note.id);
+                        }
+                      },
+                      itemBuilder: (_) => const [
+                        PopupMenuItem(value: 'edit', child: Text('Edit')),
+                        PopupMenuItem(value: 'delete', child: Text('Delete')),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                if (preview != null && preview.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    preview,
+                    style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (tags.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 4,
+                    runSpacing: 4,
                     children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Text(
-                              title,
-                              style: tt.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      for (final t in tags)
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: tagColor(t).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            t.name,
+                            style: tt.labelSmall?.copyWith(
+                              color: tagColor(t),
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            DateFormat.MMMd().format(note.occurredAt),
-                            style: tt.bodySmall
-                                ?.copyWith(color: cs.onSurfaceVariant),
-                          ),
-                          PopupMenuButton<String>(
-                            icon: Icon(Icons.more_vert_rounded,
-                                size: 18, color: cs.onSurfaceVariant),
-                            onSelected: (v) async {
-                              switch (v) {
-                                case 'edit':
-                                  showNoteFormSheet(context, existing: note);
-                                case 'delete':
-                                  await ref
-                                      .read(notesRepositoryProvider)
-                                      .deleteNote(note.id);
-                              }
-                            },
-                            itemBuilder: (_) => const [
-                              PopupMenuItem(value: 'edit', child: Text('Edit')),
-                              PopupMenuItem(
-                                  value: 'delete', child: Text('Delete')),
-                            ],
-                          ),
-                        ],
-                      ),
-                      if (preview != null && preview.isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          preview,
-                          style: tt.bodySmall
-                              ?.copyWith(color: cs.onSurfaceVariant),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ],
-                      if (tags.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          children: [
-                            for (final t in tags)
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 8, vertical: 3),
-                                decoration: BoxDecoration(
-                                  color: DomainColors.notes
-                                      .withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  t.name,
-                                  style: tt.labelSmall?.copyWith(
-                                    color: DomainColors.notes,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ],
                     ],
                   ),
-                ),
+                ],
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
   void _openViewer(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(
-      builder: (_) => _NoteViewer(note: note, tags: tags),
-    ));
+    Navigator.of(context, rootNavigator: true).push(
+      MaterialPageRoute(
+        builder: (_) => _NoteViewer(note: note, tags: tags),
+      ),
+    );
   }
 
   String _firstLine(String md) {
@@ -414,8 +361,7 @@ class _NoteViewer extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(Icons.event_rounded,
-                  size: 14, color: cs.onSurfaceVariant),
+              Icon(Icons.event_rounded, size: 14, color: cs.onSurfaceVariant),
               const SizedBox(width: 6),
               Text(
                 DateFormat.yMMMMEEEEd().format(note.occurredAt),
@@ -432,16 +378,20 @@ class _NoteViewer extends StatelessWidget {
                 for (final t in tags)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: DomainColors.notes.withValues(alpha: 0.12),
+                      color: tagColor(t).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
-                    child: Text(t.name,
-                        style: tt.labelSmall?.copyWith(
-                          color: DomainColors.notes,
-                          fontWeight: FontWeight.w600,
-                        )),
+                    child: Text(
+                      t.name,
+                      style: tt.labelSmall?.copyWith(
+                        color: tagColor(t),
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
               ],
             ),

@@ -42,6 +42,12 @@ class MainScaffold extends StatelessWidget {
       Icons.sticky_note_2_rounded,
       'Notes',
     ),
+    _NavDestination(
+      '/sharing',
+      Icons.share_outlined,
+      Icons.share_rounded,
+      'Share',
+    ),
   ];
 
   int _indexFor(String loc) {

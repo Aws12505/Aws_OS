@@ -85,6 +85,15 @@ class BackupService {
     return file;
   }
 
+  /// In-memory backup bytes for streaming (e.g. local sharing) without a temp
+  /// file. Plain UTF-8 JSON when [password] is null, else the AES-GCM `.awsbak`
+  /// byte layout. Mirrors [writeBackupFile].
+  Future<Uint8List> exportBytes({String? password}) async {
+    final json = await exportToJson();
+    if (password == null) return Uint8List.fromList(utf8.encode(json));
+    return _encrypt(json, password);
+  }
+
   /// Parse a backup file (JSON or encrypted .awsbak) and apply it.
   /// [replace] = true wipes existing rows in-table before insertion (full
   /// restore). [replace] = false performs INSERT OR REPLACE on each row so

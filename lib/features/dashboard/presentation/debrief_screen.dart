@@ -82,7 +82,9 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await ref.read(debriefRepositoryProvider).saveReflection(
+    await ref
+        .read(debriefRepositoryProvider)
+        .saveReflection(
           _day,
           mood: _mood,
           energy: _energy,
@@ -93,9 +95,9 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
         );
     if (!mounted) return;
     setState(() => _saving = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Debrief saved')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Debrief saved')));
   }
 
   Future<void> _generate(DaySummary summary) async {
@@ -121,9 +123,9 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
     if (!mounted) return;
     setState(() => _generating = false);
     if (usedOffline) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Used an offline summary')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Used an offline summary')));
     }
   }
 
@@ -132,7 +134,8 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
     final b = StringBuffer()
       ..writeln('Date: ${df.format(s.date)}')
       ..writeln(
-          'Tasks: ${s.tasksDone}/${s.tasksDue} done (${(s.taskCompletion * 100).round()}%).');
+        'Tasks: ${s.tasksDone}/${s.tasksDue} done (${(s.taskCompletion * 100).round()}%).',
+      );
     if (s.transactionCount > 0) {
       final net = s.netByCurrency.entries
           .map((e) => '${e.value.toStringAsFixed(2)} ${e.key}')
@@ -153,6 +156,13 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
     if (_nn(_gratitude.text) != null) {
       b.writeln('Gratitude: ${_gratitude.text.trim()}');
     }
+    if (_nn(_reflection.text) != null) {
+      b.writeln('Reflection: ${_reflection.text.trim()}');
+    }
+    if (s.taskStreak > 1) b.writeln('Task streak: ${s.taskStreak} days.');
+    if (s.debriefStreak > 1) {
+      b.writeln('Journaling streak: ${s.debriefStreak} days.');
+    }
     return b.toString();
   }
 
@@ -172,9 +182,7 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
     final isToday = _day.isSameDay(DateTime.now());
 
     return AppScaffold(
-      appBar: AppBar(
-        title: const Text('Debrief'),
-      ),
+      appBar: AppBar(title: const Text('Debrief')),
       body: summaryAsync.when(
         loading: () => const AppLoading(),
         error: (e, _) => AppErrorView(error: e),
@@ -303,8 +311,10 @@ class _GlanceCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text('The day at a glance',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'The day at a glance',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
               if (summary.taskStreak > 0)
                 MiniPill(
@@ -347,13 +357,12 @@ class _GlanceCard extends ConsumerWidget {
                   label: 'Workout',
                   value: summary.workedOut
                       ? (summary.sessionCount > 1
-                          ? '${summary.sessionCount}×'
-                          : 'Done')
+                            ? '${summary.sessionCount}×'
+                            : 'Done')
                       : '—',
                   icon: Icons.fitness_center_rounded,
                   accent: DomainColors.gym,
-                  valueColor:
-                      summary.workedOut ? DomainColors.income : null,
+                  valueColor: summary.workedOut ? DomainColors.income : null,
                 ),
               ),
               const SizedBox(width: AppSpacing.md),
@@ -392,7 +401,11 @@ class _GlanceCard extends ConsumerWidget {
               spacing: AppSpacing.sm,
               runSpacing: AppSpacing.sm,
               children: [
-                for (var i = 0; i < summary.topExpenseCategories.length && i < 3; i++)
+                for (
+                  var i = 0;
+                  i < summary.topExpenseCategories.length && i < 3;
+                  i++
+                )
                   MiniPill(
                     label: summary.topExpenseCategories[i].name,
                     color: ChartPalette.at(i),
@@ -441,8 +454,10 @@ class _JournalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('How was your day?',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            'How was your day?',
+            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: AppSpacing.md),
           _ScalePicker(
             label: 'Mood',
@@ -455,24 +470,30 @@ class _JournalCard extends StatelessWidget {
             label: 'Energy',
             value: energy,
             onChanged: onEnergy,
-            colorFor: (s) => Color.lerp(
-                cs.primary, cs.tertiary, (s - 1) / 4)!,
+            colorFor: (s) => Color.lerp(cs.primary, cs.tertiary, (s - 1) / 4)!,
           ),
           const SizedBox(height: AppSpacing.lg),
-          _JournalField(controller: wins, label: 'Wins', hint: 'What went well?'),
           _JournalField(
-              controller: improve,
-              label: 'To improve',
-              hint: 'What could be better?'),
+            controller: wins,
+            label: 'Wins',
+            hint: 'What went well?',
+          ),
           _JournalField(
-              controller: gratitude,
-              label: 'Gratitude',
-              hint: "What you're thankful for"),
+            controller: improve,
+            label: 'To improve',
+            hint: 'What could be better?',
+          ),
           _JournalField(
-              controller: reflection,
-              label: 'Reflection',
-              hint: 'Anything else on your mind',
-              maxLines: 3),
+            controller: gratitude,
+            label: 'Gratitude',
+            hint: "What you're thankful for",
+          ),
+          _JournalField(
+            controller: reflection,
+            label: 'Reflection',
+            hint: 'Anything else on your mind',
+            maxLines: 3,
+          ),
           const SizedBox(height: AppSpacing.sm),
           PrimaryButton(
             label: 'Save debrief',
@@ -508,8 +529,10 @@ class _ScalePicker extends StatelessWidget {
       children: [
         SizedBox(
           width: 64,
-          child: Text(label,
-              style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant)),
+          child: Text(
+            label,
+            style: tt.labelLarge?.copyWith(color: cs.onSurfaceVariant),
+          ),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(
@@ -597,7 +620,8 @@ class _WeekTrendCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rangeAsync = ref.watch(
-        rangeSummaryProvider((start: day.addDays(-6), end: day)));
+      rangeSummaryProvider((start: day.addDays(-6), end: day)),
+    );
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
@@ -605,19 +629,25 @@ class _WeekTrendCard extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('This week',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+          Text(
+            'This week',
+            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: AppSpacing.lg),
           rangeAsync.when(
             loading: () => const SizedBox(
-                height: 120, child: Center(child: CircularProgressIndicator())),
-            error: (e, _) => Text('$e',
-                style: tt.bodySmall?.copyWith(color: cs.error)),
+              height: 120,
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) =>
+                Text('$e', style: tt.bodySmall?.copyWith(color: cs.error)),
             data: (range) {
               final maxNet = range.days
-                  .map((d) => d.netByCurrency.values
-                      .fold<double>(0, (s, v) => s + v)
-                      .abs())
+                  .map(
+                    (d) => d.netByCurrency.values
+                        .fold<double>(0, (s, v) => s + v)
+                        .abs(),
+                  )
                   .fold<double>(1, (a, b) => a > b ? a : b);
               return Column(
                 children: [
@@ -645,16 +675,19 @@ class _WeekTrendCard extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
                       _MiniStat(
-                          label: 'Workouts',
-                          value: '${range.totalWorkouts}'),
+                        label: 'Workouts',
+                        value: '${range.totalWorkouts}',
+                      ),
                       _MiniStat(
-                          label: 'Tasks done',
-                          value: '${range.totalTasksDone}'),
+                        label: 'Tasks done',
+                        value: '${range.totalTasksDone}',
+                      ),
                       _MiniStat(
-                          label: 'Avg mood',
-                          value: range.avgMood == 0
-                              ? '—'
-                              : range.avgMood.toStringAsFixed(1)),
+                        label: 'Avg mood',
+                        value: range.avgMood == 0
+                            ? '—'
+                            : range.avgMood.toStringAsFixed(1),
+                      ),
                     ],
                   ),
                   if (maxNet < 0) const SizedBox.shrink(),
@@ -696,8 +729,11 @@ class _DayBar extends StatelessWidget {
         SizedBox(
           height: 14,
           child: workedOut
-              ? const Icon(Icons.fitness_center_rounded,
-                  size: 12, color: DomainColors.gym)
+              ? const Icon(
+                  Icons.fitness_center_rounded,
+                  size: 12,
+                  color: DomainColors.gym,
+                )
               : null,
         ),
         Expanded(
@@ -712,9 +748,9 @@ class _DayBar extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: hasTasks
                         ? (completion >= 1
-                                ? DomainColors.income
-                                : DomainColors.tasks)
-                            .withValues(alpha: 0.85)
+                                  ? DomainColors.income
+                                  : DomainColors.tasks)
+                              .withValues(alpha: 0.85)
                         : cs.surfaceContainerHighest,
                     borderRadius: BorderRadius.circular(6),
                   ),
@@ -760,15 +796,21 @@ class _MiniStat extends StatelessWidget {
       children: [
         FittedBox(
           fit: BoxFit.scaleDown,
-          child: Text(value,
-              maxLines: 1,
-              style: tt.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-        ),
-        Text(label,
+          child: Text(
+            value,
             maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
+            style: tt.titleLarge?.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.5,
+            ),
+          ),
+        ),
+        Text(
+          label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+        ),
       ],
     );
   }
@@ -797,17 +839,20 @@ class _CarryOverCard extends ConsumerWidget {
               color: DomainColors.warning.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            child: const Icon(Icons.arrow_circle_right_rounded,
-                color: DomainColors.warning),
+            child: const Icon(
+              Icons.arrow_circle_right_rounded,
+              color: DomainColors.warning,
+            ),
           ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Plan tomorrow',
-                    style:
-                        tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                Text(
+                  'Plan tomorrow',
+                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                ),
                 Text(
                   '$unfinished unfinished task${unfinished == 1 ? '' : 's'} can move to ${DateFormat('MMM d').format(target)}',
                   style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
@@ -862,9 +907,10 @@ class _SummaryCard extends ConsumerWidget {
             children: [
               Icon(Icons.auto_awesome_rounded, size: 18, color: cs.primary),
               const SizedBox(width: AppSpacing.sm),
-              Text('Summary',
-                  style:
-                      tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+              Text(
+                'Summary',
+                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
               const Spacer(),
               if (aiConfigured)
                 const MiniPill(label: 'AI', icon: Icons.bolt_rounded),
@@ -902,8 +948,9 @@ class _SummaryCard extends ConsumerWidget {
 
 String _fmtMoney(double amount, Currency? cur, {bool signed = false}) {
   final digits = cur?.decimalPlaces ?? 2;
-  final n = NumberFormat.decimalPatternDigits(decimalDigits: digits)
-      .format(amount.abs());
+  final n = NumberFormat.decimalPatternDigits(
+    decimalDigits: digits,
+  ).format(amount.abs());
   final sym = cur?.symbol ?? cur?.code ?? '';
   final sign = signed && amount < 0 ? '−' : (signed && amount > 0 ? '+' : '');
   return sym.isEmpty ? '$sign$n' : '$sign$n $sym';

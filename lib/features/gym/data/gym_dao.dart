@@ -5,35 +5,37 @@ import '../../../core/db/tables/gym_tables.dart';
 
 part 'gym_dao.g.dart';
 
-@DriftAccessor(tables: [
-  MeasurementTypes,
-  MeasurementEntries,
-  MeasurementValues,
-  Programs,
-  ProgramDays,
-  SupersetGroups,
-  DayExercises,
-  ExerciseSetPrescriptions,
-  DaySessions,
-])
+@DriftAccessor(
+  tables: [
+    MeasurementTypes,
+    MeasurementEntries,
+    MeasurementValues,
+    Programs,
+    ProgramDays,
+    SupersetGroups,
+    DayExercises,
+    ExerciseSetPrescriptions,
+    DaySessions,
+  ],
+)
 class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
   GymDao(super.db);
 
   // -- Measurement types ---------------------------------------------------
 
   Stream<List<MeasurementType>> watchMeasurementTypes() {
-    return (select(measurementTypes)
-          ..orderBy([
-            (t) => OrderingTerm.asc(t.sortOrder),
-            (t) => OrderingTerm.asc(t.name),
-          ]))
+    return (select(measurementTypes)..orderBy([
+          (t) => OrderingTerm.asc(t.sortOrder),
+          (t) => OrderingTerm.asc(t.name),
+        ]))
         .watch();
   }
 
   Future<void> upsertMeasurementType(MeasurementTypesCompanion c) {
     final now = DateTime.now();
-    return into(measurementTypes)
-        .insertOnConflictUpdate(c.copyWith(updatedAt: Value(now)));
+    return into(
+      measurementTypes,
+    ).insertOnConflictUpdate(c.copyWith(updatedAt: Value(now)));
   }
 
   Future<void> deleteMeasurementType(String id) =>
@@ -42,9 +44,9 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
   // -- Measurement entries -------------------------------------------------
 
   Stream<List<MeasurementEntry>> watchEntries() {
-    return (select(measurementEntries)
-          ..orderBy([(t) => OrderingTerm.desc(t.takenAt)]))
-        .watch();
+    return (select(
+      measurementEntries,
+    )..orderBy([(t) => OrderingTerm.desc(t.takenAt)])).watch();
   }
 
   Stream<List<MeasurementValue>> watchValues() {
@@ -57,17 +59,17 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
     required Map<String, double> values, // typeId -> value
   }) async {
     return transaction(() async {
-      final entry =
-          await into(measurementEntries).insertReturning(MeasurementEntriesCompanion(
-        takenAt: Value(takenAt),
-        note: Value(note),
-      ));
+      final entry = await into(measurementEntries).insertReturning(
+        MeasurementEntriesCompanion(takenAt: Value(takenAt), note: Value(note)),
+      );
       for (final e in values.entries) {
-        await into(measurementValues).insert(MeasurementValuesCompanion(
-          entryId: Value(entry.id),
-          typeId: Value(e.key),
-          value: Value(e.value),
-        ));
+        await into(measurementValues).insert(
+          MeasurementValuesCompanion(
+            entryId: Value(entry.id),
+            typeId: Value(e.key),
+            value: Value(e.value),
+          ),
+        );
       }
       return entry;
     });
@@ -79,11 +81,10 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
   // -- Programs ------------------------------------------------------------
 
   Stream<List<Program>> watchPrograms() {
-    return (select(programs)
-          ..orderBy([
-            (t) => OrderingTerm.asc(t.endedAt),
-            (t) => OrderingTerm.desc(t.startedAt),
-          ]))
+    return (select(programs)..orderBy([
+          (t) => OrderingTerm.asc(t.endedAt),
+          (t) => OrderingTerm.desc(t.startedAt),
+        ]))
         .watch();
   }
 
@@ -107,6 +108,14 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
         .watch();
   }
 
+  /// Every program day across all programs — lets the workout-history list
+  /// resolve a session's `programDayId` back to its day (and program) name.
+  Stream<List<ProgramDay>> watchAllDays() {
+    return (select(
+      programDays,
+    )..orderBy([(t) => OrderingTerm.asc(t.position)])).watch();
+  }
+
   Future<ProgramDay> upsertDayReturning(ProgramDaysCompanion d) async {
     final now = DateTime.now();
     return into(programDays).insertReturning(
@@ -125,6 +134,12 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
           ..where((t) => t.dayId.equals(dayId))
           ..orderBy([(t) => OrderingTerm.asc(t.position)]))
         .watch();
+  }
+
+  /// Every exercise across all program days — lets progression charts merge a
+  /// movement (by name) across the different days it appears in.
+  Stream<List<DayExercise>> watchAllExercises() {
+    return select(dayExercises).watch();
   }
 
   Stream<List<SupersetGroup>> watchSupersetsForDay(String dayId) {
@@ -147,18 +162,21 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
     required int position,
     int targetSets = 1,
   }) {
-    return into(supersetGroups).insertReturning(SupersetGroupsCompanion(
-      dayId: Value(dayId),
-      position: Value(position),
-      targetSets: Value(targetSets),
-    ));
+    return into(supersetGroups).insertReturning(
+      SupersetGroupsCompanion(
+        dayId: Value(dayId),
+        position: Value(position),
+        targetSets: Value(targetSets),
+      ),
+    );
   }
 
   Future<void> updateSuperset(String id, {int? targetSets}) {
     return (update(supersetGroups)..where((t) => t.id.equals(id))).write(
       SupersetGroupsCompanion(
-        targetSets:
-            targetSets == null ? const Value.absent() : Value(targetSets),
+        targetSets: targetSets == null
+            ? const Value.absent()
+            : Value(targetSets),
         updatedAt: Value(DateTime.now()),
       ),
     );
@@ -173,7 +191,8 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
   // -- Prescriptions ------------------------------------------------------
 
   Stream<List<ExerciseSetPrescription>> watchPrescriptionsForExercise(
-      String dayExerciseId) {
+    String dayExerciseId,
+  ) {
     return (select(exerciseSetPrescriptions)
           ..where((t) => t.dayExerciseId.equals(dayExerciseId))
           ..orderBy([
@@ -181,6 +200,12 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
             (t) => OrderingTerm.desc(t.effectiveFrom),
           ]))
         .watch();
+  }
+
+  /// Every prescription row across all exercises — the append-only, timestamped
+  /// history that powers progression (each edit of a set is one row).
+  Stream<List<ExerciseSetPrescription>> watchAllPrescriptions() {
+    return select(exerciseSetPrescriptions).watch();
   }
 
   Future<void> insertPrescription({
@@ -210,9 +235,9 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
   }
 
   Stream<List<DaySession>> watchAllSessions() {
-    return (select(daySessions)
-          ..orderBy([(t) => OrderingTerm.desc(t.playedAt)]))
-        .watch();
+    return (select(
+      daySessions,
+    )..orderBy([(t) => OrderingTerm.desc(t.playedAt)])).watch();
   }
 
   Future<void> insertSession({
@@ -220,11 +245,13 @@ class GymDao extends DatabaseAccessor<AppDatabase> with _$GymDaoMixin {
     required DateTime playedAt,
     String? note,
   }) {
-    return into(daySessions).insert(DaySessionsCompanion(
-      programDayId: Value(dayId),
-      playedAt: Value(playedAt),
-      note: Value(note),
-    ));
+    return into(daySessions).insert(
+      DaySessionsCompanion(
+        programDayId: Value(dayId),
+        playedAt: Value(playedAt),
+        note: Value(note),
+      ),
+    );
   }
 
   Future<void> deleteSession(String id) =>
