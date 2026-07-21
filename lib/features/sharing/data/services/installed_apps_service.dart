@@ -45,6 +45,25 @@ class InstalledAppsService {
     }
   }
 
+  final _iconCache = <String, Uint8List?>{};
+
+  /// Launcher icon for [package] as PNG bytes (cached). Returns null if the
+  /// platform can't resolve one, so callers can fall back to a generic glyph.
+  Future<Uint8List?> icon(String package, {int size = 128}) async {
+    if (_iconCache.containsKey(package)) return _iconCache[package];
+    try {
+      final res = await _ch.invokeMethod<Uint8List>('getAppIcon', {
+        'package': package,
+        'size': size,
+      });
+      _iconCache[package] = res;
+      return res;
+    } catch (_) {
+      _iconCache[package] = null;
+      return null;
+    }
+  }
+
   Future<List<String>> apkPaths(String package) async {
     try {
       final res = await _ch.invokeListMethod<String>('getApkPaths', {

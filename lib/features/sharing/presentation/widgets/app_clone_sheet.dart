@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -23,6 +24,57 @@ Future<List<ShareItem>?> showAppCloneSheet(BuildContext context) {
     useSafeArea: true,
     builder: (_) => const _AppCloneSheet(),
   );
+}
+
+/// A rounded app launcher icon fetched lazily (and cached) from the platform.
+/// Falls back to a generic glyph while loading or if none can be resolved.
+class _AppIcon extends StatelessWidget {
+  const _AppIcon({
+    required this.package,
+    required this.service,
+    this.size = 40,
+  });
+
+  final String package;
+  final InstalledAppsService service;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FutureBuilder<Uint8List?>(
+      future: service.icon(package),
+      builder: (context, snap) {
+        final radius = BorderRadius.circular(size * 0.22);
+        final bytes = snap.data;
+        if (bytes != null && bytes.isNotEmpty) {
+          return ClipRRect(
+            borderRadius: radius,
+            child: Image.memory(
+              bytes,
+              width: size,
+              height: size,
+              gaplessPlayback: true,
+              filterQuality: FilterQuality.medium,
+            ),
+          );
+        }
+        return Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: cs.surfaceContainerHighest,
+            borderRadius: radius,
+          ),
+          child: Icon(
+            Icons.android_rounded,
+            size: size * 0.6,
+            color: cs.onSurfaceVariant,
+          ),
+        );
+      },
+    );
+  }
 }
 
 class _AppCloneSheet extends ConsumerStatefulWidget {
@@ -199,7 +251,10 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
                 final a = filtered[i];
                 return ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.android_rounded),
+                  leading: _AppIcon(
+                    package: a.package,
+                    service: ref.read(installedAppsServiceProvider),
+                  ),
                   title: Text(
                     a.label,
                     maxLines: 1,
@@ -244,7 +299,11 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
         const SizedBox(height: 8),
         ListTile(
           contentPadding: EdgeInsets.zero,
-          leading: const Icon(Icons.android_rounded),
+          leading: _AppIcon(
+            package: app.package,
+            service: ref.read(installedAppsServiceProvider),
+            size: 44,
+          ),
           title: const Text('APK'),
           subtitle: Text(
             '${formatBytes(app.apkSize)}'

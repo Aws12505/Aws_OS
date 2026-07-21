@@ -6,8 +6,13 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageInstaller
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.drawable.BitmapDrawable
+import android.graphics.drawable.Drawable
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import java.io.ByteArrayOutputStream
 import java.io.File
 
 /// Installed-app info + APK gathering + install. Works on every device with no
@@ -40,6 +45,15 @@ class AppsChannel(private val context: Context) : MethodChannel.MethodCallHandle
             "installApks" -> {
                 val paths = call.argument<List<String>>("paths") ?: emptyList()
                 installApks(paths, result)
+            }
+            "getAppIcon" -> {
+                val pkg = call.argument<String>("package")
+                val size = call.argument<Int>("size") ?: 128
+                if (pkg == null) {
+                    result.error("ARG", "package required", null)
+                } else {
+                    result.success(getAppIcon(pkg, size))
+                }
             }
             else -> result.notImplemented()
         }
@@ -85,6 +99,31 @@ class AppsChannel(private val context: Context) : MethodChannel.MethodCallHandle
         paths.add(ai.sourceDir)
         ai.splitSourceDirs?.let { paths.addAll(it) }
         return paths
+    }
+
+    /// The app's launcher icon rendered to a square PNG (adaptive icons included).
+    /// Returns null if the icon can't be resolved.
+    private fun getAppIcon(pkg: String, size: Int): ByteArray? {
+        return try {
+            val drawable = context.packageManager.getApplicationIcon(pkg)
+            val bitmap = drawableToBitmap(drawable, size.coerceIn(24, 512))
+            val stream = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream)
+            stream.toByteArray()
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun drawableToBitmap(drawable: Drawable, size: Int): Bitmap {
+        if (drawable is BitmapDrawable && drawable.bitmap != null) {
+            return Bitmap.createScaledBitmap(drawable.bitmap, size, size, true)
+        }
+        val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        drawable.setBounds(0, 0, canvas.width, canvas.height)
+        drawable.draw(canvas)
+        return bitmap
     }
 
     private fun installApks(paths: List<String>, result: MethodChannel.Result) {

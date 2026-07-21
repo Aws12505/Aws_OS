@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
@@ -10,6 +12,7 @@ import '../data/services/foreground_task_service.dart';
 import '../data/services/hotspot_guide_service.dart';
 import '../data/services/installed_apps_service.dart';
 import '../data/services/received_files_store.dart';
+import '../data/services/share_settings_store.dart';
 import '../data/services/shizuku_service.dart';
 import '../data/services/strategy_service.dart';
 import '../data/services/transfer_client.dart';
@@ -24,7 +27,23 @@ class ShareIdentity {
   final String name;
 }
 
-final receivedFilesStoreProvider = Provider((ref) => ReceivedFilesStore());
+final shareSettingsStoreProvider = Provider((ref) => ShareSettingsStore());
+
+final receivedFilesStoreProvider = Provider(
+  (ref) => ReceivedFilesStore(ref.watch(shareSettingsStoreProvider)),
+);
+
+/// The directory received files currently land in — for display. Invalidate
+/// this after changing the save location to refresh the UI.
+final saveDirectoryProvider = FutureProvider<String>(
+  (ref) => ref.watch(receivedFilesStoreProvider).currentSaveDirPath(),
+);
+
+/// The files already received into the save folder. Invalidate to refresh after
+/// a transfer completes or the save location changes.
+final receivedFilesListProvider = FutureProvider<List<File>>(
+  (ref) => ref.watch(receivedFilesStoreProvider).list(),
+);
 
 final transferServerProvider = Provider<TransferServer>((ref) {
   final s = TransferServer(ref.watch(receivedFilesStoreProvider));

@@ -9,7 +9,10 @@ import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../data/models/connection_mode.dart';
+import '../../data/models/transfer_task.dart';
 import '../providers.dart';
+import '../save_location.dart';
+import 'received_files_list.dart';
 import 'transfer_progress.dart';
 
 class ReceivePanel extends ConsumerStatefulWidget {
@@ -27,6 +30,18 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
     final controller = ref.read(shareSessionProvider.notifier);
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+
+    // Refresh the received-files list whenever a task finishes landing a file.
+    ref.listen<int>(
+      shareSessionProvider.select(
+        (v) => v.tasks
+            .where((t) => t.status == TransferStatus.done)
+            .length,
+      ),
+      (prev, next) {
+        if (next != (prev ?? 0)) ref.invalidate(receivedFilesListProvider);
+      },
+    );
 
     if (!s.serverRunning) {
       return Center(
@@ -68,6 +83,10 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
                 textAlign: TextAlign.center,
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
+              const SizedBox(height: 20),
+              const _SaveLocationCard(),
+              const SizedBox(height: 12),
+              const ReceivedFilesCard(),
               const SizedBox(height: 20),
               PrimaryButton(
                 label: 'Start receiving',
@@ -153,6 +172,8 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
           ),
         ),
         const TransferProgressCard(),
+        const _SaveLocationCard(),
+        const ReceivedFilesCard(),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: SecondaryButton(
@@ -163,6 +184,77 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Shows where received files are saved and lets the user pick a folder.
+class _SaveLocationCard extends ConsumerWidget {
+  const _SaveLocationCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final cs = Theme.of(context).colorScheme;
+    final tt = Theme.of(context).textTheme;
+    final pathAsync = ref.watch(saveDirectoryProvider);
+    final custom = ref.watch(shareSettingsStoreProvider);
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.folder_rounded, color: cs.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'Save location',
+                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          pathAsync.when(
+            data: (path) => Text(
+              path,
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            loading: () => Text(
+              'Loading…',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+            error: (_, _) => Text(
+              'Default folder',
+              style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: SecondaryButton(
+                  label: 'Change folder',
+                  icon: Icons.drive_folder_upload_rounded,
+                  expand: true,
+                  onPressed: () => pickShareSaveDirectory(context, ref),
+                ),
+              ),
+              FutureBuilder<String?>(
+                future: custom.saveDirectory(),
+                builder: (_, snap) => snap.data == null
+                    ? const SizedBox.shrink()
+                    : Padding(
+                        padding: const EdgeInsets.only(left: 8),
+                        child: IconButton(
+                          tooltip: 'Reset to default',
+                          icon: const Icon(Icons.restore_rounded),
+                          onPressed: () => resetShareSaveDirectory(ref),
+                        ),
+                      ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

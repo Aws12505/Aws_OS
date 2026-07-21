@@ -27,6 +27,11 @@
     <!-- App sharing (Stage 3): list installed apps + install received APKs -->
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
+    <!-- Save received files to a user-chosen folder (e.g. Downloads). Legacy
+         path for API <=29; All-files access for API 30+. -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="29"/>
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"/>
 
     <application
         android:label="Aws OS"

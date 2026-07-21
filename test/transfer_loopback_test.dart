@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:aws_os/features/sharing/data/models/share_device.dart';
 import 'package:aws_os/features/sharing/data/models/share_item.dart';
 import 'package:aws_os/features/sharing/data/services/received_files_store.dart';
+import 'package:aws_os/features/sharing/data/services/share_settings_store.dart';
 import 'package:aws_os/features/sharing/data/services/transfer_client.dart';
 import 'package:aws_os/features/sharing/data/services/transfer_server.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +12,7 @@ import 'package:path/path.dart' as p;
 
 /// Routes the received-files store to a temp dir (no path_provider plugin).
 class _TempStore extends ReceivedFilesStore {
-  _TempStore(this.dir);
+  _TempStore(this.dir) : super(ShareSettingsStore());
   final Directory dir;
   @override
   Future<Directory> receivedDir() async {
