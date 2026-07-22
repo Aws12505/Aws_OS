@@ -34,68 +34,83 @@ class ShareSessionController extends StateNotifier<ShareSession> {
   // ── Receive ────────────────────────────────────────────────────────────────
 
   Future<void> startReceiving({ConnectionMode mode = ConnectionMode.lan}) async {
-    final id = await _ref.read(shareIdentityProvider.future);
-    final server = _ref.read(transferServerProvider);
-    server.onAccept = _handleAccept;
-    server.onSpecial = _onSpecial;
-    _specials.clear();
-    await _sub?.cancel();
-    _sub = server.events.listen(_onEvent);
+    try {
+      final id = await _ref.read(shareIdentityProvider.future);
+      final server = _ref.read(transferServerProvider);
+      server.onAccept = _handleAccept;
+      server.onSpecial = _onSpecial;
+      _specials.clear();
+      await _sub?.cancel();
+      _sub = server.events.listen(_onEvent);
 
-    var activeMode = mode;
-    var ip = '0.0.0.0';
-    String? ssid;
-    String? pass;
+      var activeMode = mode;
+      var ip = '0.0.0.0';
+      String? ssid;
+      String? pass;
 
-    if (mode == ConnectionMode.wifiDirect) {
-      state = state.copyWith(status: 'Starting Wi-Fi Direct…');
-      final g = await _ref.read(wifiDirectServiceProvider).createGroup();
-      if (g != null) {
-        wdGroup = g;
-        ip = g.goAddress;
-        ssid = g.ssid;
-        pass = g.pass;
-      } else {
-        activeMode = ConnectionMode.lan;
-        state = state.copyWith(
-          error: 'Wi-Fi Direct unavailable — using Wi-Fi/LAN',
-        );
+      if (mode == ConnectionMode.wifiDirect) {
+        state = state.copyWith(status: 'Starting Wi-Fi Direct…');
+        final g = await _ref.read(wifiDirectServiceProvider).createGroup();
+        if (g != null) {
+          wdGroup = g;
+          ip = g.goAddress;
+          ssid = g.ssid;
+          pass = g.pass;
+        } else {
+          activeMode = ConnectionMode.lan;
+          state = state.copyWith(
+            error: 'Wi-Fi Direct unavailable — using Wi-Fi/LAN',
+          );
+        }
       }
-    }
 
-    final port = await server.start(deviceId: id.id, deviceName: id.name);
-    await _ref
-        .read(discoveryServiceProvider)
-        .advertise(id: id.id, name: id.name, port: port, token: server.token);
-
-    if (activeMode == ConnectionMode.lan) {
+      final port = await server.start(deviceId: id.id, deviceName: id.name);
       try {
-        ip = (await _ref.read(strategyServiceProvider).current()).ip ?? ip;
+        await _ref.read(discoveryServiceProvider).advertise(
+          id: id.id,
+          name: id.name,
+          port: port,
+          token: server.token,
+        );
       } catch (_) {}
+
+      if (activeMode == ConnectionMode.lan) {
+        try {
+          ip = (await _ref.read(strategyServiceProvider).current()).ip ?? ip;
+        } catch (_) {}
+      }
+      qrData = ShareProtocol.pairingUri(
+        ip: ip,
+        port: port,
+        token: server.token,
+        name: id.name,
+        mode: activeMode.wire,
+        ssid: ssid,
+        pass: pass,
+        go: activeMode == ConnectionMode.wifiDirect ? ip : null,
+      ).toString();
+      state = state.copyWith(
+        role: ShareRole.receiving,
+        mode: activeMode,
+        serverRunning: true,
+        status: activeMode == ConnectionMode.wifiDirect
+            ? 'Wi-Fi Direct ready — have them join & scan'
+            : 'Ready — scan the code or pick this device',
+        tasks: const [],
+      );
+      try {
+        _ref.read(foregroundServiceProvider).start(
+          'Ready to receive',
+          'Nearby sharing is on',
+        );
+      } catch (_) {}
+    } catch (e) {
+      qrData = null;
+      state = state.copyWith(
+        serverRunning: false,
+        error: 'Couldn\'t start receiving: $e',
+      );
     }
-    qrData = ShareProtocol.pairingUri(
-      ip: ip,
-      port: port,
-      token: server.token,
-      name: id.name,
-      mode: activeMode.wire,
-      ssid: ssid,
-      pass: pass,
-      go: activeMode == ConnectionMode.wifiDirect ? ip : null,
-    ).toString();
-    state = state.copyWith(
-      role: ShareRole.receiving,
-      mode: activeMode,
-      serverRunning: true,
-      status: activeMode == ConnectionMode.wifiDirect
-          ? 'Wi-Fi Direct ready — have them join & scan'
-          : 'Ready — scan the code or pick this device',
-      tasks: const [],
-    );
-    _ref.read(foregroundServiceProvider).start(
-      'Ready to receive',
-      'Nearby sharing is on',
-    );
   }
 
   Future<void> stopReceiving() async {

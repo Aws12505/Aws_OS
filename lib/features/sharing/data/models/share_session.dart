@@ -64,7 +64,7 @@ class ShareSession {
     tasks: tasks ?? this.tasks,
     serverRunning: serverRunning ?? this.serverRunning,
     incoming: incoming == _sentinel ? this.incoming : incoming as IncomingRequest?,
-    status: status,
+    status: status ?? this.status,
     error: error,
   );
 }

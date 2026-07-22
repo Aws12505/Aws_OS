@@ -43,6 +43,17 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
       },
     );
 
+    // Surface failures (e.g. "Start receiving" couldn't bind a server) instead
+    // of leaving the screen looking unchanged with no explanation.
+    ref.listen<String?>(shareSessionProvider.select((v) => v.error), (
+      prev,
+      next,
+    ) {
+      if (next != null && next != prev) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(next)));
+      }
+    });
+
     if (!s.serverRunning) {
       return Center(
         child: SingleChildScrollView(
@@ -84,10 +95,6 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
               ),
               const SizedBox(height: 20),
-              const _SaveLocationCard(),
-              const SizedBox(height: 12),
-              const ReceivedFilesCard(),
-              const SizedBox(height: 20),
               PrimaryButton(
                 label: 'Start receiving',
                 icon: Icons.download_rounded,
@@ -100,6 +107,10 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
                   await controller.startReceiving(mode: _mode);
                 },
               ),
+              const SizedBox(height: 20),
+              const _SaveLocationCard(),
+              const SizedBox(height: 12),
+              const ReceivedFilesCard(),
             ],
           ),
         ),
