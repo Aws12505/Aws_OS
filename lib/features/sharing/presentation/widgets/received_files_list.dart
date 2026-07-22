@@ -17,6 +17,8 @@ import 'transfer_progress.dart';
 class ReceivedFilesCard extends ConsumerWidget {
   const ReceivedFilesCard({super.key});
 
+  static const _previewCount = 5;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
@@ -66,14 +68,43 @@ class ReceivedFilesCard extends ConsumerWidget {
                   ),
                 );
               }
+              final preview = files.take(_previewCount).toList();
+              final extra = files.length - preview.length;
               return Column(
                 children: [
-                  for (final f in files) _ReceivedRow(file: f),
+                  for (final f in preview) _ReceivedRow(file: f),
+                  if (extra > 0)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: TextButton(
+                        onPressed: () => _showAllReceivedFiles(context, files),
+                        child: Text('View all ${files.length} files'),
+                      ),
+                    ),
                 ],
               );
             },
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAllReceivedFiles(BuildContext context, List<File> files) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      builder: (sheetCtx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.7,
+        builder: (_, scrollController) => ListView.builder(
+          controller: scrollController,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: files.length,
+          itemBuilder: (_, i) => _ReceivedRow(file: files[i]),
+        ),
       ),
     );
   }

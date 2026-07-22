@@ -57,7 +57,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
     if (!s.serverRunning) {
       return Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
