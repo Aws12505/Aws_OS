@@ -275,24 +275,35 @@ class ShareSessionController extends StateNotifier<ShareSession> {
   Future<String?> _onSpecial(ManifestFile mf, File tmp) async {
     final store = _ref.read(receivedFilesStoreProvider);
     final rel = mf.relPath ?? mf.name;
-    final dest = await store.placeSpecial(rel);
-    try {
-      await tmp.rename(dest.path);
-    } on FileSystemException {
-      await tmp.copy(dest.path);
+    final String destPath;
+    if (mf.itemKind == ShareItemKind.apk) {
+      // APKs land in the *visible* received folder so they show up in the list
+      // and can be installed manually — they're still tracked below for the
+      // Shizuku group-install path when it's available.
+      destPath = (await store.finalize(tmp, mf.name)).path;
+    } else {
+      // OBB / app-data are useless standalone (only a Shizuku restore consumes
+      // them), so they stay in the hidden staging area.
+      final dest = await store.placeSpecial(rel);
       try {
-        await tmp.delete();
-      } catch (_) {}
+        await tmp.rename(dest.path);
+      } on FileSystemException {
+        await tmp.copy(dest.path);
+        try {
+          await tmp.delete();
+        } catch (_) {}
+      }
+      destPath = dest.path;
     }
     _specials.add(
       _ReceivedSpecial(
-        path: dest.path,
+        path: destPath,
         relPath: rel,
         packageId: mf.packageId,
         kind: mf.itemKind,
       ),
     );
-    return dest.path;
+    return destPath;
   }
 
   Future<void> _finishAppClone() async {
@@ -304,7 +315,6 @@ class ShareSessionController extends StateNotifier<ShareSession> {
       byPkg.putIfAbsent(s.packageId ?? 'unknown', () => []).add(s);
     }
     final shizuku = _ref.read(shizukuServiceProvider);
-    final apps = _ref.read(installedAppsServiceProvider);
     final hasShizuku = await shizuku.hasPermission();
     for (final files in byPkg.values) {
       final apks = files
@@ -318,18 +328,26 @@ class ShareSessionController extends StateNotifier<ShareSession> {
           )
           .map((f) => StagedFile(path: f.path, relPath: f.relPath))
           .toList();
-      if (apks.isNotEmpty) {
-        if (hasShizuku) {
-          await shizuku.installApks(apks);
-        } else {
-          await apps.installApks(apks);
-        }
+      if (apks.isNotEmpty && hasShizuku) {
+        // Shizuku can install silently (and handles splits as a group).
+        await shizuku.installApks(apks);
       }
+      // Without Shizuku, the APKs are already visible in the received folder;
+      // the user installs them from the list (the old silent PackageInstaller
+      // path never surfaced the confirm UI, so apps appeared to vanish).
       if (dataFiles.isNotEmpty && hasShizuku) {
         await shizuku.restore(dataFiles);
       }
     }
-    state = state.copyWith(status: 'Installed / restored received apps');
+    final anyApk = specials.any((s) => s.kind == ShareItemKind.apk);
+    state = state.copyWith(
+      status: hasShizuku
+          ? 'Installed / restored received apps'
+          : anyApk
+          ? 'Apps saved — open Received files to install them'
+          : 'Received app data saved',
+    );
+    _ref.read(receivedFilesStoreProvider).invalidate();
   }
 
   void _patch(

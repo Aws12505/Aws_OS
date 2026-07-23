@@ -10,6 +10,8 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.webkit.MimeTypeMap
+import androidx.core.content.FileProvider
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
@@ -45,6 +47,22 @@ class AppsChannel(private val context: Context) : MethodChannel.MethodCallHandle
             "installApks" -> {
                 val paths = call.argument<List<String>>("paths") ?: emptyList()
                 installApks(paths, result)
+            }
+            "installApk" -> {
+                val path = call.argument<String>("path")
+                if (path == null) {
+                    result.error("ARG", "path required", null)
+                } else {
+                    result.success(openFile(path, "application/vnd.android.package-archive"))
+                }
+            }
+            "openFile" -> {
+                val path = call.argument<String>("path")
+                if (path == null) {
+                    result.error("ARG", "path required", null)
+                } else {
+                    result.success(openFile(path, call.argument<String>("mime")))
+                }
             }
             "getAppIcon" -> {
                 val pkg = call.argument<String>("package")
@@ -124,6 +142,38 @@ class AppsChannel(private val context: Context) : MethodChannel.MethodCallHandle
         drawable.setBounds(0, 0, canvas.width, canvas.height)
         drawable.draw(canvas)
         return bitmap
+    }
+
+    /// Opens a received file with the system's default handler. For an APK this
+    /// launches the package installer (mime application/vnd.android.package-archive);
+    /// for other files it opens the matching viewer. Uses a FileProvider content
+    /// URI so it works on Android 7+ (no file:// exposure). Returns false if the
+    /// file is missing or no app can handle it.
+    private fun openFile(path: String, mime: String?): Boolean {
+        return try {
+            val file = File(path)
+            if (!file.exists()) return false
+            val uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                file
+            )
+            val resolved = mime ?: guessMime(file.name)
+            val intent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, resolved)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            true
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    private fun guessMime(name: String): String {
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: "*/*"
     }
 
     private fun installApks(paths: List<String>, result: MethodChannel.Result) {

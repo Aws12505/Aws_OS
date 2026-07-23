@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Roots the sharing FileProvider may hand out. Received files land either in
+     app-external storage or a user-chosen folder anywhere on shared storage, so
+     both are covered; root-path is a catch-all for absolute paths on OEMs that
+     report an unusual external root. -->
+<paths>
+    <external-path name="external_storage" path="." />
+    <external-files-path name="external_files" path="." />
+    <files-path name="files" path="." />
+    <cache-path name="cache" path="." />
+    <root-path name="root" path="/" />
+</paths>

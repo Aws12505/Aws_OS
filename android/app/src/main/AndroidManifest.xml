@@ -82,6 +82,18 @@
             android:foregroundServiceType="connectedDevice|dataSync"
             android:exported="false" />
 
+        <!-- Local sharing: open/install received files via the system handler
+             (ACTION_VIEW needs a content:// URI on Android 7+). -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Shizuku (Stage 3 app-clone: OBB / Android-data access without root). -->
         <provider
             android:name="rikka.shizuku.ShizukuProvider"

@@ -83,4 +83,30 @@ class InstalledAppsService {
       return false;
     }
   }
+
+  /// Launches the system installer for a single received APK (shows the confirm
+  /// UI). Returns false if the file is gone or no installer handled it.
+  Future<bool> installApk(String path) async {
+    try {
+      return (await _ch.invokeMethod<bool>('installApk', {'path': path})) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Opens a received file with the system's default app (image viewer, video
+  /// player, etc.). Pass [mime] to force a type; otherwise it's inferred from
+  /// the extension. Returns false if nothing could open it.
+  Future<bool> openFile(String path, {String? mime}) async {
+    try {
+      return (await _ch.invokeMethod<bool>('openFile', {
+            'path': path,
+            'mime': mime,
+          })) ??
+          false;
+    } catch (_) {
+      return false;
+    }
+  }
 }

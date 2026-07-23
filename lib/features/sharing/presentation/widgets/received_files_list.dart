@@ -110,7 +110,9 @@ class ReceivedFilesCard extends ConsumerWidget {
   }
 }
 
-class _ReceivedRow extends StatelessWidget {
+enum _RowAction { open, share }
+
+class _ReceivedRow extends ConsumerWidget {
   const _ReceivedRow({required this.file});
   final File file;
 
@@ -131,8 +133,31 @@ class _ReceivedRow extends StatelessWidget {
     };
   }
 
+  bool get _isApk => p.extension(file.path).toLowerCase() == '.apk';
+
+  Future<void> _open(BuildContext context, WidgetRef ref) async {
+    final service = ref.read(installedAppsServiceProvider);
+    final ok = _isApk
+        ? await service.installApk(file.path)
+        : await service.openFile(file.path);
+    if (!ok && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isApk
+                ? "Couldn't open the installer for this app."
+                : "No app can open this file.",
+          ),
+        ),
+      );
+    }
+  }
+
+  void _share() =>
+      SharePlus.instance.share(ShareParams(files: [XFile(file.path)]));
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final name = p.basename(file.path);
@@ -173,10 +198,42 @@ class _ReceivedRow extends StatelessWidget {
         formatBytes(size),
         style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
       ),
-      trailing: const Icon(Icons.ios_share_rounded, size: 18),
-      onTap: () => SharePlus.instance.share(
-        ShareParams(files: [XFile(file.path)]),
+      trailing: PopupMenuButton<_RowAction>(
+        icon: const Icon(Icons.more_vert_rounded, size: 20),
+        onSelected: (a) => switch (a) {
+          _RowAction.open => _open(context, ref),
+          _RowAction.share => _share(),
+        },
+        itemBuilder: (_) => [
+          PopupMenuItem(
+            value: _RowAction.open,
+            child: Row(
+              children: [
+                Icon(
+                  _isApk
+                      ? Icons.install_mobile_rounded
+                      : Icons.open_in_new_rounded,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(_isApk ? 'Install' : 'Open'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: _RowAction.share,
+            child: Row(
+              children: [
+                Icon(Icons.ios_share_rounded, size: 20),
+                SizedBox(width: 12),
+                Text('Share'),
+              ],
+            ),
+          ),
+        ],
       ),
+      // Primary tap: install (APK) or open with the default app.
+      onTap: () => _open(context, ref),
     );
   }
 }
