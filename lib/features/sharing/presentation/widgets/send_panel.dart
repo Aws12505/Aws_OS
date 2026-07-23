@@ -1,6 +1,7 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/glass.dart';
@@ -77,10 +78,33 @@ class _SendPanelState extends ConsumerState<SendPanel> {
             device.mode == ConnectionMode.hotspot) &&
         device.joinSsid != null;
     if (needsJoin) {
-      final proceed = await _showJoinDialog(device);
-      if (proceed != true) return;
+      final joined = await _autoJoin(device);
+      if (!joined) {
+        final proceed = await _showJoinDialog(device);
+        if (proceed != true) return;
+      }
     }
     await ref.read(shareSessionProvider.notifier).sendTo(device, _items);
+  }
+
+  /// Tries to join the receiver's Wi-Fi Direct / hotspot network without
+  /// leaving the app (Android 10+). Returns false on older Android or if the
+  /// system declines — callers should fall back to the manual join dialog.
+  Future<bool> _autoJoin(ShareDevice device) async {
+    final ssid = device.joinSsid;
+    if (ssid == null) return false;
+    setState(() => _busy = true);
+    try {
+      await [
+        Permission.nearbyWifiDevices,
+        Permission.locationWhenInUse,
+      ].request();
+      return await ref
+          .read(wifiConnectServiceProvider)
+          .connect(ssid: ssid, password: device.joinPass);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   Future<bool?> _showJoinDialog(ShareDevice d) {

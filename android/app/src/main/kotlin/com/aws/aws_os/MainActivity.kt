@@ -16,6 +16,8 @@ class MainActivity : FlutterActivity() {
             .setMethodCallHandler(AppsChannel(applicationContext))
         MethodChannel(messenger, ShizukuChannel.CHANNEL)
             .setMethodCallHandler(ShizukuChannel(applicationContext))
+        MethodChannel(messenger, WifiConnectChannel.CHANNEL)
+            .setMethodCallHandler(WifiConnectChannel(applicationContext))
 
         // Local sharing: deep-links to system network settings for guided hotspot.
         MethodChannel(messenger, "com.aws.aws_os/system")

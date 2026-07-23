@@ -16,6 +16,7 @@ import '../data/services/share_settings_store.dart';
 import '../data/services/shizuku_service.dart';
 import '../data/services/strategy_service.dart';
 import '../data/services/transfer_client.dart';
+import '../data/services/wifi_connect_service.dart';
 import '../data/services/wifi_direct_service.dart';
 import '../data/services/transfer_server.dart';
 import 'share_session_controller.dart';
@@ -68,6 +69,7 @@ final hotspotGuideProvider = Provider((ref) => HotspotGuideService());
 final foregroundServiceProvider =
     Provider((ref) => TransferForegroundService());
 final wifiDirectServiceProvider = Provider((ref) => WifiDirectService());
+final wifiConnectServiceProvider = Provider((ref) => WifiConnectService());
 final installedAppsServiceProvider = Provider((ref) => InstalledAppsService());
 final shizukuServiceProvider = Provider((ref) => ShizukuService());
 

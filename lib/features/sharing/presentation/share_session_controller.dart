@@ -185,6 +185,9 @@ class ShareSessionController extends StateNotifier<ShareSession> {
       items: items,
     );
     await fgs.stop();
+    if (device.joinSsid != null) {
+      await _ref.read(wifiConnectServiceProvider).disconnect();
+    }
     state = state.copyWith(status: ok ? 'All sent' : state.status ?? 'Failed');
   }
 
