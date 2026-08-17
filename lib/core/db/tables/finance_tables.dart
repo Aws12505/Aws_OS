@@ -100,6 +100,21 @@ class TransactionLegs extends Table with SyncableColumns {
   Set<Column> get primaryKey => {id};
 }
 
+class TransactionLinks extends Table with SyncableColumns {
+  @override
+  String get tableName => 'transaction_links';
+
+  // Undirected link between two transactions of any kind. Query by either
+  // column to find everything linked to a given transaction.
+  TextColumn get transactionId => text().customConstraint(
+      'NOT NULL REFERENCES transactions(id) ON DELETE CASCADE')();
+  TextColumn get linkedTransactionId => text().customConstraint(
+      'NOT NULL REFERENCES transactions(id) ON DELETE CASCADE')();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 class ExchangeRates extends Table with SyncableColumns {
   @override
   String get tableName => 'exchange_rates';

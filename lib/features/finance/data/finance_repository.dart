@@ -291,4 +291,21 @@ class FinanceRepository {
   }
 
   Future<void> deleteTransaction(String id) => dao.deleteTransaction(id);
+
+  Future<TransactionWithLegs?> getTransactionWithLegs(String id) =>
+      dao.getTransactionWithLegs(id);
+
+  // -- Linking --------------------------------------------------------------
+
+  /// Links two transactions together — undirected and many-to-many, so any
+  /// transaction can end up linked to any number of others regardless of
+  /// kind (e.g. an expense linked to several separate repayment incomes).
+  Future<void> linkTransactions(String aId, String bId) =>
+      dao.linkTransactions(aId, bId);
+
+  Future<void> unlinkTransactionPair(String aId, String bId) =>
+      dao.unlinkTransactionPair(aId, bId);
+
+  Stream<List<TransactionWithLegs>> watchLinkedTransactions(String txId) =>
+      dao.watchLinkedTransactions(txId);
 }

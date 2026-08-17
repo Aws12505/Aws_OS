@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 
 Future<void> showCurrencyFormSheet(BuildContext context,
@@ -74,9 +77,10 @@ class _CurrencyFormState extends ConsumerState<_CurrencyForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              widget.existing == null ? 'New currency' : 'Edit currency',
-              style: Theme.of(context).textTheme.titleLarge,
+            FormSheetHeader(
+              icon: Icons.currency_exchange_rounded,
+              color: DomainColors.exchange,
+              title: widget.existing == null ? 'New currency' : 'Edit currency',
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -122,10 +126,11 @@ class _CurrencyFormState extends ConsumerState<_CurrencyForm> {
               contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
+            PrimaryButton(
+              label: 'Save',
+              icon: Icons.save_rounded,
+              expand: true,
               onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: const Text('Save'),
             ),
           ],
         ),

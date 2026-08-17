@@ -21,6 +21,7 @@ part 'app_database.g.dart';
   CategoryTypes,
   Transactions,
   TransactionLegs,
+  TransactionLinks,
   ExchangeRates,
   Recurrences,
   ScheduledOccurrences,
@@ -53,7 +54,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.e);
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -72,6 +73,10 @@ class AppDatabase extends _$AppDatabase {
           // v4: optional category label on tasks.
           if (from < 4) {
             await m.addColumn(tasks, tasks.category);
+          }
+          // v5: many-to-many links between any two transactions.
+          if (from < 5) {
+            await m.createTable(transactionLinks);
           }
         },
         beforeOpen: (details) async {

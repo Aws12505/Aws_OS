@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
+import '../../data/finance_dao.dart';
 import '../../data/finance_repository.dart';
 import '../providers.dart';
+import 'link_transaction_sheet.dart';
 
 Future<void> showIncomeExpenseFormSheet(
   BuildContext context, {
@@ -45,6 +51,7 @@ class _FormState extends ConsumerState<_Form> {
   final List<_LineDraft> _lines = [_LineDraft()];
   String? _categoryId;
   String? _typeId;
+  final List<TransactionWithLegs> _linkedEntries = [];
 
   bool get _isExpense => widget.kind == 'expense';
 
@@ -64,22 +71,20 @@ class _FormState extends ConsumerState<_Form> {
   }
 
   Future<void> _pickDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
-    if (d == null) return;
-    final t = await showTimePicker(
-      // ignore: use_build_context_synchronously
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_date),
-    );
-    setState(() {
-      _date = DateTime(d.year, d.month, d.day, t?.hour ?? _date.hour,
-          t?.minute ?? _date.minute);
-    });
+    final picked = await pickDateTime(context, initial: _date);
+    if (picked == null) return;
+    setState(() => _date = picked);
+  }
+
+  Future<void> _addLink() async {
+    final excludeIds = _linkedEntries.map((e) => e.transaction.id).toList();
+    final pickedId =
+        await showLinkTransactionPicker(context, excludeIds: excludeIds);
+    if (pickedId == null || !mounted) return;
+    final entry =
+        await ref.read(financeRepositoryProvider).getTransactionWithLegs(pickedId);
+    if (entry == null || !mounted) return;
+    setState(() => _linkedEntries.add(entry));
   }
 
   Future<void> _save(List<Account> accounts) async {
@@ -104,14 +109,18 @@ class _FormState extends ConsumerState<_Form> {
       ));
       return;
     }
-    await ref.read(financeRepositoryProvider).recordIncomeOrExpense(
-          kind: widget.kind,
-          occurredAt: _date,
-          legs: legs,
-          note: _note.text.trim().isEmpty ? null : _note.text.trim(),
-          categoryId: _categoryId,
-          typeId: _typeId,
-        );
+    final repo = ref.read(financeRepositoryProvider);
+    final newId = await repo.recordIncomeOrExpense(
+      kind: widget.kind,
+      occurredAt: _date,
+      legs: legs,
+      note: _note.text.trim().isEmpty ? null : _note.text.trim(),
+      categoryId: _categoryId,
+      typeId: _typeId,
+    );
+    for (final entry in _linkedEntries) {
+      await repo.linkTransactions(newId, entry.transaction.id);
+    }
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -124,6 +133,8 @@ class _FormState extends ConsumerState<_Form> {
     final byCurrency = {for (final c in currencies) c.id: c};
 
     final title = _isExpense ? 'New expense' : 'New income';
+    final color = DomainColors.forTxKind(widget.kind);
+    final icon = DomainColors.iconForTxKind(widget.kind);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -134,19 +145,16 @@ class _FormState extends ConsumerState<_Form> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(title, style: Theme.of(context).textTheme.titleLarge),
+              FormSheetHeader(icon: icon, color: color, title: title),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Date'),
-                subtitle:
-                    Text('${_date.toLocal()}'.replaceFirst('.000', '').split('.').first),
-                trailing: const Icon(Icons.event),
+              SheetDateTile(
+                label: 'Date',
+                value: DateFormat.yMMMd().add_Hm().format(_date),
                 onTap: _pickDate,
               ),
+              const SizedBox(height: 16),
+              const FormSectionLabel('Lines'),
               const SizedBox(height: 8),
-              Text('Lines', style: Theme.of(context).textTheme.titleSmall),
-              const SizedBox(height: 4),
               for (var i = 0; i < _lines.length; i++)
                 _LineEditor(
                   line: _lines[i],
@@ -180,7 +188,7 @@ class _FormState extends ConsumerState<_Form> {
                 },
                 onTypeChanged: (id) => setState(() => _typeId = id),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _note,
                 maxLines: 2,
@@ -189,15 +197,64 @@ class _FormState extends ConsumerState<_Form> {
                     hintText: 'What was this for?'),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
+              const FormSectionLabel('Linked transactions'),
+              const SizedBox(height: 8),
+              if (_linkedEntries.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final entry in _linkedEntries)
+                        _LinkedChip(
+                          entry: entry,
+                          onRemove: () =>
+                              setState(() => _linkedEntries.remove(entry)),
+                        ),
+                    ],
+                  ),
+                ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: _addLink,
+                  icon: const Icon(Icons.add_link_rounded),
+                  label: const Text('Link to another transaction'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              PrimaryButton(
+                label: 'Save',
+                icon: Icons.save_rounded,
+                expand: true,
                 onPressed: () => _save(accounts),
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+class _LinkedChip extends StatelessWidget {
+  const _LinkedChip({required this.entry, required this.onRemove});
+  final TransactionWithLegs entry;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final tx = entry.transaction;
+    final color = DomainColors.forTxKind(tx.kind);
+    return Chip(
+      avatar: Icon(DomainColors.iconForTxKind(tx.kind), size: 16, color: color),
+      label: Text(
+        '${DomainColors.labelForTxKind(tx.kind)} · ${DateFormat.MMMd().format(tx.occurredAt)}',
+      ),
+      onDeleted: onRemove,
+      side: BorderSide(color: color.withValues(alpha: 0.4)),
+      backgroundColor: color.withValues(alpha: 0.1),
     );
   }
 }
@@ -229,6 +286,7 @@ class _LineEditor extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             flex: 3,
@@ -255,18 +313,10 @@ class _LineEditor extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: TextFormField(
+            child: AmountField(
               controller: line.controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                suffixText: currency?.symbol ?? '',
-                helperText: dp == 0 ? null : '${dp}dp',
-              ),
+              currencySymbol: currency?.symbol,
+              helperText: dp == 0 ? null : '${dp}dp',
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Required';
                 final n = double.tryParse(v.replaceAll(',', '.'));

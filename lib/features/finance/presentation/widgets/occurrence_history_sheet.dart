@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 import 'confirm_occurrence_sheet.dart';
 
@@ -41,10 +43,11 @@ class _Sheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              recurrence.noteTemplate ??
+            FormSheetHeader(
+              icon: DomainColors.iconForTxKind(recurrence.kind),
+              color: DomainColors.forTxKind(recurrence.kind),
+              title: recurrence.noteTemplate ??
                   (recurrence.kind == 'income' ? 'Income' : 'Expense'),
-              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 4),
             Text('All occurrences — review or skip any of them directly.',

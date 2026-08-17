@@ -8,6 +8,7 @@ import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 import '../transaction_filter.dart';
 
@@ -88,7 +89,7 @@ class _TransactionFilterSheet extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   // ── TYPE ─────────────────────────────────────────────
-                  const _SectionLabel('TYPE'),
+                  const FormSectionLabel('TYPE'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -110,7 +111,7 @@ class _TransactionFilterSheet extends ConsumerWidget {
                   const SizedBox(height: 20),
 
                   // ── DATE ─────────────────────────────────────────────
-                  const _SectionLabel('DATE'),
+                  const FormSectionLabel('DATE'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -138,7 +139,7 @@ class _TransactionFilterSheet extends ConsumerWidget {
 
                   // ── CATEGORY ─────────────────────────────────────────
                   if (categories.isNotEmpty) ...[
-                    const _SectionLabel('CATEGORY'),
+                    const FormSectionLabel('CATEGORY'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -180,7 +181,7 @@ class _TransactionFilterSheet extends ConsumerWidget {
                     ),
 
                   // ── RECURRENCE ───────────────────────────────────────
-                  const _SectionLabel('RECURRENCE'),
+                  const FormSectionLabel('RECURRENCE'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -232,7 +233,7 @@ class _SubcategorySection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const _SectionLabel('SUBCATEGORY'),
+        const FormSectionLabel('SUBCATEGORY'),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8,
@@ -322,24 +323,6 @@ class _CustomDateRow extends StatelessWidget {
           ),
         ],
       ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: cs.onSurfaceVariant,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-      ),
     );
   }
 }

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 
 Future<void> showExchangeFormSheet(BuildContext context) {
@@ -52,15 +55,10 @@ class _FormState extends ConsumerState<_Form> {
   }
 
   Future<void> _pickDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+    final d = await pickDate(context, initial: _date);
     if (d == null) return;
-    setState(() => _date = DateTime(d.year, d.month, d.day,
-        _date.hour, _date.minute));
+    setState(
+        () => _date = DateTime(d.year, d.month, d.day, _date.hour, _date.minute));
   }
 
   Future<void> _save(List<Account> accounts) async {
@@ -104,8 +102,9 @@ class _FormState extends ConsumerState<_Form> {
     final currencies =
         ref.watch(currenciesStreamProvider).value ?? const <Currency>[];
     final byCur = {for (final c in currencies) c.id: c};
-    final fromCur =
-        _fromId == null ? null : byCur[
+    final fromCur = _fromId == null
+        ? null
+        : byCur[
             accounts.firstWhere((a) => a.id == _fromId).currencyId];
     final toCur = _toId == null
         ? null
@@ -126,16 +125,18 @@ class _FormState extends ConsumerState<_Form> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Exchange',
-                  style: Theme.of(context).textTheme.titleLarge),
+              FormSheetHeader(
+                icon: Icons.swap_horiz_rounded,
+                color: DomainColors.exchange,
+                title: 'Exchange',
+              ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Date'),
-                subtitle: Text('${_date.toLocal()}'.split('.').first),
-                trailing: const Icon(Icons.event),
+              SheetDateTile(
+                label: 'Date',
+                value: DateFormat.yMMMd().format(_date),
                 onTap: _pickDate,
               ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _fromId,
                 decoration: const InputDecoration(labelText: 'From account'),
@@ -151,17 +152,10 @@ class _FormState extends ConsumerState<_Form> {
                 validator: (v) => v == null ? 'Required' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AmountField(
                 controller: _fromAmount,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                decoration: InputDecoration(
-                  labelText: 'From amount',
-                  suffixText: fromCur?.symbol ?? '',
-                ),
+                label: 'From amount',
+                currencySymbol: fromCur?.symbol,
                 validator: (v) {
                   final n = double.tryParse((v ?? '').replaceAll(',', '.'));
                   return (n == null || n <= 0) ? 'Required' : null;
@@ -183,17 +177,10 @@ class _FormState extends ConsumerState<_Form> {
                 validator: (v) => v == null ? 'Required' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AmountField(
                 controller: _toAmount,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                decoration: InputDecoration(
-                  labelText: 'To amount',
-                  suffixText: toCur?.symbol ?? '',
-                ),
+                label: 'To amount',
+                currencySymbol: toCur?.symbol,
                 validator: (v) {
                   final n = double.tryParse((v ?? '').replaceAll(',', '.'));
                   return (n == null || n <= 0) ? 'Required' : null;
@@ -226,10 +213,11 @@ class _FormState extends ConsumerState<_Form> {
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
+              PrimaryButton(
+                label: 'Save',
+                icon: Icons.save_rounded,
+                expand: true,
                 onPressed: () => _save(accounts),
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
               ),
             ],
           ),

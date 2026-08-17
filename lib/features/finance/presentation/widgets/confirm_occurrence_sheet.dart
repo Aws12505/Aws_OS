@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../../data/finance_repository.dart';
 import '../../data/recurrence_service.dart';
 import '../providers.dart';
@@ -137,6 +140,10 @@ class _SheetState extends ConsumerState<_Sheet> {
     final byCur = {for (final c in currencies) c.id: c};
     final rec = _rec;
     final cs = Theme.of(context).colorScheme;
+    final color = rec == null ? cs.primary : DomainColors.forTxKind(rec.kind);
+    final icon = rec == null
+        ? Icons.event_repeat_rounded
+        : DomainColors.iconForTxKind(rec.kind);
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxHeight: MediaQuery.of(context).size.height * 0.9,
@@ -147,14 +154,13 @@ class _SheetState extends ConsumerState<_Sheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Confirm occurrence',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 4),
-            Text(
-              rec == null
+            FormSheetHeader(
+              icon: icon,
+              color: color,
+              title: 'Confirm occurrence',
+              subtitle: rec == null
                   ? 'Loading…'
                   : '${rec.kind == 'expense' ? 'Expense' : 'Income'} due ${DateFormat.yMMMd().format(widget.occurrence.dueAt)}',
-              style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16),
             Flexible(
@@ -162,19 +168,11 @@ class _SheetState extends ConsumerState<_Sheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const Text('Effective date'),
-                      subtitle:
-                          Text(DateFormat.yMMMd().add_Hm().format(_date)),
-                      trailing: const Icon(Icons.event),
+                    SheetDateTile(
+                      label: 'Effective date',
+                      value: DateFormat.yMMMd().add_Hm().format(_date),
                       onTap: () async {
-                        final d = await showDatePicker(
-                          context: context,
-                          initialDate: _date,
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime(2100),
-                        );
+                        final d = await pickDate(context, initial: _date);
                         if (d != null) {
                           setState(() => _date = DateTime(
                               d.year, d.month, d.day, _date.hour, _date.minute));
@@ -213,18 +211,18 @@ class _SheetState extends ConsumerState<_Sheet> {
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
+                  child: SecondaryButton(
+                    label: 'Skip this month',
+                    icon: Icons.skip_next_rounded,
                     onPressed: _skip,
-                    icon: const Icon(Icons.skip_next),
-                    label: const Text('Skip this month'),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: FilledButton.icon(
+                  child: PrimaryButton(
+                    label: 'Confirm',
+                    icon: Icons.check_rounded,
                     onPressed: () => _confirm(accounts),
-                    icon: const Icon(Icons.check),
-                    label: const Text('Confirm'),
                   ),
                 ),
               ],
@@ -292,17 +290,9 @@ class _LineRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: TextFormField(
+            child: AmountField(
               controller: line.controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              decoration: InputDecoration(
-                labelText: 'Amount',
-                suffixText: currency?.symbol ?? '',
-              ),
+              currencySymbol: currency?.symbol,
             ),
           ),
         ],

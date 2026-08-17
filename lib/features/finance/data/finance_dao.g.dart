@@ -10,6 +10,8 @@ mixin _$FinanceDaoMixin on DatabaseAccessor<AppDatabase> {
   $CategoryTypesTable get categoryTypes => attachedDatabase.categoryTypes;
   $TransactionsTable get transactions => attachedDatabase.transactions;
   $TransactionLegsTable get transactionLegs => attachedDatabase.transactionLegs;
+  $TransactionLinksTable get transactionLinks =>
+      attachedDatabase.transactionLinks;
   $ExchangeRatesTable get exchangeRates => attachedDatabase.exchangeRates;
   $RecurrencesTable get recurrences => attachedDatabase.recurrences;
   $ScheduledOccurrencesTable get scheduledOccurrences =>
@@ -35,6 +37,11 @@ class FinanceDaoManager {
       $$TransactionLegsTableTableManager(
         _db.attachedDatabase,
         _db.transactionLegs,
+      );
+  $$TransactionLinksTableTableManager get transactionLinks =>
+      $$TransactionLinksTableTableManager(
+        _db.attachedDatabase,
+        _db.transactionLinks,
       );
   $$ExchangeRatesTableTableManager get exchangeRates =>
       $$ExchangeRatesTableTableManager(_db.attachedDatabase, _db.exchangeRates);

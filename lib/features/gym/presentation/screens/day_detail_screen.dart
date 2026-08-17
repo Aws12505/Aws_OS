@@ -2,6 +2,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
@@ -15,6 +16,16 @@ class DayDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final exercisesAsync = ref.watch(exercisesForDayProvider(day.id));
     final supersetsAsync = ref.watch(supersetsForDayProvider(day.id));
+
+    final exercisesValue = exercisesAsync.value ?? const <DayExercise>[];
+    final totalSets = exercisesValue.fold<int>(0, (sum, e) => sum + e.targetSets);
+
+    ref.listen<Set<String>>(dayCheckedSetsProvider(day.id), (previous, next) {
+      final previousCount = previous?.length ?? 0;
+      if (totalSets > 0 && next.length >= totalSets && previousCount < totalSets) {
+        _completeDay(ref, context, day);
+      }
+    });
 
     return Scaffold(
       appBar: AppBar(title: Text(day.name)),
@@ -44,7 +55,7 @@ class DayDetailScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
             children: [
-              for (final e in solo) _ExerciseTile(exercise: e),
+              for (final e in solo) _ExerciseTile(dayId: day.id, exercise: e),
               for (final g in supersets) ...[
                 Card(
                   color: Theme.of(context).colorScheme.secondaryContainer,
@@ -71,7 +82,7 @@ class DayDetailScreen extends ConsumerWidget {
                           ],
                         ),
                         for (final e in (byGroup[g.id] ?? const []))
-                          _ExerciseTile(exercise: e, inside: true),
+                          _ExerciseTile(dayId: day.id, exercise: e, inside: true),
                         TextButton.icon(
                           icon: const Icon(Icons.add),
                           label: const Text('Add to superset'),
@@ -127,6 +138,25 @@ class DayDetailScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+}
+
+/// Every set in the day has just been ticked. Log it as a finished session
+/// and reset the checklist so the ticks go back to gray for next time.
+Future<void> _completeDay(
+  WidgetRef ref,
+  BuildContext context,
+  ProgramDay day,
+) async {
+  await ref.read(gymDaoProvider).insertSession(
+        dayId: day.id,
+        playedAt: DateTime.now(),
+      );
+  ref.read(dayCheckedSetsProvider(day.id).notifier).clear();
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text('${day.name} complete — logged as a session!'),
+    ));
   }
 }
 
@@ -216,7 +246,12 @@ void _showAddExercise(
 }
 
 class _ExerciseTile extends ConsumerWidget {
-  const _ExerciseTile({required this.exercise, this.inside = false});
+  const _ExerciseTile({
+    required this.dayId,
+    required this.exercise,
+    this.inside = false,
+  });
+  final String dayId;
   final DayExercise exercise;
   final bool inside;
 
@@ -224,13 +259,12 @@ class _ExerciseTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prescriptionsAsync =
         ref.watch(prescriptionsForExerciseProvider(exercise.id));
-    // Group prescriptions by set_index, keeping the most recent.
-    final byIndex = <int, ExerciseSetPrescription>{};
+    // Group prescriptions by set_index; the query already orders each
+    // group newest-first (via effectiveFrom desc), so index 0 is current
+    // and index 1 (if present) is the previous entry.
+    final byIndex = <int, List<ExerciseSetPrescription>>{};
     for (final p in (prescriptionsAsync.value ?? const <ExerciseSetPrescription>[])) {
-      final cur = byIndex[p.setIndex];
-      if (cur == null || p.effectiveFrom.isAfter(cur.effectiveFrom)) {
-        byIndex[p.setIndex] = p;
-      }
+      byIndex.putIfAbsent(p.setIndex, () => []).add(p);
     }
     final tile = Card(
       margin: inside ? const EdgeInsets.symmetric(vertical: 2) : null,
@@ -276,9 +310,11 @@ class _ExerciseTile extends ConsumerWidget {
             ),
             for (var i = 1; i <= exercise.targetSets; i++)
               _SetRow(
+                dayId: dayId,
                 exerciseId: exercise.id,
                 setIndex: i,
-                current: byIndex[i],
+                current: (byIndex[i]?.isNotEmpty ?? false) ? byIndex[i]![0] : null,
+                previous: (byIndex[i]?.length ?? 0) > 1 ? byIndex[i]![1] : null,
               ),
           ],
         ),
@@ -290,13 +326,17 @@ class _ExerciseTile extends ConsumerWidget {
 
 class _SetRow extends ConsumerStatefulWidget {
   const _SetRow({
+    required this.dayId,
     required this.exerciseId,
     required this.setIndex,
     required this.current,
+    required this.previous,
   });
+  final String dayId;
   final String exerciseId;
   final int setIndex;
   final ExerciseSetPrescription? current;
+  final ExerciseSetPrescription? previous;
   @override
   ConsumerState<_SetRow> createState() => _SetRowState();
 }
@@ -330,59 +370,113 @@ class _SetRowState extends ConsumerState<_SetRow> {
     super.dispose();
   }
 
-  Future<void> _save() async {
+  String get _checkKey => '${widget.exerciseId}#${widget.setIndex}';
+
+  /// Parses the fields and, if they're valid, persists them as a new
+  /// prescription row (unless unchanged from the current one). Returns
+  /// false — with a snackbar explaining why — if the fields aren't usable,
+  /// so a tick press is never a silent no-op.
+  Future<bool> _trySave() async {
     final reps = int.tryParse(_reps.text.trim());
     final weight = double.tryParse(_weight.text.trim().replaceAll(',', '.'));
-    if (reps == null || weight == null) return;
-    // Only insert a new prescription row if values differ from current.
-    if (widget.current != null &&
+    if (reps == null || weight == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Enter reps and weight before checking off this set.'),
+        ));
+      }
+      return false;
+    }
+    final unchanged = widget.current != null &&
         widget.current!.reps == reps &&
-        (widget.current!.weight - weight).abs() < 1e-9) {
+        (widget.current!.weight - weight).abs() < 1e-9;
+    if (!unchanged) {
+      await ref.read(gymDaoProvider).insertPrescription(
+            dayExerciseId: widget.exerciseId,
+            setIndex: widget.setIndex,
+            reps: reps,
+            weight: weight,
+          );
+    }
+    return true;
+  }
+
+  Future<void> _onCheckPressed() async {
+    final notifier = ref.read(dayCheckedSetsProvider(widget.dayId).notifier);
+    final isChecked =
+        ref.read(dayCheckedSetsProvider(widget.dayId)).contains(_checkKey);
+    if (isChecked) {
+      notifier.uncheck(_checkKey);
       return;
     }
-    await ref.read(gymDaoProvider).insertPrescription(
-          dayExerciseId: widget.exerciseId,
-          setIndex: widget.setIndex,
-          reps: reps,
-          weight: weight,
-        );
+    if (await _trySave()) {
+      notifier.check(_checkKey);
+    }
   }
+
+  String _fmtWeight(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
 
   @override
   Widget build(BuildContext context) {
+    final isChecked = ref
+        .watch(dayCheckedSetsProvider(widget.dayId))
+        .contains(_checkKey);
+    final previous = widget.previous;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 32, child: Text('#${widget.setIndex}')),
-          Expanded(
-            child: TextField(
-              controller: _reps,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: const InputDecoration(
-                  labelText: 'Reps', isDense: true),
-              onSubmitted: (_) => _save(),
+          Row(
+            children: [
+              SizedBox(width: 32, child: Text('#${widget.setIndex}')),
+              Expanded(
+                child: TextField(
+                  controller: _reps,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  decoration: const InputDecoration(
+                      labelText: 'Reps', isDense: true),
+                  onSubmitted: (_) => _trySave(),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _weight,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                  ],
+                  decoration: const InputDecoration(
+                      labelText: 'Weight', isDense: true),
+                  onSubmitted: (_) => _trySave(),
+                ),
+              ),
+              IconButton(
+                tooltip: isChecked ? 'Uncheck set' : 'Check off set',
+                icon: Icon(
+                  isChecked ? Icons.check_circle : Icons.check_circle_outline,
+                  color: isChecked ? Colors.green : Colors.grey,
+                ),
+                onPressed: _onCheckPressed,
+              ),
+            ],
+          ),
+          if (previous != null)
+            Padding(
+              padding: const EdgeInsets.only(left: 32, bottom: 2),
+              child: Text(
+                'Previous: ${previous.reps} × ${_fmtWeight(previous.weight)}'
+                ' (${DateFormat.MMMd().format(previous.effectiveFrom)})',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Theme.of(context).colorScheme.outline),
+              ),
             ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: TextField(
-              controller: _weight,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              decoration: const InputDecoration(
-                  labelText: 'Weight', isDense: true),
-              onSubmitted: (_) => _save(),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.check),
-            onPressed: _save,
-          ),
         ],
       ),
     );

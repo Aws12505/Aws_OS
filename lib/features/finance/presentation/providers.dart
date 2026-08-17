@@ -50,6 +50,21 @@ final transactionsInRangeProvider = StreamProvider.family<
       .watchTransactionsInRange(range.start, range.end);
 });
 
+/// Every transaction linked to [txId] (either direction), with legs —
+/// powers the "linked transactions" management sheet and list-tile badge.
+final linkedTransactionsProvider =
+    StreamProvider.family<List<TransactionWithLegs>, String>((ref, txId) {
+  return ref.watch(financeRepositoryProvider).watchLinkedTransactions(txId);
+});
+
+/// Wider pool than [recentTransactionsStreamProvider] — backs the "link to a
+/// transaction" picker, which should be able to search further back than the
+/// last 100 entries shown in the Activity tab.
+final linkPickerTransactionsProvider =
+    StreamProvider<List<TransactionWithLegs>>((ref) {
+  return ref.watch(financeDaoProvider).watchRecentTransactions(limit: 300);
+});
+
 final exchangeRatesStreamProvider =
     StreamProvider<List<ExchangeRate>>((ref) {
   return ref.watch(financeRepositoryProvider).watchExchangeRates();

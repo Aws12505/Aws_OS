@@ -5,7 +5,11 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../../data/finance_repository.dart';
 import '../../data/recurrence_service.dart';
 import '../providers.dart';
@@ -91,12 +95,7 @@ class _FormState extends ConsumerState<_Form> {
   }
 
   Future<void> _pickStartDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _startDate,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+    final d = await pickDate(context, initial: _startDate);
     if (d != null) setState(() => _startDate = d);
   }
 
@@ -164,8 +163,13 @@ class _FormState extends ConsumerState<_Form> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.existing == null ? 'New recurring entry' : 'Edit recurring',
-                  style: Theme.of(context).textTheme.titleLarge),
+              FormSheetHeader(
+                icon: Icons.repeat_rounded,
+                color: DomainColors.warning,
+                title: widget.existing == null
+                    ? 'New recurring entry'
+                    : 'Edit recurring',
+              ),
               const SizedBox(height: 16),
               SegmentedButton<String>(
                 segments: const [
@@ -180,16 +184,13 @@ class _FormState extends ConsumerState<_Form> {
                 }),
               ),
               const SizedBox(height: 12),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Start date'),
-                subtitle: Text(DateFormat.yMMMd().format(_startDate)),
-                trailing: const Icon(Icons.event),
+              SheetDateTile(
+                label: 'Start date',
+                value: DateFormat.yMMMd().format(_startDate),
                 onTap: _pickStartDate,
               ),
-              const SizedBox(height: 8),
-              Text('Repeat',
-                  style: Theme.of(context).textTheme.titleSmall),
+              const SizedBox(height: 16),
+              const FormSectionLabel('Repeat'),
               const SizedBox(height: 8),
               Row(
                 children: [
@@ -249,8 +250,8 @@ class _FormState extends ConsumerState<_Form> {
                 ),
               ],
               const Divider(height: 24),
-              Text('Default amount(s)',
-                  style: Theme.of(context).textTheme.titleSmall),
+              const FormSectionLabel('Default amount(s)'),
+              const SizedBox(height: 8),
               for (var i = 0; i < _lines.length; i++)
                 _LineRow(
                   line: _lines[i],
@@ -306,10 +307,11 @@ class _FormState extends ConsumerState<_Form> {
                     hintText: 'Applied to each generated occurrence'),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
+              PrimaryButton(
+                label: 'Save',
+                icon: Icons.save_rounded,
+                expand: true,
                 onPressed: () => _save(accounts),
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
               ),
             ],
           ),
@@ -371,17 +373,10 @@ class _LineRow extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             flex: 2,
-            child: TextFormField(
+            child: AmountField(
               controller: line.controller,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-              ],
-              decoration: InputDecoration(
-                labelText: 'Default amount',
-                suffixText: currency?.symbol ?? '',
-              ),
+              label: 'Default amount',
+              currencySymbol: currency?.symbol,
               validator: (v) {
                 if (v == null || v.trim().isEmpty) return 'Required';
                 final n = double.tryParse(v.replaceAll(',', '.'));

@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 
 Future<void> showAccountFormSheet(BuildContext context, {Account? existing}) {
@@ -80,9 +83,10 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              widget.existing == null ? 'New account' : 'Edit account',
-              style: Theme.of(context).textTheme.titleLarge,
+            FormSheetHeader(
+              icon: Icons.account_balance_wallet_rounded,
+              color: DomainColors.tasks,
+              title: widget.existing == null ? 'New account' : 'Edit account',
             ),
             const SizedBox(height: 16),
             TextFormField(
@@ -125,10 +129,11 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
               contentPadding: EdgeInsets.zero,
             ),
             const SizedBox(height: 8),
-            FilledButton.icon(
+            PrimaryButton(
+              label: 'Save',
+              icon: Icons.save_rounded,
+              expand: true,
               onPressed: _save,
-              icon: const Icon(Icons.save),
-              label: const Text('Save'),
             ),
           ],
         ),

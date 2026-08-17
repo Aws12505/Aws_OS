@@ -13,6 +13,7 @@ part 'finance_dao.g.dart';
   CategoryTypes,
   Transactions,
   TransactionLegs,
+  TransactionLinks,
   ExchangeRates,
   Recurrences,
   ScheduledOccurrences,
@@ -332,6 +333,64 @@ class FinanceDao extends DatabaseAccessor<AppDatabase> with _$FinanceDaoMixin {
 
   Future<void> deleteTransaction(String id) =>
       (delete(transactions)..where((t) => t.id.equals(id))).go();
+
+  // -- Transaction links -----------------------------------------------------
+
+  /// Links two transactions together (undirected, many-to-many — any
+  /// transaction can be linked to any number of others, regardless of kind).
+  /// No-ops if a link between the two already exists.
+  Future<void> linkTransactions(String aId, String bId) async {
+    if (aId == bId) return;
+    final existing = await (select(transactionLinks)
+          ..where((t) =>
+              (t.transactionId.equals(aId) &
+                  t.linkedTransactionId.equals(bId)) |
+              (t.transactionId.equals(bId) &
+                  t.linkedTransactionId.equals(aId))))
+        .getSingleOrNull();
+    if (existing != null) return;
+    await into(transactionLinks).insert(TransactionLinksCompanion.insert(
+      transactionId: aId,
+      linkedTransactionId: bId,
+    ));
+  }
+
+  Future<void> unlinkTransactionPair(String aId, String bId) {
+    return (delete(transactionLinks)
+          ..where((t) =>
+              (t.transactionId.equals(aId) &
+                  t.linkedTransactionId.equals(bId)) |
+              (t.transactionId.equals(bId) &
+                  t.linkedTransactionId.equals(aId))))
+        .go();
+  }
+
+  /// Every transaction (with legs) linked to [txId], regardless of which side
+  /// of the link row it's stored on.
+  Stream<List<TransactionWithLegs>> watchLinkedTransactions(String txId) {
+    final q = select(transactionLinks)
+      ..where((t) =>
+          t.transactionId.equals(txId) | t.linkedTransactionId.equals(txId));
+    return q.watch().asyncMap((links) async {
+      if (links.isEmpty) return const <TransactionWithLegs>[];
+      final otherIds = {
+        for (final l in links)
+          l.transactionId == txId ? l.linkedTransactionId : l.transactionId,
+      }.toList();
+      final txs = await (select(transactions)..where((t) => t.id.isIn(otherIds)))
+          .get();
+      final legs = await (select(transactionLegs)
+            ..where((t) => t.transactionId.isIn(otherIds)))
+          .get();
+      final byTx = <String, List<TransactionLeg>>{};
+      for (final l in legs) {
+        byTx.putIfAbsent(l.transactionId, () => []).add(l);
+      }
+      return [
+        for (final tx in txs) TransactionWithLegs(tx, byTx[tx.id] ?? const []),
+      ];
+    });
+  }
 
   // -- Exchange rates ------------------------------------------------------
 

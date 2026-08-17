@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/tokens.dart';
+import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
 
 Future<void> showTransferFormSheet(BuildContext context) {
@@ -47,15 +51,10 @@ class _FormState extends ConsumerState<_Form> {
   }
 
   Future<void> _pickDate() async {
-    final d = await showDatePicker(
-      context: context,
-      initialDate: _date,
-      firstDate: DateTime(2000),
-      lastDate: DateTime(2100),
-    );
+    final d = await pickDate(context, initial: _date);
     if (d == null) return;
-    setState(() => _date = DateTime(d.year, d.month, d.day,
-        _date.hour, _date.minute));
+    setState(
+        () => _date = DateTime(d.year, d.month, d.day, _date.hour, _date.minute));
   }
 
   Future<void> _save(List<Account> accounts) async {
@@ -97,6 +96,9 @@ class _FormState extends ConsumerState<_Form> {
     final currencies =
         ref.watch(currenciesStreamProvider).value ?? const <Currency>[];
     final byCur = {for (final c in currencies) c.id: c};
+    final fromCur = _fromId == null
+        ? null
+        : byCur[accounts.firstWhere((a) => a.id == _fromId).currencyId];
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -107,16 +109,18 @@ class _FormState extends ConsumerState<_Form> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Transfer',
-                  style: Theme.of(context).textTheme.titleLarge),
+              FormSheetHeader(
+                icon: Icons.compare_arrows_rounded,
+                color: DomainColors.transfer,
+                title: 'Transfer',
+              ),
               const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Date'),
-                subtitle: Text('${_date.toLocal()}'.split('.').first),
-                trailing: const Icon(Icons.event),
+              SheetDateTile(
+                label: 'Date',
+                value: DateFormat.yMMMd().format(_date),
                 onTap: _pickDate,
               ),
+              const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _fromId,
                 decoration: const InputDecoration(labelText: 'From account'),
@@ -149,14 +153,9 @@ class _FormState extends ConsumerState<_Form> {
                 validator: (v) => v == null ? 'Required' : null,
               ),
               const SizedBox(height: 12),
-              TextFormField(
+              AmountField(
                 controller: _amount,
-                keyboardType:
-                    const TextInputType.numberWithOptions(decimal: true),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
-                ],
-                decoration: const InputDecoration(labelText: 'Amount'),
+                currencySymbol: fromCur?.symbol,
                 validator: (v) {
                   final n = double.tryParse((v ?? '').replaceAll(',', '.'));
                   return (n == null || n <= 0) ? 'Enter a positive number' : null;
@@ -169,10 +168,11 @@ class _FormState extends ConsumerState<_Form> {
                 maxLines: 2,
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
+              PrimaryButton(
+                label: 'Save',
+                icon: Icons.save_rounded,
+                expand: true,
                 onPressed: () => _save(accounts),
-                icon: const Icon(Icons.save),
-                label: const Text('Save'),
               ),
             ],
           ),

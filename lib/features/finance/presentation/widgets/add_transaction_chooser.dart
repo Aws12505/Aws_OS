@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../shared/design/tokens.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import 'exchange_form_sheet.dart';
 import 'income_expense_form_sheet.dart';
@@ -16,7 +17,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
         children: [
           _ChoiceTile(
             icon: Icons.trending_down,
-            color: Colors.red,
+            color: DomainColors.expense,
             title: 'Expense',
             subtitle: 'Money out, possibly split across accounts.',
             onTap: () {
@@ -26,7 +27,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.trending_up,
-            color: Colors.green,
+            color: DomainColors.income,
             title: 'Income',
             subtitle: 'Money in, possibly split across accounts.',
             onTap: () {
@@ -36,7 +37,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.compare_arrows,
-            color: Colors.blue,
+            color: DomainColors.transfer,
             title: 'Transfer',
             subtitle: 'Move between two same-currency accounts.',
             onTap: () {
@@ -46,7 +47,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.swap_horiz,
-            color: Colors.purple,
+            color: DomainColors.exchange,
             title: 'Exchange',
             subtitle: 'Convert between two currencies, records a rate.',
             onTap: () {
@@ -56,7 +57,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.repeat,
-            color: Colors.orange,
+            color: DomainColors.warning,
             title: 'Recurring',
             subtitle: 'Schedule an income/expense that reminds you to confirm each time.',
             onTap: () {

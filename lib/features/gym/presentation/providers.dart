@@ -86,3 +86,28 @@ final sessionsForDayProvider = StreamProvider.family<List<DaySession>, String>((
 final allSessionsStreamProvider = StreamProvider<List<DaySession>>((ref) {
   return ref.watch(gymDaoProvider).watchAllSessions();
 });
+
+/// In-memory "ticked" state for the sets in a single day's workout, keyed by
+/// `'<dayExerciseId>#<setIndex>'`. Not persisted — it's a per-visit checklist
+/// that gets cleared once every set in the day has been ticked (the day is
+/// then logged as a finished [DaySession]) or when the user unticks a set.
+class CheckedSetsNotifier extends StateNotifier<Set<String>> {
+  CheckedSetsNotifier() : super(const {});
+
+  void check(String key) {
+    if (state.contains(key)) return;
+    state = {...state, key};
+  }
+
+  void uncheck(String key) {
+    if (!state.contains(key)) return;
+    state = {...state}..remove(key);
+  }
+
+  void clear() => state = const {};
+}
+
+final dayCheckedSetsProvider =
+    StateNotifierProvider.family<CheckedSetsNotifier, Set<String>, String>(
+  (ref, dayId) => CheckedSetsNotifier(),
+);

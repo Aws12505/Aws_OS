@@ -8,9 +8,11 @@ import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/glass.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 import '../transaction_filter.dart';
+import '../widgets/linked_transactions_sheet.dart';
 import '../widgets/transaction_filter_sheet.dart';
 
 class TransactionsListView extends ConsumerStatefulWidget {
@@ -356,6 +358,7 @@ class _TransactionTile extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
+                  _LinkedBadge(transactionId: tx.id),
                 ],
               ),
             ),
@@ -371,21 +374,72 @@ class _TransactionTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: cs.error,
-                  ),
-                  onPressed: onDelete,
-                  style: IconButton.styleFrom(
-                    minimumSize: const Size(32, 32),
-                    padding: EdgeInsets.zero,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        Icons.link_rounded,
+                        size: 18,
+                        color: cs.onSurfaceVariant,
+                      ),
+                      onPressed: () => showLinkedTransactionsSheet(
+                        context,
+                        transactionId: tx.id,
+                      ),
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(32, 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline_rounded,
+                        size: 18,
+                        color: cs.error,
+                      ),
+                      onPressed: onDelete,
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(32, 32),
+                        padding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact "N linked" pill shown under a transaction's summary when it has
+/// one or more transactions linked to it — tapping opens the same management
+/// sheet as the tile's link icon. Isolated into its own [ConsumerWidget] so
+/// [_TransactionTile] itself can stay a plain [StatelessWidget].
+class _LinkedBadge extends ConsumerWidget {
+  const _LinkedBadge({required this.transactionId});
+  final String transactionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final linked =
+        ref.watch(linkedTransactionsProvider(transactionId)).value ??
+            const <TransactionWithLegs>[];
+    if (linked.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 4),
+      child: GestureDetector(
+        onTap: () => showLinkedTransactionsSheet(
+          context,
+          transactionId: transactionId,
+        ),
+        child: MiniPill(
+          label: '${linked.length} linked',
+          icon: Icons.link_rounded,
+          color: Theme.of(context).colorScheme.tertiary,
         ),
       ),
     );
