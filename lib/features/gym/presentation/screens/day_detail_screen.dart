@@ -160,6 +160,70 @@ Future<void> _completeDay(
   }
 }
 
+String _fmtSetWeight(double v) =>
+    v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
+
+/// Full, all-time prescription history for one exercise (every set index,
+/// every edit), opened as a sheet over the day screen so the user never
+/// has to leave it to see their progression.
+void _showExerciseHistory(BuildContext context, {required DayExercise exercise}) {
+  showAppModalBottomSheet<void>(
+    context: context,
+    showDragHandle: true,
+    isScrollControlled: true,
+    builder: (ctx) => Consumer(builder: (ctx2, ref, _) {
+      final prescriptionsAsync =
+          ref.watch(prescriptionsForExerciseProvider(exercise.id));
+      final byIndex = <int, List<ExerciseSetPrescription>>{};
+      for (final p
+          in (prescriptionsAsync.value ?? const <ExerciseSetPrescription>[])) {
+        byIndex.putIfAbsent(p.setIndex, () => []).add(p);
+      }
+      final indices = byIndex.keys.toList()..sort();
+      return DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (ctx3, scrollController) => ListView(
+          controller: scrollController,
+          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+          children: [
+            Text('${exercise.exerciseName} — history',
+                style: Theme.of(ctx3).textTheme.titleLarge),
+            const SizedBox(height: 12),
+            if (indices.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 24),
+                child: Text('No history yet — check off a set to start logging.'),
+              )
+            else
+              for (final i in indices) ...[
+                Text('Set #$i', style: Theme.of(ctx3).textTheme.titleSmall),
+                for (final p in byIndex[i]!)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text('${p.reps} × ${_fmtSetWeight(p.weight)}'),
+                        ),
+                        Text(
+                          DateFormat.yMMMd().add_jm().format(p.effectiveFrom),
+                          style: Theme.of(ctx3).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                const Divider(),
+              ],
+          ],
+        ),
+      );
+    }),
+  );
+}
+
 void _showAddExercise(
   BuildContext context, {
   required String dayId,
@@ -284,6 +348,12 @@ class _ExerciseTile extends ConsumerWidget {
                 ),
                 Text('${exercise.targetSets} sets',
                     style: Theme.of(context).textTheme.bodySmall),
+                IconButton(
+                  tooltip: 'Full history',
+                  icon: const Icon(Icons.history),
+                  onPressed: () =>
+                      _showExerciseHistory(context, exercise: exercise),
+                ),
                 PopupMenuButton<String>(
                   onSelected: (v) async {
                     switch (v) {
@@ -414,9 +484,6 @@ class _SetRowState extends ConsumerState<_SetRow> {
     }
   }
 
-  String _fmtWeight(double v) =>
-      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toString();
-
   @override
   Widget build(BuildContext context) {
     final isChecked = ref
@@ -469,7 +536,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
             Padding(
               padding: const EdgeInsets.only(left: 32, bottom: 2),
               child: Text(
-                'Previous: ${previous.reps} × ${_fmtWeight(previous.weight)}'
+                'Previous: ${previous.reps} × ${_fmtSetWeight(previous.weight)}'
                 ' (${DateFormat.MMMd().format(previous.effectiveFrom)})',
                 style: Theme.of(context)
                     .textTheme
