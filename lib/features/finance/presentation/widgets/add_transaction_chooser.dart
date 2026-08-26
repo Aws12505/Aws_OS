@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import 'exchange_form_sheet.dart';
 import 'income_expense_form_sheet.dart';
@@ -17,7 +17,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
         children: [
           _ChoiceTile(
             icon: Icons.trending_down,
-            color: DomainColors.expense,
+            color: context.sem.expense.base,
             title: 'Expense',
             subtitle: 'Money out, possibly split across accounts.',
             onTap: () {
@@ -27,7 +27,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.trending_up,
-            color: DomainColors.income,
+            color: context.sem.income.base,
             title: 'Income',
             subtitle: 'Money in, possibly split across accounts.',
             onTap: () {
@@ -37,7 +37,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.compare_arrows,
-            color: DomainColors.transfer,
+            color: context.sem.transfer.base,
             title: 'Transfer',
             subtitle: 'Move between two same-currency accounts.',
             onTap: () {
@@ -47,7 +47,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.swap_horiz,
-            color: DomainColors.exchange,
+            color: context.sem.exchange.base,
             title: 'Exchange',
             subtitle: 'Convert between two currencies, records a rate.',
             onTap: () {
@@ -57,7 +57,7 @@ Future<void> showAddTransactionChooser(BuildContext context) {
           ),
           _ChoiceTile(
             icon: Icons.repeat,
-            color: DomainColors.warning,
+            color: context.sem.warning.base,
             title: 'Recurring',
             subtitle: 'Schedule an income/expense that reminds you to confirm each time.',
             onTap: () {

@@ -12,15 +12,31 @@ abstract final class AppSpacing {
   static const double xxxl = 32;
 }
 
-/// Corner-radius scale. Mirrors the values already used by GlassCard (22) and
-/// the theme (12/16/20) so shared widgets line up with existing surfaces.
+/// Corner-radius scale.
+///
+/// Every corner in the app snaps to one of these. Before this, sixteen distinct
+/// literals were in use (2, 3, 4, 6, 7, 9, 10, 11, 13, 14 among them), which is
+/// not a shape system, it is an accident.
 abstract final class AppRadius {
+  /// Bars, dots, tiny indicators.
+  static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
   static const double lg = 16;
   static const double xl = 20;
   static const double xxl = 22;
   static const double pill = 28;
+}
+
+/// Fixed-chrome clearances.
+abstract final class AppInsets {
+  /// Bottom padding a scrolling list needs to clear the translucent nav bar
+  /// and the floating action button. Replaces the three different magic
+  /// numbers (110, 120, 156) that were all reaching for the same clearance.
+  static const double listBottom = 120;
+
+  /// Same clearance for a screen with no floating action button over it.
+  static const double listBottomNoFab = 96;
 }
 
 /// Semantic domain colors — the single source of truth for the literals that

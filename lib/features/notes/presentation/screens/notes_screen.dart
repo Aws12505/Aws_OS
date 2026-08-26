@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
-import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
+import '../../../../shared/widgets/app_filter_bar.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/hero_title.dart';
+import '../../../../shared/widgets/stagger.dart';
 import '../note_filter.dart';
 import '../providers.dart';
 import '../widgets/note_filter_sheet.dart';
@@ -40,9 +43,18 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final mappingsAsync = ref.watch(noteTagsStreamProvider);
 
     return AppScaffold(
+      mode: SurfaceMode.working,
       body: Column(
         children: [
-          const SectionHeader(kicker: 'Capture', title: 'Notes'),
+          SectionHeader(
+            title: 'Notes',
+            status: switch (notesAsync.valueOrNull?.length) {
+              null => null,
+              0 => 'Nothing captured yet',
+              1 => '1 note',
+              final n => '$n notes',
+            },
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
             child: TextField(
@@ -55,6 +67,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Clear the search',
                         icon: const Icon(Icons.close_rounded, size: 18),
                         onPressed: () {
                           _search.clear();
@@ -67,7 +80,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           const _FilterBar(),
           Expanded(
             child: notesAsync.when(
-              loading: () => const AppLoading(),
+              loading: () => const AppLoading(message: 'Loading your notes'),
               error: (e, _) => AppErrorView(error: e),
               data: (notes) {
                 final mappings = mappingsAsync.value ?? const <NoteTag>[];
@@ -95,16 +108,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                         : Icons.sticky_note_2_rounded,
                     title: searching ? 'No matching notes' : 'No notes yet',
                     message: searching
-                        ? 'Try a different search or filter.'
-                        : 'Capture a thought, idea, or journal entry.',
-                    accent: DomainColors.notes,
+                        ? 'Nothing matches that search and those filters. '
+                              'Try widening one of them.'
+                        : 'Capture a thought, an idea, or a journal entry.',
+                    accent: context.sem.notes.base,
                     action: searching
                         ? null
                         : FilledButton.icon(
-                            style: FilledButton.styleFrom(
-                              backgroundColor: DomainColors.notes,
-                              foregroundColor: Colors.white,
-                            ),
                             icon: const Icon(Icons.add_rounded),
                             label: const Text('Write a note'),
                             onPressed: () => showNoteFormSheet(context),
@@ -116,15 +126,18 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   for (final t in (tagsAsync.value ?? const <Tag>[])) t.id: t,
                 };
                 return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(0, 4, 0, 110),
+                  padding: const EdgeInsets.fromLTRB(0, 4, 0, AppInsets.listBottom),
                   itemCount: filtered.length,
-                  itemBuilder: (_, i) => _NoteTile(
-                    note: filtered[i],
-                    tags: [
+                  itemBuilder: (_, i) => StaggeredEntry(
+                    index: i,
+                    child: _NoteTile(
+                      note: filtered[i],
+                      tags: [
                       for (final id
                           in (tagsForNote[filtered[i].id] ?? const []))
                         if (tagsById[id] != null) tagsById[id]!,
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },
@@ -143,58 +156,15 @@ class _FilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
     final filter = ref.watch(noteFilterProvider);
-    final activeCount = filter.activeCount;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              AppChip(
-                label: 'Filters',
-                icon: Icons.tune_rounded,
-                color: DomainColors.notes,
-                selected: activeCount > 0,
-                onTap: () => showNoteFilterSheet(context),
-              ),
-              if (activeCount > 0)
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: const BoxDecoration(
-                      color: DomainColors.notes,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$activeCount',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          if (!filter.isDefault) ...[
-            const SizedBox(width: 10),
-            AppChip(
-              label: 'Clear',
-              icon: Icons.close_rounded,
-              color: cs.error,
-              onTap: () => ref.read(noteFilterProvider.notifier).state =
-                  const NoteFilter(),
-            ),
-          ],
-        ],
-      ),
+    return AppFilterBar(
+      activeCount: filter.activeCount,
+      color: context.sem.notes.base,
+      onOpenFilters: () => showNoteFilterSheet(context),
+      onClear: filter.isDefault
+          ? null
+          : () => ref.read(noteFilterProvider.notifier).state =
+                const NoteFilter(),
     );
   }
 }
@@ -226,8 +196,8 @@ class _NoteTile extends ConsumerWidget {
             width: 3,
             height: tags.isNotEmpty ? 80 : 44,
             decoration: BoxDecoration(
-              color: DomainColors.notes,
-              borderRadius: BorderRadius.circular(2),
+              color: context.sem.notes.base,
+              borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
           ),
           const SizedBox(width: 14),
@@ -239,13 +209,10 @@ class _NoteTile extends ConsumerWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
-                      child: Text(
-                        title,
-                        style: tt.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      child: HeroTitle(
+                        tag: 'note-${note.id}',
+                        text: title,
+                        style: tt.titleSmall!.weight(FontWeight.w700),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -298,15 +265,14 @@ class _NoteTile extends ConsumerWidget {
                             vertical: 3,
                           ),
                           decoration: BoxDecoration(
-                            color: tagColor(t).withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(6),
+                            color: tagColor(context, t).withValues(alpha: 0.14),
+                            borderRadius: BorderRadius.circular(AppRadius.sm),
                           ),
                           child: Text(
                             t.name,
                             style: tt.labelSmall?.copyWith(
-                              color: tagColor(t),
-                              fontWeight: FontWeight.w600,
-                            ),
+                              color: tagColor(context, t),
+                            ).weight(FontWeight.w600),
                           ),
                         ),
                     ],
@@ -321,7 +287,7 @@ class _NoteTile extends ConsumerWidget {
   }
 
   void _openViewer(BuildContext context) {
-    Navigator.of(context, rootNavigator: true).push(
+    Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => _NoteViewer(note: note, tags: tags),
       ),
@@ -343,11 +309,18 @@ class _NoteViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(
-        title: Text(note.title?.isNotEmpty == true ? note.title! : 'Note'),
+        title: HeroTitle(
+          tag: 'note-${note.id}',
+          text: note.title?.isNotEmpty == true ? note.title! : 'Note',
+          style: Theme.of(context).appBarTheme.titleTextStyle ??
+              tt.titleLarge!,
+        ),
         actions: [
           IconButton(
+            tooltip: 'Edit this note',
             icon: const Icon(Icons.edit_rounded),
             onPressed: () {
               Navigator.of(context).pop();
@@ -382,15 +355,14 @@ class _NoteViewer extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: tagColor(t).withValues(alpha: 0.14),
+                      color: tagColor(context, t).withValues(alpha: 0.14),
                       borderRadius: BorderRadius.circular(AppRadius.sm),
                     ),
                     child: Text(
                       t.name,
                       style: tt.labelSmall?.copyWith(
-                        color: tagColor(t),
-                        fontWeight: FontWeight.w600,
-                      ),
+                        color: tagColor(context, t),
+                      ).weight(FontWeight.w600),
                     ),
                   ),
               ],

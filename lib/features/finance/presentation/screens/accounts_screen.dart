@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 import '../widgets/account_form_sheet.dart';
 
@@ -13,11 +19,12 @@ class AccountsScreen extends ConsumerWidget {
     final currencies = ref.watch(currenciesStreamProvider).value ?? const [];
     final byId = {for (final c in currencies) c.id: c};
 
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Accounts')),
       body: accountsAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+        loading: () => const AppLoading(),
+        error: (e, _) => AppErrorView(error: e),
         data: (items) {
           if (items.isEmpty) {
             return const Center(
@@ -31,7 +38,7 @@ class AccountsScreen extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
             itemCount: items.length,
             itemBuilder: (_, i) {
               final a = items[i];
@@ -51,24 +58,15 @@ class AccountsScreen extends ConsumerWidget {
                         case 'edit':
                           showAccountFormSheet(context, existing: a);
                         case 'delete':
-                          final ok = await showDialog<bool>(
-                            context: context,
-                            builder: (dCtx) => AlertDialog(
-                              title: Text('Delete ${a.name}?'),
-                              content: const Text(
-                                  'Linked transactions will keep the account id reference. '
-                                  'Consider archiving instead.'),
-                              actions: [
-                                TextButton(
-                                    onPressed: () => Navigator.pop(dCtx, false),
-                                    child: const Text('Cancel')),
-                                FilledButton(
-                                    onPressed: () => Navigator.pop(dCtx, true),
-                                    child: const Text('Delete')),
-                              ],
-                            ),
+                          final ok = await showAppConfirmDialog(
+                            context,
+                            title: 'Delete ${a.name}?',
+                            message: 'Linked transactions will keep the account id reference. '
+                                  'Consider archiving instead.',
+                            confirmLabel: 'Delete',
+                            destructive: true,
                           );
-                          if (ok == true) {
+                          if (ok) {
                             await ref
                                 .read(financeRepositoryProvider)
                                 .deleteAccount(a.id);

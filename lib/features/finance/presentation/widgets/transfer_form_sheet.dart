@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
@@ -71,7 +71,7 @@ class _FormState extends ConsumerState<_Form> {
     if (from.currencyId != to.currencyId) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
         content: Text(
-            'Different currencies — use Exchange instead of Transfer.'),
+            'Different currencies. Use Exchange instead of Transfer.'),
       ));
       return;
     }
@@ -111,7 +111,7 @@ class _FormState extends ConsumerState<_Form> {
             children: [
               FormSheetHeader(
                 icon: Icons.compare_arrows_rounded,
-                color: DomainColors.transfer,
+                color: context.sem.transfer.base,
                 title: 'Transfer',
               ),
               const SizedBox(height: 16),

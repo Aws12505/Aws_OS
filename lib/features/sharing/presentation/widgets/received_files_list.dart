@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../data/models/share_item.dart';
 import '../../data/share_format.dart';
@@ -36,7 +39,7 @@ class ReceivedFilesCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Received files',
-                  style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                  style: tt.titleSmall?.weight(FontWeight.w700),
                 ),
               ),
               IconButton(
@@ -49,7 +52,7 @@ class ReceivedFilesCard extends ConsumerWidget {
           filesAsync.when(
             loading: () => const Padding(
               padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
+              child: AppLoading(),
             ),
             error: (_, _) => Padding(
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -91,7 +94,7 @@ class ReceivedFilesCard extends ConsumerWidget {
   }
 
   void _showAllReceivedFiles(BuildContext context, List<File> files) {
-    showModalBottomSheet<void>(
+    showAppModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
@@ -172,7 +175,7 @@ class _ReceivedRow extends ConsumerWidget {
 
     final leading = kind == ShareItemKind.photo
         ? ClipRRect(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppRadius.sm),
             child: Image.file(
               file,
               width: 40,
@@ -192,7 +195,7 @@ class _ReceivedRow extends ConsumerWidget {
         name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+        style: tt.bodyMedium?.weight(FontWeight.w600),
       ),
       subtitle: Text(
         formatBytes(size),
@@ -250,7 +253,7 @@ class _GlyphTile extends StatelessWidget {
       height: 40,
       decoration: BoxDecoration(
         color: cs.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Icon(iconForKind(kind), size: 22, color: cs.onSurfaceVariant),
     );

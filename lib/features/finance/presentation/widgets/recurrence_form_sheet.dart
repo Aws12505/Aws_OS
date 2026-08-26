@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
@@ -165,7 +165,7 @@ class _FormState extends ConsumerState<_Form> {
             children: [
               FormSheetHeader(
                 icon: Icons.repeat_rounded,
-                color: DomainColors.warning,
+                color: context.sem.warning.base,
                 title: widget.existing == null
                     ? 'New recurring entry'
                     : 'Edit recurring',
@@ -276,7 +276,7 @@ class _FormState extends ConsumerState<_Form> {
                 initialValue: _categoryId,
                 decoration: const InputDecoration(labelText: 'Category (optional)'),
                 items: [
-                  const DropdownMenuItem(value: null, child: Text('— none —')),
+                  const DropdownMenuItem(value: null, child: Text('None')),
                   for (final c in cats)
                     DropdownMenuItem(value: c.id, child: Text(c.name)),
                 ],
@@ -291,7 +291,7 @@ class _FormState extends ConsumerState<_Form> {
                   initialValue: _typeId,
                   decoration: const InputDecoration(labelText: 'Type (optional)'),
                   items: [
-                    const DropdownMenuItem(value: null, child: Text('— none —')),
+                    const DropdownMenuItem(value: null, child: Text('None')),
                     for (final t in types)
                       DropdownMenuItem(value: t.id, child: Text(t.name)),
                   ],
@@ -386,8 +386,9 @@ class _LineRow extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Remove this row',
             onPressed: canRemove ? onRemove : null,
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close_rounded),
           ),
         ],
       ),

@@ -6,7 +6,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/date_ext.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
@@ -42,6 +45,7 @@ class BudgetsScreen extends ConsumerWidget {
     final budgetByCat = {for (final b in budgets) b.categoryId: b};
 
     return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Budgets')),
       body: catsAsync.when(
         loading: () => const AppLoading(),
@@ -89,9 +93,9 @@ class BudgetsScreen extends ConsumerWidget {
       BuildContext context, WidgetRef ref, Category c, Budget? existing) async {
     final ctrl = TextEditingController(
         text: existing == null ? '' : existing.amount.toStringAsFixed(0));
-    final action = await showDialog<String>(
-      context: context,
-      builder: (dCtx) => AlertDialog(
+    final action = await showAppDialog<String>(
+    context,
+    builder: (dCtx) => AlertDialog(
         title: Text('Budget · ${c.name}'),
         content: TextField(
           controller: ctrl,
@@ -155,31 +159,28 @@ class _BudgetTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final fmt = NumberFormat.decimalPattern();
     final limit = budget?.amount;
     final frac =
         (limit == null || limit <= 0) ? 0.0 : (spent / limit).clamp(0.0, 1.0);
     final over = limit != null && spent > limit;
     final barColor = over
-        ? DomainColors.expense
+        ? context.sem.expense.base
         : frac > 0.85
-            ? DomainColors.warning
-            : DomainColors.income;
+            ? context.sem.warning.base
+            : context.sem.income.base;
 
-    return Container(
+    return AppCard(
       margin: const EdgeInsets.symmetric(vertical: 5),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+      radius: AppRadius.lg,
+      onTap: onEdit,
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        14,
+        AppSpacing.lg,
+        14,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onEdit,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-          child: Column(
+      child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
@@ -187,7 +188,7 @@ class _BudgetTile extends StatelessWidget {
                   Expanded(
                     child: Text(category.name,
                         style: tt.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                            ?.weight(FontWeight.w700)),
                   ),
                   if (limit == null)
                     Text('Set budget',
@@ -195,15 +196,14 @@ class _BudgetTile extends StatelessWidget {
                   else
                     Text('${fmt.format(spent)} / ${fmt.format(limit)}',
                         style: tt.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: over ? DomainColors.expense : cs.onSurface,
-                        )),
+                          color: over ? context.sem.expense.base : cs.onSurface,
+                        ).weight(FontWeight.w700)),
                 ],
               ),
               if (limit != null) ...[
                 const SizedBox(height: 8),
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
                   child: LinearProgressIndicator(
                     value: frac,
                     minHeight: 7,
@@ -217,14 +217,12 @@ class _BudgetTile extends StatelessWidget {
                       ? 'Over by ${fmt.format(spent - limit)}'
                       : '${fmt.format(limit - spent)} left',
                   style: tt.labelSmall?.copyWith(
-                    color: over ? DomainColors.expense : cs.onSurfaceVariant,
+                    color: over ? context.sem.expense.base : cs.onSurfaceVariant,
                   ),
                 ),
               ],
             ],
           ),
-        ),
-      ),
     );
   }
 }

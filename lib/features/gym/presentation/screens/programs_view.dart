@@ -4,9 +4,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_empty_state.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/hero_title.dart';
+import '../../../../shared/widgets/stagger.dart';
 import '../providers.dart';
 import 'program_detail_screen.dart';
 
@@ -25,57 +33,94 @@ class _ProgramsViewState extends ConsumerState<ProgramsView> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(programsStreamProvider);
-    return Scaffold(
-      body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
-        data: (allPrograms) {
-          final programs = switch (_status) {
-            _ProgramStatus.all => allPrograms,
-            _ProgramStatus.active =>
-              allPrograms.where((p) => p.endedAt == null).toList(),
-            _ProgramStatus.completed =>
-              allPrograms.where((p) => p.endedAt != null).toList(),
-          };
-          return Column(
-            children: [
-              SizedBox(
-                height: 44,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(8, 4, 8, 4),
-                  children: [
-                    for (final s in _ProgramStatus.values)
-                      Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.sm),
-                        child: AppChip(
-                          label: switch (s) {
-                            _ProgramStatus.all => 'All',
-                            _ProgramStatus.active => 'Active',
-                            _ProgramStatus.completed => 'Completed',
-                          },
-                          color: DomainColors.gym,
-                          selected: _status == s,
-                          onTap: () => setState(() => _status = s),
-                        ),
-                      ),
-                  ],
+    final accent = context.sem.gym;
+
+    return async.when(
+      loading: () => const AppLoading(message: 'Loading your programs'),
+      error: (e, _) => AppErrorView(error: e),
+      data: (allPrograms) {
+        final programs = switch (_status) {
+          _ProgramStatus.all => allPrograms,
+          _ProgramStatus.active =>
+            allPrograms.where((p) => p.endedAt == null).toList(),
+          _ProgramStatus.completed =>
+            allPrograms.where((p) => p.endedAt != null).toList(),
+        };
+
+        return Column(
+          children: [
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.md,
+                  AppSpacing.xs,
                 ),
-              ),
-              Expanded(
-                child: programs.isEmpty
-                    ? const _ProgramsEmpty()
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(8, 4, 8, 120),
-                        itemCount: programs.length,
-                        itemBuilder: (_, i) =>
-                            _ProgramTile(program: programs[i]),
+                children: [
+                  for (final s in _ProgramStatus.values)
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.sm),
+                      child: AppChip(
+                        label: switch (s) {
+                          _ProgramStatus.all => 'All',
+                          _ProgramStatus.active => 'Active',
+                          _ProgramStatus.completed => 'Finished',
+                        },
+                        color: accent.base,
+                        selected: _status == s,
+                        onTap: () => setState(() => _status = s),
                       ),
+                    ),
+                ],
               ),
-            ],
-          );
-        },
-      ),
+            ),
+            Expanded(
+              child: programs.isEmpty
+                  ? AppEmptyState(
+                      icon: Icons.list_alt_rounded,
+                      title: switch (_status) {
+                        _ProgramStatus.all => 'No programs yet',
+                        _ProgramStatus.active => 'Nothing running',
+                        _ProgramStatus.completed => 'Nothing finished yet',
+                      },
+                      message: switch (_status) {
+                        _ProgramStatus.all =>
+                          'A program is a training block, such as PPL or '
+                              'Upper/Lower. Add one to start planning days.',
+                        _ProgramStatus.active =>
+                          'Every program here has an end date. Start a new one '
+                              'to get going again.',
+                        _ProgramStatus.completed =>
+                          'Programs show up here once you give them an end '
+                              'date.',
+                      },
+                      accent: accent.base,
+                      action: FilledButton.icon(
+                        onPressed: () => showProgramFormSheet(context),
+                        icon: const Icon(Icons.add_rounded),
+                        label: const Text('New program'),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.md,
+                        AppSpacing.xs,
+                        AppSpacing.md,
+                        AppInsets.listBottom,
+                      ),
+                      itemCount: programs.length,
+                      itemBuilder: (_, i) => StaggeredEntry(
+                        index: i,
+                        child: _ProgramTile(program: programs[i]),
+                      ),
+                    ),
+            ),
+          ],
+        );
+      },
     );
   }
 }
@@ -94,7 +139,9 @@ void showProgramFormSheet(BuildContext context, {Program? existing}) {
 
 class _ProgramForm extends ConsumerStatefulWidget {
   const _ProgramForm({this.existing});
+
   final Program? existing;
+
   @override
   ConsumerState<_ProgramForm> createState() => _ProgramFormState();
 }
@@ -102,12 +149,14 @@ class _ProgramForm extends ConsumerStatefulWidget {
 class _ProgramFormState extends ConsumerState<_ProgramForm> {
   late final TextEditingController _name;
   DateTime? _startedAt;
+  DateTime? _endedAt;
 
   @override
   void initState() {
     super.initState();
     _name = TextEditingController(text: widget.existing?.name ?? '');
     _startedAt = widget.existing?.startedAt ?? DateTime.now();
+    _endedAt = widget.existing?.endedAt;
   }
 
   @override
@@ -119,57 +168,91 @@ class _ProgramFormState extends ConsumerState<_ProgramForm> {
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) return;
-    final companion = ProgramsCompanion(
-      id: widget.existing == null
-          ? const Value.absent()
-          : Value(widget.existing!.id),
-      name: Value(name),
-      startedAt: Value(_startedAt),
-    );
-    await ref.read(gymDaoProvider).upsertProgramReturning(companion);
+    await ref
+        .read(gymDaoProvider)
+        .upsertProgramReturning(
+          ProgramsCompanion(
+            id: widget.existing == null
+                ? const Value.absent()
+                : Value(widget.existing!.id),
+            name: Value(name),
+            startedAt: Value(_startedAt),
+            endedAt: Value(_endedAt),
+          ),
+        );
     if (mounted) Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
+    final surfaces = context.surfaces;
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+      padding: const EdgeInsets.fromLTRB(20, AppSpacing.sm, 20, AppSpacing.xxl),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(widget.existing == null ? 'New program' : 'Edit program',
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 16),
+          Text(
+            widget.existing == null ? 'New program' : 'Edit program',
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.lg),
           TextField(
             controller: _name,
             autofocus: true,
+            textCapitalization: TextCapitalization.sentences,
             decoration: const InputDecoration(
-                labelText: 'Name', hintText: 'PPL, Upper/Lower, …'),
+              labelText: 'Name',
+              hintText: 'Upper/Lower',
+            ),
+            onSubmitted: (_) => _save(),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           ListTile(
             contentPadding: EdgeInsets.zero,
             title: const Text('Started on'),
-            subtitle: Text(_startedAt == null
-                ? '—'
-                : DateFormat.yMMMd().format(_startedAt!)),
-            trailing: const Icon(Icons.event),
+            subtitle: Text(
+              _startedAt == null
+                  ? 'Not set'
+                  : DateFormat.yMMMd().format(_startedAt!),
+            ),
+            trailing: const Icon(Icons.event_rounded),
             onTap: () async {
-              final d = await showDatePicker(
-                context: context,
-                initialDate: _startedAt ?? DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
+              final d = await pickDate(context, initial: _startedAt);
               if (d != null) setState(() => _startedAt = d);
             },
           ),
-          const SizedBox(height: 16),
+          // Modelled since the first version but never editable, which is why
+          // the Finished filter could never match anything.
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: const Text('Finished on'),
+            subtitle: Text(
+              _endedAt == null
+                  ? 'Still running'
+                  : DateFormat.yMMMd().format(_endedAt!),
+              style: _endedAt == null
+                  ? TextStyle(color: surfaces.textTertiary)
+                  : null,
+            ),
+            trailing: _endedAt == null
+                ? const Icon(Icons.event_available_rounded)
+                : IconButton(
+                    tooltip: 'Clear the end date',
+                    icon: const Icon(Icons.close_rounded),
+                    onPressed: () => setState(() => _endedAt = null),
+                  ),
+            onTap: () async {
+              final d = await pickDate(context, initial: _endedAt);
+              if (d != null) setState(() => _endedAt = d);
+            },
+          ),
+          const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             onPressed: _save,
-            icon: const Icon(Icons.save),
-            label: const Text('Save'),
+            icon: const Icon(Icons.check_rounded),
+            label: Text(widget.existing == null ? 'Create' : 'Save'),
           ),
         ],
       ),
@@ -179,132 +262,133 @@ class _ProgramFormState extends ConsumerState<_ProgramForm> {
 
 class _ProgramTile extends ConsumerWidget {
   const _ProgramTile({required this.program});
+
   final Program program;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    const accent = Color(0xFFEF4444);
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.22 : 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
+    final surfaces = context.surfaces;
+    final accent = context.sem.gym;
+    final days = ref.watch(daysForProgramProvider(program.id)).value;
+    final finished = program.endedAt != null;
+
+    return AppCard(
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        leading: Container(
-          width: 46,
-          height: 46,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [accent, Color.lerp(accent, Colors.black, 0.25)!],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => ProgramDetailScreen(program: program),
+        ),
+      ),
+      semanticsLabel: 'Open ${program.name}',
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: finished ? surfaces.sunken : accent.container,
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
-            borderRadius: BorderRadius.circular(13),
-            boxShadow: [
-              BoxShadow(
-                color: accent.withValues(alpha: 0.4),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+            child: Icon(
+              finished ? Icons.check_rounded : Icons.fitness_center_rounded,
+              size: 20,
+              color: finished ? surfaces.textTertiary : accent.onContainer,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HeroTitle(
+                  tag: 'program-${program.id}',
+                  text: program.name,
+                  style: tt.titleMedium!,
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  _programStatus(program, days?.length),
+                  style: tt.bodySmall?.copyWith(color: surfaces.textSecondary),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          PopupMenuButton<String>(
+            tooltip: 'More actions for ${program.name}',
+            onSelected: (v) async {
+              switch (v) {
+                case 'edit':
+                  showProgramFormSheet(context, existing: program);
+                case 'finish':
+                  await ref
+                      .read(gymDaoProvider)
+                      .upsertProgramReturning(
+                        ProgramsCompanion(
+                          id: Value(program.id),
+                          name: Value(program.name),
+                          startedAt: Value(program.startedAt),
+                          endedAt: Value(finished ? null : DateTime.now()),
+                        ),
+                      );
+                case 'delete':
+                  final ok = await showAppConfirmDialog(
+                    context,
+                    title: 'Delete ${program.name}?',
+                    message:
+                        'Its days, exercises and session history are deleted '
+                        'with it.',
+                    confirmLabel: 'Delete',
+                    destructive: true,
+                  );
+                  if (ok) {
+                    await ref.read(gymDaoProvider).deleteProgram(program.id);
+                  }
+              }
+            },
+            itemBuilder: (_) => [
+              const PopupMenuItem(value: 'edit', child: Text('Edit')),
+              PopupMenuItem(
+                value: 'finish',
+                child: Text(finished ? 'Reopen' : 'Mark finished'),
               ),
+              const PopupMenuItem(value: 'delete', child: Text('Delete')),
             ],
           ),
-          child: const Icon(Icons.fitness_center_rounded,
-              color: Colors.white, size: 22),
-        ),
-        title: Text(program.name,
-            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-        subtitle: Text(
-            program.startedAt == null
-                ? 'No start date'
-                : 'Started ${DateFormat.yMMMd().format(program.startedAt!)}',
-            style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant)),
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) async {
-            switch (v) {
-              case 'edit':
-                showProgramFormSheet(context, existing: program);
-              case 'delete':
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (dCtx) => AlertDialog(
-                    title: Text('Delete ${program.name}?'),
-                    content: const Text(
-                        'Days, exercises, and history under it will be removed.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dCtx, false),
-                          child: const Text('Cancel')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(dCtx, true),
-                          child: const Text('Delete')),
-                    ],
-                  ),
-                );
-                if (ok == true) {
-                  await ref.read(gymDaoProvider).deleteProgram(program.id);
-                }
-            }
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
-        ),
-        onTap: () => Navigator.of(context, rootNavigator: true).push(
-          MaterialPageRoute(
-            builder: (_) => ProgramDetailScreen(program: program),
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
-class _ProgramsEmpty extends StatelessWidget {
-  const _ProgramsEmpty();
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEF4444).withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.list_alt_rounded,
-                  size: 40, color: Color(0xFFEF4444)),
-            ),
-            const SizedBox(height: 20),
-            Text('No programs yet',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
-            const SizedBox(height: 8),
-            Text('Tap + to add one (e.g. PPL, Upper/Lower).',
-                textAlign: TextAlign.center,
-                style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant)),
-          ],
-        ),
-      ),
-    );
-  }
+/// Where this program stands: how many days it has, and when it ran.
+String _programStatus(Program program, int? dayCount) {
+  final shape = switch (dayCount) {
+    null => null,
+    0 => 'No days yet',
+    1 => '1 day',
+    final n => '$n days',
+  };
+
+  final when = switch ((program.startedAt, program.endedAt)) {
+    (null, null) => null,
+    (final start?, null) => 'since ${DateFormat.yMMMd().format(start)}',
+    (null, final end?) => 'finished ${DateFormat.yMMMd().format(end)}',
+    (final start?, final end?) =>
+      '${DateFormat.yMMMd().format(start)} to ${DateFormat.yMMMd().format(end)}',
+  };
+
+  if (shape == null) return when ?? 'No dates set';
+  if (when == null) return shape;
+  return '$shape, $when';
 }

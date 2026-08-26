@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../design/tokens.dart';
+import '../design/app_theme.dart';
 
 /// Colored icon chip + bold title shown at the top of every finance form
 /// sheet, so each one reads at a glance which action/domain it belongs to
@@ -44,7 +44,7 @@ class FormSheetHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: tt.titleLarge?.weight(FontWeight.w800),
               ),
               if (subtitle != null)
                 Text(
@@ -74,9 +74,8 @@ class FormSectionLabel extends StatelessWidget {
       text.toUpperCase(),
       style: Theme.of(context).textTheme.labelSmall?.copyWith(
             color: cs.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
             letterSpacing: 1.2,
-          ),
+      ),
     );
   }
 }
@@ -131,7 +130,7 @@ class SheetDateTile extends StatelessWidget {
                     ),
                     Text(
                       value,
-                      style: tt.bodyLarge?.copyWith(fontWeight: FontWeight.w600),
+                      style: tt.bodyLarge?.weight(FontWeight.w600),
                     ),
                   ],
                 ),
@@ -175,9 +174,7 @@ class AmountField extends StatelessWidget {
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
       ],
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
+      style: Theme.of(context).textTheme.headlineSmall?.weight(FontWeight.w700),
       decoration: InputDecoration(
         labelText: label,
         suffixText: currencySymbol,

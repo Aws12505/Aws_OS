@@ -3,6 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
@@ -49,71 +53,48 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'MONEY',
-                          style: tt.labelSmall?.copyWith(
-                            color: cs.primary,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.6,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Finance',
-                          style: tt.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: 'Finance mentor',
-                    icon: const Icon(Icons.psychology_rounded),
-                    onPressed: () => context.push('/mentor?kind=finance'),
-                  ),
-                  _ManageMenu(),
-                ],
-              ),
+    // Ambient host so the aurora shows through on the Insights tab. The three
+    // dense tabs cover it with their own working canvas.
+    return AppScaffold(
+      mode: SurfaceMode.ambient,
+      body: Column(
+        children: [
+          SectionHeader(
+            // No status line here: the month summary directly below is the
+            // live line, and saying it twice would just push the tabs down.
+            title: 'Finance',
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  tooltip: 'Finance mentor',
+                  icon: const Icon(Icons.psychology_rounded),
+                  onPressed: () => context.push('/mentor?kind=finance'),
+                ),
+                _ManageMenu(),
+              ],
             ),
-            const _MonthSummary(),
-            SegmentedControl(
-              labels: _labels,
-              icons: _icons,
-              index: _tabs.index,
-              onTap: (i) => _tabs.animateTo(i),
+          ),
+          const _MonthSummary(),
+          SegmentedControl(
+            labels: _labels,
+            icons: _icons,
+            index: _tabs.index,
+            onTap: (i) => _tabs.animateTo(i),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: const [
+                WorkingSurface(child: VaultView()),
+                WorkingSurface(child: TransactionsListView()),
+                FinanceInsightsView(),
+                WorkingSurface(child: ExchangeRatesView()),
+              ],
             ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: TabBarView(
-                controller: _tabs,
-                children: const [
-                  VaultView(),
-                  TransactionsListView(),
-                  FinanceInsightsView(),
-                  ExchangeRatesView(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -177,7 +158,7 @@ class _MonthSummary extends ConsumerWidget {
             child: _FlowChip(
               label: 'In',
               value: fmt.format(income),
-              color: const Color(0xFF22C55E),
+              color: context.sem.income.base,
               icon: Icons.south_west_rounded,
             ),
           ),
@@ -186,7 +167,7 @@ class _MonthSummary extends ConsumerWidget {
             child: _FlowChip(
               label: 'Out',
               value: fmt.format(expense),
-              color: const Color(0xFFEF4444),
+              color: context.sem.expense.base,
               icon: Icons.north_east_rounded,
             ),
           ),
@@ -221,13 +202,12 @@ class _FlowChip extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+    return AppCard(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      radius: AppRadius.lg,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 10,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,8 +220,7 @@ class _FlowChip extends StatelessWidget {
                 label,
                 style: tt.labelSmall?.copyWith(
                   color: cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w600,
-                ),
+                ).weight(FontWeight.w600),
               ),
             ],
           ),
@@ -252,10 +231,9 @@ class _FlowChip extends StatelessWidget {
             child: Text(
               value,
               style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.w800,
                 color: color,
                 letterSpacing: -0.3,
-              ),
+              ).weight(FontWeight.w800),
             ),
           ),
         ],

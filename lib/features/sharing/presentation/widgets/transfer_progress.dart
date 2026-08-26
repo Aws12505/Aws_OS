@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../data/models/share_item.dart';
 import '../../data/models/transfer_task.dart';
@@ -41,7 +41,7 @@ class TransferProgressCard extends ConsumerWidget {
               Expanded(
                 child: Text(
                   s.status ?? 'Transfer',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: tt.titleMedium,
                 ),
               ),
               if (s.active)
@@ -53,7 +53,7 @@ class TransferProgressCard extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.xs),
             child: LinearProgressIndicator(
               value: s.progress == 0 ? null : s.progress,
               minHeight: 6,
@@ -84,7 +84,7 @@ class _TaskRow extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final color = switch (task.status) {
-      TransferStatus.done => DomainColors.income,
+      TransferStatus.done => context.sem.income.base,
       TransferStatus.failed || TransferStatus.cancelled => cs.error,
       _ => cs.primary,
     };
@@ -105,9 +105,7 @@ class _TaskRow extends StatelessWidget {
                         task.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: tt.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: tt.bodyMedium?.weight(FontWeight.w600),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -122,7 +120,7 @@ class _TaskRow extends StatelessWidget {
                   )
                 else
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
                     child: LinearProgressIndicator(
                       value: task.progress == 0 ? null : task.progress,
                       minHeight: 4,
@@ -145,7 +143,7 @@ class _TaskRow extends StatelessWidget {
       TransferStatus.done => Icon(
         Icons.check_circle_rounded,
         size: 18,
-        color: DomainColors.income,
+        color: context.sem.income.base,
       ),
       TransferStatus.failed || TransferStatus.cancelled => Icon(
         Icons.error_outline_rounded,

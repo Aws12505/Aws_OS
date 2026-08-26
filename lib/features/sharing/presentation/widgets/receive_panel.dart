@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../../../shared/widgets/segmented_control.dart';
@@ -57,7 +57,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
     if (!s.serverRunning) {
       return Center(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 110),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, AppInsets.listBottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -65,7 +65,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
               const SizedBox(height: 16),
               Text(
                 'Receive files',
-                style: tt.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                style: tt.headlineSmall,
               ),
               const SizedBox(height: 8),
               Text(
@@ -89,7 +89,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
               const SizedBox(height: 8),
               Text(
                 _mode == ConnectionMode.wifiDirect
-                    ? 'Creates a direct link with no router or internet — fastest offline.'
+                    ? 'Creates a direct link with no router or internet. Fastest offline.'
                     : 'Both phones on the same Wi-Fi. Fast and zero setup.',
                 textAlign: TextAlign.center,
                 style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
@@ -120,7 +120,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
     final qr = controller.qrData;
     final wd = controller.wdGroup;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, AppInsets.listBottom),
       children: [
         if (wd != null)
           GlassCard(
@@ -133,9 +133,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
                     const SizedBox(width: 8),
                     Text(
                       'Wi-Fi Direct link',
-                      style: tt.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: tt.titleMedium,
                     ),
                   ],
                 ),
@@ -156,7 +154,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
             children: [
               Text(
                 'Ready to receive',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: tt.titleMedium,
               ),
               const SizedBox(height: 4),
               Text(
@@ -168,6 +166,8 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
                 Center(
                   child: Container(
                     padding: const EdgeInsets.all(14),
+                    // Literally white on purpose: a QR code has to be dark on
+                    // light for scanners to read it, in either theme.
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(AppRadius.lg),
@@ -219,7 +219,7 @@ class _SaveLocationCard extends ConsumerWidget {
               const SizedBox(width: 8),
               Text(
                 'Save location',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700),
+                style: tt.titleSmall?.weight(FontWeight.w700),
               ),
             ],
           ),
@@ -293,10 +293,11 @@ class _CredRow extends StatelessWidget {
           Expanded(
             child: SelectableText(
               value,
-              style: tt.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: tt.bodyMedium?.weight(FontWeight.w700),
             ),
           ),
           IconButton(
+            tooltip: 'Copy',
             icon: const Icon(Icons.copy_rounded, size: 18),
             onPressed: () => Clipboard.setData(ClipboardData(text: value)),
           ),

@@ -1,8 +1,10 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../design/app_theme.dart';
 import 'quick_action_fab.dart';
 
 class MainScaffold extends StatelessWidget {
@@ -63,28 +65,32 @@ class MainScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final index = _indexFor(location);
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaces = context.surfaces;
+
     return Scaffold(
       extendBody: true,
+      backgroundColor: Colors.transparent,
       body: child,
       floatingActionButton: const QuickActionFab(),
-      bottomNavigationBar: ClipRRect(
+      bottomNavigationBar: ClipRect(
+        // ClipRect, not ClipRRect: the bar is square-edged, and the clip is
+        // here only to bound the blur to the bar's own rectangle.
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: DecoratedBox(
             decoration: BoxDecoration(
-              color: cs.surface.withValues(alpha: isDark ? 0.6 : 0.78),
+              color: surfaces.navFill,
               border: Border(
-                top: BorderSide(
-                  color: cs.outlineVariant.withValues(alpha: 0.4),
-                  width: 1,
-                ),
+                top: BorderSide(color: surfaces.navBorder, width: 1),
               ),
             ),
             child: NavigationBar(
               selectedIndex: index,
-              onDestinationSelected: (i) => context.go(_destinations[i].route),
+              onDestinationSelected: (i) {
+                if (i == index) return;
+                HapticFeedback.selectionClick();
+                context.go(_destinations[i].route);
+              },
               backgroundColor: Colors.transparent,
               destinations: [
                 for (final d in _destinations)
@@ -92,6 +98,7 @@ class MainScaffold extends StatelessWidget {
                     icon: Icon(d.icon),
                     selectedIcon: Icon(d.selectedIcon),
                     label: d.label,
+                    tooltip: d.label,
                   ),
               ],
             ),

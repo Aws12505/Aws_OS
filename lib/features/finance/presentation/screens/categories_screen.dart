@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
@@ -30,7 +36,8 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Categories'),
         bottom: TabBar(controller: _tabs, tabs: const [
@@ -65,8 +72,8 @@ class _CategoryListView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final categoriesAsync = ref.watch(categoriesByKindProvider(kind));
     return categoriesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(e.toString())),
+      loading: () => const AppLoading(),
+      error: (e, _) => AppErrorView(error: e),
       data: (items) {
         if (items.isEmpty) {
           return Center(
@@ -80,7 +87,7 @@ class _CategoryListView extends ConsumerWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+          padding: const EdgeInsets.fromLTRB(8, 8, 8, AppInsets.listBottomNoFab),
           itemCount: items.length,
           itemBuilder: (_, i) => _CategoryCard(category: items[i]),
         );
@@ -122,23 +129,14 @@ class _CategoryCard extends ConsumerWidget {
                         _showCategoryForm(context,
                             kind: category.kind, existing: category);
                       case 'delete':
-                        final ok = await showDialog<bool>(
-                          context: context,
-                          builder: (dCtx) => AlertDialog(
-                            title: Text('Delete ${category.name}?'),
-                            content: const Text(
-                                'Types inside will also be removed.'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(dCtx, false),
-                                  child: const Text('Cancel')),
-                              FilledButton(
-                                  onPressed: () => Navigator.pop(dCtx, true),
-                                  child: const Text('Delete')),
-                            ],
-                          ),
+                        final ok = await showAppConfirmDialog(
+                          context,
+                          title: 'Delete ${category.name}?',
+                          message: 'Types inside will also be removed.',
+                          confirmLabel: 'Delete',
+                          destructive: true,
                         );
-                        if (ok == true) {
+                        if (ok) {
                           await ref
                               .read(financeRepositoryProvider)
                               .deleteCategory(category.id);

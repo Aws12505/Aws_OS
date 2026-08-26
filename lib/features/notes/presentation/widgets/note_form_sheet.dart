@@ -4,15 +4,18 @@ import 'package:intl/intl.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../providers.dart';
 
 Future<void> showNoteFormSheet(BuildContext context, {Note? existing}) async {
   List<String> initialTags = const [];
   if (existing != null) {
-    initialTags = await ProviderScope.containerOf(context, listen: false)
-        .read(notesRepositoryProvider)
-        .getTagIdsForNote(existing.id);
+    initialTags = await ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(notesRepositoryProvider).getTagIdsForNote(existing.id);
   }
   if (!context.mounted) return;
   await showAppModalBottomSheet<void>(
@@ -67,21 +70,30 @@ class _FormState extends ConsumerState<_Form> {
       lastDate: DateTime(2100),
     );
     if (d != null) {
-      setState(() => _occurredAt = DateTime(
-          d.year, d.month, d.day, _occurredAt.hour, _occurredAt.minute));
+      setState(
+        () => _occurredAt = DateTime(
+          d.year,
+          d.month,
+          d.day,
+          _occurredAt.hour,
+          _occurredAt.minute,
+        ),
+      );
     }
   }
 
   Future<void> _save() async {
     if (_content.text.trim().isEmpty) {
       setState(() => _preview = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Content is required.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Content is required.')));
       return;
     }
     if (!_preview && !_formKey.currentState!.validate()) return;
-    await ref.read(notesRepositoryProvider).saveNote(
+    await ref
+        .read(notesRepositoryProvider)
+        .saveNote(
           id: widget.existing?.id,
           title: _title.text.trim().isEmpty ? null : _title.text.trim(),
           contentMd: _content.text,
@@ -93,8 +105,8 @@ class _FormState extends ConsumerState<_Form> {
 
   Future<void> _addTagInline() async {
     final controller = TextEditingController();
-    final name = await showDialog<String>(
-      context: context,
+    final name = await showAppDialog<String>(
+      context,
       builder: (dCtx) => AlertDialog(
         title: const Text('New tag'),
         content: TextField(
@@ -104,11 +116,13 @@ class _FormState extends ConsumerState<_Form> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(dCtx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(dCtx),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(dCtx, controller.text.trim()),
-              child: const Text('Add')),
+            onPressed: () => Navigator.pop(dCtx, controller.text.trim()),
+            child: const Text('Add'),
+          ),
         ],
       ),
     );
@@ -129,30 +143,37 @@ class _FormState extends ConsumerState<_Form> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(widget.existing == null ? 'New note' : 'Edit note',
-                  style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                widget.existing == null ? 'New note' : 'Edit note',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: 16),
               TextFormField(
                 controller: _title,
                 decoration: const InputDecoration(
-                    labelText: 'Title (optional)'),
+                  labelText: 'Title (optional)',
+                ),
               ),
               const SizedBox(height: 12),
               Row(
                 children: [
-                  Text('Content',
-                      style: Theme.of(context).textTheme.titleSmall),
+                  Text(
+                    'Content',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
                   const Spacer(),
                   SegmentedButton<bool>(
                     segments: const [
                       ButtonSegment(
-                          value: false,
-                          label: Text('Write'),
-                          icon: Icon(Icons.edit_rounded, size: 16)),
+                        value: false,
+                        label: Text('Write'),
+                        icon: Icon(Icons.edit_rounded, size: 16),
+                      ),
                       ButtonSegment(
-                          value: true,
-                          label: Text('Preview'),
-                          icon: Icon(Icons.visibility_rounded, size: 16)),
+                        value: true,
+                        label: Text('Preview'),
+                        icon: Icon(Icons.visibility_rounded, size: 16),
+                      ),
                     ],
                     selected: {_preview},
                     showSelectedIcon: false,
@@ -171,27 +192,25 @@ class _FormState extends ConsumerState<_Form> {
                   constraints: const BoxConstraints(minHeight: 140),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .surfaceContainerHighest
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest
                         .withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .outline
-                            .withValues(alpha: 0.4)),
+                      color: Theme.of(
+                        context,
+                      ).colorScheme.outline.withValues(alpha: 0.4),
+                    ),
                   ),
                   child: _content.text.trim().isEmpty
-                      ? Text('Nothing to preview yet',
-                          style: Theme.of(context)
-                              .textTheme
-                              .bodyMedium
+                      ? Text(
+                          'Nothing to preview yet',
+                          style: Theme.of(context).textTheme.bodyMedium
                               ?.copyWith(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurfaceVariant,
-                              ))
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                        )
                       : MarkdownBody(data: _content.text),
                 )
               else
@@ -217,8 +236,10 @@ class _FormState extends ConsumerState<_Form> {
               const SizedBox(height: 8),
               Align(
                 alignment: Alignment.centerLeft,
-                child: Text('Tags',
-                    style: Theme.of(context).textTheme.titleSmall),
+                child: Text(
+                  'Tags',
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
               ),
               const SizedBox(height: 4),
               Wrap(

@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/glass.dart';
 import '../../data/models/connection_mode.dart';
 import '../../data/models/share_device.dart';
@@ -108,39 +110,11 @@ class _SendPanelState extends ConsumerState<SendPanel> {
   }
 
   Future<bool?> _showJoinDialog(ShareDevice d) {
-    return showDialog<bool>(
-      context: context,
-      builder: (dCtx) => AlertDialog(
-        title: const Text('Join the network'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Connect this phone to the sender's Wi-Fi, then tap Send.",
-            ),
-            const SizedBox(height: 12),
-            SelectableText('Network:  ${d.joinSsid}'),
-            SelectableText('Password:  ${d.joinPass ?? ''}'),
-            const SizedBox(height: 8),
-            TextButton.icon(
-              onPressed: () => ref.read(hotspotGuideProvider).openWifiSettings(),
-              icon: const Icon(Icons.wifi_rounded),
-              label: const Text('Open Wi-Fi settings'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dCtx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dCtx, true),
-            child: const Text('Send'),
-          ),
-        ],
-      ),
+    return showAppConfirmDialog(
+      context,
+      title: 'Join the network',
+      confirmLabel: 'Send',
+      destructive: true,
     );
   }
 
@@ -156,7 +130,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
     final devices = ref.watch(discoveredDevicesProvider).value ?? const [];
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 110),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, AppInsets.listBottom),
       children: [
         GlassCard(
           child: Column(
@@ -164,7 +138,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
             children: [
               Text(
                 'What to send',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: tt.titleMedium,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -200,9 +174,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
                     Expanded(
                       child: Text(
                         '${_items.length} item(s) · ${formatBytes(_totalBytes)}',
-                        style: tt.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
+                        style: tt.bodyMedium?.weight(FontWeight.w600),
                       ),
                     ),
                     TextButton(
@@ -245,7 +217,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
             children: [
               Text(
                 'Send to',
-                style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                style: tt.titleMedium,
               ),
               const SizedBox(height: 12),
               SecondaryButton(
@@ -259,15 +231,14 @@ class _SendPanelState extends ConsumerState<SendPanel> {
                 'Nearby devices',
                 style: tt.labelMedium?.copyWith(
                   color: cs.onSurfaceVariant,
-                  fontWeight: FontWeight.w700,
-                ),
+                ).weight(FontWeight.w700),
               ),
               const SizedBox(height: 6),
               if (devices.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Text(
-                    'No devices yet — make sure the other phone tapped '
+                    'No devices yet. Make sure the other phone tapped '
                     '“Receive”, or scan its QR.',
                     style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   ),

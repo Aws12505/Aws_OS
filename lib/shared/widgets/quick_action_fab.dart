@@ -13,6 +13,7 @@ import '../../features/notes/presentation/widgets/note_form_sheet.dart';
 import '../../features/tasks/presentation/providers.dart';
 import '../../features/tasks/presentation/widgets/task_form_sheet.dart';
 import '../../features/tasks/presentation/widgets/workspace_form_sheet.dart';
+import '../design/app_theme.dart';
 import 'app_modal_sheet.dart';
 
 class QuickActionFab extends ConsumerWidget {
@@ -48,28 +49,28 @@ class _QuickActionSheet extends StatelessWidget {
         icon: Icons.trending_down_rounded,
         label: 'Expense',
         sublabel: 'Money out',
-        color: Color(0xFFEF4444),
+        tone: _Tone.expense,
         key: 'expense',
       ),
       _Action(
         icon: Icons.trending_up_rounded,
         label: 'Income',
         sublabel: 'Money in',
-        color: Color(0xFF22C55E),
+        tone: _Tone.income,
         key: 'income',
       ),
       _Action(
         icon: Icons.compare_arrows_rounded,
         label: 'Transfer',
         sublabel: 'Same currency',
-        color: Color(0xFF3B82F6),
+        tone: _Tone.transfer,
         key: 'transfer',
       ),
       _Action(
         icon: Icons.swap_horiz_rounded,
         label: 'Exchange',
         sublabel: 'Cross currency',
-        color: Color(0xFF8B5CF6),
+        tone: _Tone.exchange,
         key: 'exchange',
       ),
     ]),
@@ -78,14 +79,14 @@ class _QuickActionSheet extends StatelessWidget {
         icon: Icons.task_alt_rounded,
         label: 'Task',
         sublabel: 'Add to workspace',
-        color: Color(0xFF14B8A6),
+        tone: _Tone.tasks,
         key: 'task',
       ),
       _Action(
         icon: Icons.sticky_note_2_rounded,
         label: 'Note',
         sublabel: 'Markdown note',
-        color: Color(0xFFF59E0B),
+        tone: _Tone.notes,
         key: 'note',
       ),
     ]),
@@ -94,14 +95,14 @@ class _QuickActionSheet extends StatelessWidget {
         icon: Icons.straighten_rounded,
         label: 'Measurement',
         sublabel: 'Log an entry',
-        color: Color(0xFF6366F1),
+        tone: _Tone.gym,
         key: 'measurement',
       ),
       _Action(
         icon: Icons.list_alt_rounded,
         label: 'Program',
         sublabel: 'New routine',
-        color: Color(0xFFEC4899),
+        tone: _Tone.gym,
         key: 'program',
       ),
     ]),
@@ -110,21 +111,21 @@ class _QuickActionSheet extends StatelessWidget {
         icon: Icons.psychology_rounded,
         label: 'Mentor',
         sublabel: 'AI advice',
-        color: Color(0xFF0EA5E9),
+        tone: _Tone.mentor,
         key: 'mentor',
       ),
       _Action(
         icon: Icons.tune_rounded,
         label: 'Manage',
         sublabel: 'Accounts & more',
-        color: Color(0xFF64748B),
+        tone: _Tone.neutral,
         key: 'manage',
       ),
       _Action(
         icon: Icons.wifi_tethering_rounded,
         label: 'Share',
         sublabel: 'Nearby devices',
-        color: Color(0xFF10B981),
+        tone: _Tone.share,
         key: 'share',
       ),
     ]),
@@ -178,7 +179,7 @@ class _QuickActionSheet extends StatelessWidget {
       useSafeArea: true,
       builder: (sheetCtx) {
         final tt = Theme.of(sheetCtx).textTheme;
-        const accent = Color(0xFF0EA5E9);
+        final accent = Theme.of(sheetCtx).colorScheme.primary;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
@@ -191,9 +192,8 @@ class _QuickActionSheet extends StatelessWidget {
                   child: Text(
                     'Ask a mentor',
                     style: tt.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
-                    ),
+                    ).weight(FontWeight.w800),
                   ),
                 ),
                 for (final kind in MentorKind.values)
@@ -204,13 +204,18 @@ class _QuickActionSheet extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         color: accent.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
-                      child: const Icon(Icons.psychology_rounded,
+                      child: Icon(Icons.psychology_rounded,
                           color: accent, size: 20),
                     ),
-                    title: Text(kind.title,
-                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    title: Text(
+                      kind.title,
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleSmall
+                          ?.weight(FontWeight.w700),
+                    ),
                     subtitle: Text(kind.tagline),
                     onTap: () {
                       Navigator.pop(sheetCtx);
@@ -243,18 +248,18 @@ class _QuickActionSheet extends StatelessWidget {
                   Text(
                     'Quick add',
                     style: tt.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.3,
-                    ),
+                    ).weight(FontWeight.w800),
                   ),
                   const Spacer(),
                   IconButton(
+                    tooltip: 'Close',
                     icon: Icon(Icons.close_rounded,
                         color: cs.onSurfaceVariant),
                     onPressed: () => Navigator.pop(context),
                     style: IconButton.styleFrom(
                       backgroundColor: cs.surfaceContainerHighest,
-                      minimumSize: const Size(36, 36),
+                      minimumSize: const Size(48, 48),
                       padding: EdgeInsets.zero,
                     ),
                   ),
@@ -274,9 +279,8 @@ class _QuickActionSheet extends StatelessWidget {
                           section.title.toUpperCase(),
                           style: tt.labelMedium?.copyWith(
                             color: cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
                             letterSpacing: 0.8,
-                          ),
+                          ).weight(FontWeight.w700),
                         ),
                       ),
                       GridView.builder(
@@ -317,19 +321,20 @@ class _ActionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final color = _toneColor(context, action.tone);
     return Material(
-      color: action.color.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(16),
+      color: color.withValues(alpha: 0.08),
+      borderRadius: BorderRadius.circular(AppRadius.lg),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        splashColor: action.color.withValues(alpha: 0.12),
-        highlightColor: action.color.withValues(alpha: 0.06),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        splashColor: color.withValues(alpha: 0.12),
+        highlightColor: color.withValues(alpha: 0.06),
         child: Container(
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(
-              color: action.color.withValues(alpha: 0.2),
+              color: color.withValues(alpha: 0.2),
             ),
           ),
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
@@ -340,18 +345,17 @@ class _ActionCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: action.color.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: color.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
-                child: Icon(action.icon, color: action.color, size: 22),
+                child: Icon(action.icon, color: color, size: 22),
               ),
               const SizedBox(height: 10),
               Text(
                 action.label,
                 style: tt.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
                   color: cs.onSurface,
-                ),
+                ).weight(FontWeight.w700),
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -381,17 +385,39 @@ class _Section {
   final List<_Action> actions;
 }
 
+/// Which part of the app an action belongs to. Actions carry a tone rather
+/// than a colour so they resolve against the live theme, and so two actions in
+/// the same module cannot drift onto different accents.
+enum _Tone { expense, income, transfer, exchange, tasks, notes, gym, mentor, neutral, share }
+
+Color _toneColor(BuildContext context, _Tone tone) {
+  final sem = context.sem;
+  final cs = Theme.of(context).colorScheme;
+  return switch (tone) {
+    _Tone.expense => sem.expense.base,
+    _Tone.income => sem.income.base,
+    _Tone.transfer => sem.transfer.base,
+    _Tone.exchange => sem.exchange.base,
+    _Tone.tasks => sem.tasks.base,
+    _Tone.notes => sem.notes.base,
+    _Tone.gym => sem.gym.base,
+    _Tone.mentor => cs.primary,
+    _Tone.neutral => sem.neutral.base,
+    _Tone.share => cs.tertiary,
+  };
+}
+
 class _Action {
   const _Action({
     required this.icon,
     required this.label,
     required this.sublabel,
-    required this.color,
+    required this.tone,
     required this.key,
   });
   final IconData icon;
   final String label;
   final String sublabel;
-  final Color color;
+  final _Tone tone;
   final String key;
 }

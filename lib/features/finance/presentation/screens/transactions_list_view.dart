@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
-import '../../../../shared/widgets/app_chip.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_filter_bar.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/section_header.dart';
+import '../../../../shared/widgets/stagger.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
 import '../transaction_filter.dart';
@@ -72,6 +75,7 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
               suffixIcon: _query.isEmpty
                   ? null
                   : IconButton(
+                      tooltip: 'Clear the search',
                       icon: const Icon(Icons.close_rounded, size: 18),
                       onPressed: () {
                         _search.clear();
@@ -125,17 +129,72 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                 );
               }
 
+              // Grouped by day, hairline-separated inside each group. A box
+              // around every single transaction turned a dense list into a
+              // wall of borders.
+              final byDay = <DateTime, List<TransactionWithLegs>>{};
+              for (final e in filtered) {
+                final d = e.transaction.occurredAt;
+                byDay
+                    .putIfAbsent(DateTime(d.year, d.month, d.day), () => [])
+                    .add(e);
+              }
+              final days = byDay.keys.toList()
+                ..sort((a, b) => b.compareTo(a));
+
               return ListView.builder(
-                padding: const EdgeInsets.fromLTRB(12, 4, 12, 96),
-                itemCount: filtered.length,
-                itemBuilder: (_, i) => _TransactionTile(
-                  entry: filtered[i],
-                  currencies: currencies,
-                  accounts: accounts,
-                  categoryNames: categoryNames,
-                  typeNames: typeNames,
-                  onDelete: () => _confirmDelete(filtered[i]),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.md,
+                  AppSpacing.xs,
+                  AppSpacing.md,
+                  AppInsets.listBottomNoFab,
                 ),
+                itemCount: days.length,
+                itemBuilder: (_, i) {
+                  final day = days[i];
+                  final rows = byDay[day]!;
+                  return StaggeredEntry(
+                    index: i,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionLabel(
+                          _dayLabel(day),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppSpacing.xs,
+                            AppSpacing.md,
+                            AppSpacing.xs,
+                            6,
+                          ),
+                        ),
+                        AppCard(
+                          margin: EdgeInsets.zero,
+                          padding: EdgeInsets.zero,
+                          child: Column(
+                            children: [
+                              for (var j = 0; j < rows.length; j++) ...[
+                                if (j > 0)
+                                  Divider(
+                                    height: 1,
+                                    indent: 68,
+                                    color: context.surfaces.hairline,
+                                  ),
+                                _TransactionTile(
+                                  entry: rows[j],
+                                  currencies: currencies,
+                                  accounts: accounts,
+                                  categoryNames: categoryNames,
+                                  typeNames: typeNames,
+                                  onDelete: () => _confirmDelete(rows[j]),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               );
             },
           ),
@@ -145,24 +204,14 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
   }
 
   Future<void> _confirmDelete(TransactionWithLegs entry) async {
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (dCtx) => AlertDialog(
-        title: const Text('Delete transaction?'),
-        content: const Text('This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dCtx, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dCtx, true),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
+    final ok = await showAppConfirmDialog(
+      context,
+      title: 'Delete transaction?',
+      message: 'This cannot be undone.',
+      confirmLabel: 'Delete',
+      destructive: true,
     );
-    if (ok == true) {
+    if (ok) {
       await ref
           .read(financeRepositoryProvider)
           .deleteTransaction(entry.transaction.id);
@@ -178,60 +227,17 @@ class _FilterBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
     final filter = ref.watch(transactionFilterProvider);
     final activeCount = (filter.kind != 'all' ? 1 : 0) + filter.activeCount;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 2, 12, 6),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              AppChip(
-                label: 'Filters',
-                icon: Icons.tune_rounded,
-                color: cs.tertiary,
-                selected: activeCount > 0,
-                onTap: () => showTransactionFilterSheet(context),
-              ),
-              if (activeCount > 0)
-                Positioned(top: -2, right: -2, child: _CountBadge(activeCount)),
-            ],
-          ),
-          const Spacer(),
-          if (!filter.isDefault)
-            TextButton.icon(
-              onPressed: () =>
-                  ref.read(transactionFilterProvider.notifier).state =
-                      const TransactionFilter(),
-              icon: const Icon(Icons.close_rounded, size: 16),
-              label: const Text('Clear'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CountBadge extends StatelessWidget {
-  const _CountBadge(this.count);
-  final int count;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(3),
-      decoration: BoxDecoration(color: cs.tertiary, shape: BoxShape.circle),
-      child: Text(
-        '$count',
-        style: TextStyle(
-          fontSize: 9,
-          color: cs.onTertiary,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
+    return AppFilterBar(
+      activeCount: activeCount,
+      color: Theme.of(context).colorScheme.tertiary,
+      onOpenFilters: () => showTransactionFilterSheet(context),
+      onClear: filter.isDefault
+          ? null
+          : () => ref.read(transactionFilterProvider.notifier).state =
+                const TransactionFilter(),
     );
   }
 }
@@ -268,7 +274,7 @@ class _TransactionTile extends StatelessWidget {
         })
         .join('  •  ');
 
-    final color = DomainColors.forTxKind(tx.kind);
+    final color = context.sem.forTxKind(tx.kind).base;
     final icon = DomainColors.iconForTxKind(tx.kind);
 
     final categoryLabel = tx.categoryId == null
@@ -279,24 +285,19 @@ class _TransactionTile extends StatelessWidget {
 
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 5),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        child: Row(
+      child: Row(
           children: [
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
                 color: color.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(icon, color: color, size: 20),
             ),
@@ -311,9 +312,7 @@ class _TransactionTile extends StatelessWidget {
                         DomainColors.labelForTxKind(tx.kind),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: tt.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                        style: tt.titleSmall?.weight(FontWeight.w700),
                       ),
                       if (tag.isNotEmpty) ...[
                         const SizedBox(width: 6),
@@ -325,7 +324,7 @@ class _TransactionTile extends StatelessWidget {
                             ),
                             decoration: BoxDecoration(
                               color: cs.surfaceContainerHighest,
-                              borderRadius: BorderRadius.circular(4),
+                              borderRadius: BorderRadius.circular(AppRadius.xs),
                             ),
                             child: Text(
                               tag,
@@ -370,14 +369,14 @@ class _TransactionTile extends StatelessWidget {
                   DateFormat.MMMd().format(tx.occurredAt),
                   style: tt.bodySmall?.copyWith(
                     color: cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  ).weight(FontWeight.w500),
                 ),
                 const SizedBox(height: 4),
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     IconButton(
+                      tooltip: 'Linked transactions',
                       icon: Icon(
                         Icons.link_rounded,
                         size: 18,
@@ -388,11 +387,12 @@ class _TransactionTile extends StatelessWidget {
                         transactionId: tx.id,
                       ),
                       style: IconButton.styleFrom(
-                        minimumSize: const Size(32, 32),
+                        minimumSize: const Size(48, 48),
                         padding: EdgeInsets.zero,
                       ),
                     ),
                     IconButton(
+                      tooltip: 'Delete this transaction',
                       icon: Icon(
                         Icons.delete_outline_rounded,
                         size: 18,
@@ -400,7 +400,7 @@ class _TransactionTile extends StatelessWidget {
                       ),
                       onPressed: onDelete,
                       style: IconButton.styleFrom(
-                        minimumSize: const Size(32, 32),
+                        minimumSize: const Size(48, 48),
                         padding: EdgeInsets.zero,
                       ),
                     ),
@@ -409,7 +409,6 @@ class _TransactionTile extends StatelessWidget {
               ],
             ),
           ],
-        ),
       ),
     );
   }
@@ -444,4 +443,15 @@ class _LinkedBadge extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Today and yesterday get names; everything else gets its date.
+String _dayLabel(DateTime day) {
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  final diff = today.difference(day).inDays;
+  if (diff == 0) return 'Today';
+  if (diff == 1) return 'Yesterday';
+  if (diff.abs() < 7) return DateFormat.EEEE().format(day);
+  return DateFormat.yMMMEd().format(day);
 }

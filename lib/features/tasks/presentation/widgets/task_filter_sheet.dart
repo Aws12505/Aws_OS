@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
-import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/date_range_row.dart';
+import '../../../../shared/widgets/section_header.dart';
 import '../providers.dart';
 import '../task_filter.dart';
 
@@ -57,7 +58,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
               ),
             ),
@@ -68,7 +69,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                 children: [
                   Text('Filter Tasks',
                       style: tt.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                          ),
                   const Spacer(),
                   TextButton(
                     onPressed: () =>
@@ -85,7 +86,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   // ── STATUS ──────────────────────────────────────────
-                  _SectionLabel('STATUS'),
+                  SectionLabel('Status'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -108,7 +109,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                   const SizedBox(height: 20),
 
                   // ── DUE DATE ─────────────────────────────────────────
-                  _SectionLabel('DUE DATE'),
+                  SectionLabel('Due date'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -118,7 +119,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                         .map((d) => AppChip(
                               label: d.label,
                               selected: filter.dateFilter == d,
-                              color: const Color(0xFF3B82F6),
+                              color: context.sem.transfer.base,
                               onTap: () => update(filter.copyWith(
                                 dateFilter: d,
                                 customRangeStart: null,
@@ -129,13 +130,32 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                   ),
                   const SizedBox(height: 8),
                   // Custom date range row
-                  _CustomDateRow(filter: filter, onUpdate: update),
+                  DateRangeRow(
+                    from: filter.customRangeStart,
+                    to: filter.customRangeEnd,
+                    selected: filter.dateFilter == TaskDateFilter.custom,
+                    color: context.sem.tasks.base,
+                    onPicked: (from, to) => update(
+                      filter.copyWith(
+                        dateFilter: TaskDateFilter.custom,
+                        customRangeStart: from,
+                        customRangeEnd: to,
+                      ),
+                    ),
+                    onCleared: () => update(
+                      filter.copyWith(
+                        dateFilter: TaskDateFilter.all,
+                        customRangeStart: null,
+                        customRangeEnd: null,
+                      ),
+                    ),
+                  ),
 
                   const SizedBox(height: 20),
 
                   // ── CATEGORY ─────────────────────────────────────────
                   if (categories.isNotEmpty) ...[
-                    _SectionLabel('CATEGORY'),
+                    SectionLabel('Category'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -144,14 +164,14 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                         AppChip(
                           label: 'All',
                           selected: filter.category == null,
-                          color: const Color(0xFF8B5CF6),
+                          color: context.sem.exchange.base,
                           onTap: () =>
                               update(filter.copyWith(category: null)),
                         ),
                         ...categories.map((c) => AppChip(
                               label: c,
                               selected: filter.category == c,
-                              color: const Color(0xFF8B5CF6),
+                              color: context.sem.exchange.base,
                               onTap: () => update(filter.copyWith(category: c)),
                             )),
                       ],
@@ -160,7 +180,7 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
                   ],
 
                   // ── OPTIONS ──────────────────────────────────────────
-                  _SectionLabel('OPTIONS'),
+                  SectionLabel('Options'),
                   const SizedBox(height: 4),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -188,73 +208,3 @@ class _TaskFilterSheetState extends ConsumerState<_TaskFilterSheet> {
   }
 }
 
-class _CustomDateRow extends StatelessWidget {
-  const _CustomDateRow({required this.filter, required this.onUpdate});
-  final TaskFilter filter;
-  final void Function(TaskFilter) onUpdate;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final fmt = DateFormat.MMMd();
-    final isCustom = filter.dateFilter == TaskDateFilter.custom;
-
-    Future<void> pickRange() async {
-      final from = await pickDate(context,
-          initial: filter.customRangeStart ?? DateTime.now());
-      if (from == null || !context.mounted) return;
-      final to = await pickDate(context,
-          initial: filter.customRangeEnd ?? from,
-          firstDate: from);
-      if (to == null) return;
-      onUpdate(filter.copyWith(
-        dateFilter: TaskDateFilter.custom,
-        customRangeStart: from,
-        customRangeEnd: to,
-      ));
-    }
-
-    return Row(
-      children: [
-        AppChip(
-          label: isCustom && filter.customRangeStart != null
-              ? '${fmt.format(filter.customRangeStart!)} – ${fmt.format(filter.customRangeEnd ?? filter.customRangeStart!)}'
-              : 'Custom range…',
-          icon: Icons.date_range_rounded,
-          selected: isCustom,
-          color: const Color(0xFF3B82F6),
-          onTap: pickRange,
-        ),
-        if (isCustom) ...[
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => onUpdate(filter.copyWith(
-              dateFilter: TaskDateFilter.all,
-              customRangeStart: null,
-              customRangeEnd: null,
-            )),
-            child: Icon(Icons.close_rounded, size: 18, color: cs.onSurfaceVariant),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: cs.onSurfaceVariant,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.2,
-          ),
-    );
-  }
-}

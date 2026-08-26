@@ -94,6 +94,21 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
+  # Font files for the default family (Inter) and for Noto Naskh Arabic.
+  #
+  # google_fonts matches these by filename, so `Inter-ExtraBold.ttf` is what
+  # makes `GoogleFonts.getFont('Inter', fontWeight: FontWeight.w800)` resolve
+  # offline. Without them a first launch with no network silently falls back to
+  # the platform font. Arabic is the case that matters most: the platform
+  # fallback is not merely a different face, it is frequently wrong for the
+  # script.
+  #
+  # Deliberately NOT a `fonts:` section. Declaring `family: Inter` here would
+  # register a second family that nothing references, because every resolved
+  # style points at a weight-specific family such as `Inter_700`.
+  assets:
+    - assets/fonts/
+
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg

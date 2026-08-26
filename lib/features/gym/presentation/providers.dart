@@ -111,3 +111,21 @@ final dayCheckedSetsProvider =
     StateNotifierProvider.family<CheckedSetsNotifier, Set<String>, String>(
   (ref, dayId) => CheckedSetsNotifier(),
 );
+
+/// Exercise names already in use, most recently created first.
+///
+/// There is no exercise catalog, and `DayExercises.exerciseName` is free text,
+/// so a typo silently forks the progression chart into two movements. Offering
+/// the names already in the app is the cheapest fix: it keeps spelling
+/// consistent without inventing a library.
+final recentExerciseNamesProvider = Provider<List<String>>((ref) {
+  final all = ref.watch(allDayExercisesProvider).value;
+  if (all == null) return const [];
+  final seen = <String, String>{};
+  for (final e in all.reversed) {
+    final key = e.exerciseName.trim().toLowerCase();
+    if (key.isEmpty) continue;
+    seen.putIfAbsent(key, () => e.exerciseName.trim());
+  }
+  return seen.values.take(12).toList();
+});

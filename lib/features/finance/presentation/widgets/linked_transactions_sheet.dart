@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/form_sheet.dart';
 import '../../data/finance_dao.dart';
@@ -84,7 +86,7 @@ class _LinkedTransactionsSheet extends ConsumerWidget {
               child: linkedAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: AppLoading(),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.all(24),
@@ -95,8 +97,8 @@ class _LinkedTransactionsSheet extends ConsumerWidget {
                     return Padding(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       child: Text(
-                        'Link this to another income or expense — e.g. a '
-                        'refund or repayment — so the two stay connected.',
+                        'Link this to another income or expense, such as a '
+                        'refund or repayment, so the two stay connected.',
                         style: tt.bodyMedium
                             ?.copyWith(color: cs.onSurfaceVariant),
                       ),
@@ -153,7 +155,7 @@ class _LinkedRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = entry.transaction;
-    final color = DomainColors.forTxKind(tx.kind);
+    final color = context.sem.forTxKind(tx.kind).base;
     final icon = DomainColors.iconForTxKind(tx.kind);
     final summary = entry.legs.map((l) {
       final cur = currencies[l.currencyId];
@@ -165,15 +167,14 @@ class _LinkedRow extends StatelessWidget {
     }).join('  •  ');
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+    return AppCard(
+      margin: EdgeInsets.zero,
+      radius: AppRadius.lg,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: 10,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       child: Row(
         children: [
           Container(
@@ -181,7 +182,7 @@ class _LinkedRow extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Icon(icon, color: color, size: 18),
           ),
@@ -192,7 +193,7 @@ class _LinkedRow extends StatelessWidget {
               children: [
                 Text(
                   '${DomainColors.labelForTxKind(tx.kind)} · ${DateFormat.MMMd().format(tx.occurredAt)}',
-                  style: tt.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+                  style: tt.labelMedium?.weight(FontWeight.w700),
                 ),
                 Text(
                   summary,
@@ -214,10 +215,11 @@ class _LinkedRow extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Unlink',
             icon: Icon(Icons.link_off_rounded, size: 18, color: cs.error),
             onPressed: onUnlink,
             style: IconButton.styleFrom(
-              minimumSize: const Size(32, 32),
+              minimumSize: const Size(48, 48),
               padding: EdgeInsets.zero,
             ),
           ),

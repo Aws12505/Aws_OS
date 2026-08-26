@@ -4,7 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/widgets/app_background.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/color_ops.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_filter_bar.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../providers.dart';
 import '../task_filter.dart';
 import '../widgets/task_filter_sheet.dart';
@@ -13,19 +20,17 @@ import '../widgets/workspace_form_sheet.dart';
 import 'task_detail_screen.dart';
 import 'task_history_screen.dart';
 
-const _wsPalette = <Color>[
-  Color(0xFF6366F1),
-  Color(0xFF06B6D4),
-  Color(0xFF22C55E),
-  Color(0xFFF59E0B),
-  Color(0xFFEC4899),
-  Color(0xFF8B5CF6),
-  Color(0xFFEF4444),
-  Color(0xFF14B8A6),
-];
+part '../widgets/home/empty_workspaces.dart';
+part '../widgets/home/workspace_card.dart';
+part '../widgets/home/workspace_task_list.dart';
+part '../widgets/home/task_tile.dart';
 
-Color _wsColor(Workspace w, int i) =>
-    w.color != null ? Color(w.color!) : _wsPalette[i % _wsPalette.length];
+/// A workspace's colour: its own if it has one, otherwise the shared chart
+/// palette, which is already nudged toward the user's seed and corrected for
+/// contrast. The private eight-colour list this replaced was a copy of that
+/// palette with none of the correction.
+Color _wsColor(BuildContext context, Workspace w, int i) =>
+    w.color != null ? Color(w.color!) : context.sem.chartAt(i);
 
 class TasksScreen extends ConsumerWidget {
   const TasksScreen({super.key});
@@ -35,8 +40,14 @@ class TasksScreen extends ConsumerWidget {
     final async = ref.watch(workspacesStreamProvider);
     return async.when(
       loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text(e.toString()))),
+          const AppScaffold(
+            mode: SurfaceMode.working,
+            body: AppLoading(message: 'Loading your workspaces'),
+          ),
+      error: (e, _) => AppScaffold(
+        mode: SurfaceMode.working,
+        body: AppErrorView(error: e),
+      ),
       data: (workspaces) {
         if (workspaces.isEmpty) return const _EmptyWorkspaces();
         return _TasksHome(workspaces: workspaces);
@@ -46,70 +57,6 @@ class TasksScreen extends ConsumerWidget {
 }
 
 // ── empty ────────────────────────────────────────────────────────────────────
-
-class _EmptyWorkspaces extends StatelessWidget {
-  const _EmptyWorkspaces();
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.tertiary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.primary.withValues(alpha: 0.4),
-                        blurRadius: 30,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.workspaces_rounded,
-                      size: 48, color: Colors.white),
-                ),
-                const SizedBox(height: 24),
-                Text('Create a workspace',
-                    style: tt.headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w800)),
-                const SizedBox(height: 8),
-                Text(
-                  'Workspaces organize your tasks into focused\nspaces — work, personal, projects.',
-                  textAlign: TextAlign.center,
-                  style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-                ),
-                const SizedBox(height: 28),
-                FilledButton.icon(
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('New workspace'),
-                  style: FilledButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 14),
-                  ),
-                  onPressed: () => showWorkspaceFormSheet(context),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 // ── home ─────────────────────────────────────────────────────────────────────
 
@@ -142,14 +89,13 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
     setState(() => _index = i);
     _pageController.animateToPage(
       i,
-      duration: const Duration(milliseconds: 420),
-      curve: Curves.easeOutCubic,
-    );
+      duration: context.motion.long,
+      curve: context.motion.emphasized,
+          );
   }
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
     final workspaces = widget.workspaces;
     final allTasks =
         ref.watch(allTasksStreamProvider).value ?? const <Task>[];
@@ -162,43 +108,24 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
       );
     }
     final active = workspaces[_index.clamp(0, workspaces.length - 1)];
-    final accent = _wsColor(active, _index);
+    final accent = _wsColor(context, active, _index);
 
-    return Scaffold(
-      body: AuroraBackground(
-        accent: accent,
-        child: SafeArea(
-          bottom: false,
-          child: Column(
+    return AppScaffold(
+      // Working mode: this is a list screen, and a translucent card behind a
+      // dense task list costs more legibility than it buys atmosphere. The
+      // workspace accent lives in the cards and the rail, not in a second
+      // background gradient stacked on the global one.
+      mode: SurfaceMode.working,
+      body: Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              SectionHeader(
+                title: 'Tasks',
+                status: _openStatus(counts, workspaces),
+                statusIcon: Icons.checklist_rounded,
+                statusColor: accent,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'MY WORKSPACES',
-                            style: tt.labelSmall?.copyWith(
-                              color: accent,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 1.6,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Tasks',
-                            style: tt.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: -0.6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
                     IconButton(
                       tooltip: 'Carry unfinished tasks to tomorrow',
                       icon: const Icon(Icons.event_repeat_rounded),
@@ -234,7 +161,7 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
                     final c = counts[w.id] ?? (done: 0, total: 0);
                     return _WorkspaceCard(
                       name: w.name,
-                      color: _wsColor(w, i),
+                      color: _wsColor(context, w, i),
                       done: c.done,
                       total: c.total,
                       selected: i == _index,
@@ -255,656 +182,33 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
               ),
             ],
           ),
-        ),
-      ),
     );
   }
 }
 
 // ── workspace card ─────────────────────────────────────────────────────────
 
-class _WorkspaceCard extends StatelessWidget {
-  const _WorkspaceCard({
-    required this.name,
-    required this.color,
-    required this.done,
-    required this.total,
-    required this.selected,
-    required this.onTap,
-  });
-  final String name;
-  final Color color;
-  final int done;
-  final int total;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final progress = total == 0 ? 0.0 : done / total;
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 280),
-      curve: Curves.easeOutCubic,
-      width: 158,
-      margin: const EdgeInsets.only(right: 12),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(22),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 280),
-            curve: Curves.easeOutCubic,
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              gradient: selected
-                  ? LinearGradient(
-                      colors: [
-                        color,
-                        Color.lerp(color, Colors.black, 0.22)!,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: selected ? null : cs.surface.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: selected
-                    ? Colors.transparent
-                    : cs.outlineVariant.withValues(alpha: 0.5),
-              ),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.45),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ]
-                  : null,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 38,
-                      height: 38,
-                      decoration: BoxDecoration(
-                        color: selected
-                            ? Colors.white.withValues(alpha: 0.22)
-                            : color.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(11),
-                      ),
-                      child: Icon(
-                        Icons.folder_rounded,
-                        size: 20,
-                        color: selected ? Colors.white : color,
-                      ),
-                    ),
-                    const Spacer(),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        '$total',
-                        maxLines: 1,
-                        style: tt.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: selected ? Colors.white : cs.onSurface,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: tt.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: selected ? Colors.white : cs.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(4),
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    minHeight: 5,
-                    backgroundColor: selected
-                        ? Colors.white.withValues(alpha: 0.25)
-                        : cs.surfaceContainerHighest,
-                    color: selected ? Colors.white : color,
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  total == 0 ? 'No tasks' : '$done of $total done',
-                  style: tt.labelSmall?.copyWith(
-                    color: selected
-                        ? Colors.white.withValues(alpha: 0.85)
-                        : cs.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 // ── per-workspace list ───────────────────────────────────────────────────────
-
-class _WorkspaceTaskList extends ConsumerWidget {
-  const _WorkspaceTaskList({required this.workspace});
-  final Workspace workspace;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(filteredTasksForWorkspaceProvider(workspace.id));
-    return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(e.toString())),
-      data: (tasks) {
-        if (tasks.isEmpty) {
-          final cs = Theme.of(context).colorScheme;
-          final tt = Theme.of(context).textTheme;
-          return Center(
-            child: Padding(
-              padding: const EdgeInsets.all(40),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.checklist_rtl_rounded,
-                      size: 56,
-                      color: cs.onSurfaceVariant.withValues(alpha: 0.5)),
-                  const SizedBox(height: 16),
-                  Text('All clear',
-                      style: tt.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 6),
-                  Text('Tap + to add a task here.',
-                      style: tt.bodyMedium
-                          ?.copyWith(color: cs.onSurfaceVariant)),
-                ],
-              ),
-            ),
-          );
-        }
-        final children = <String, List<Task>>{};
-        final top = <Task>[];
-        for (final t in tasks) {
-          if (t.parentTaskId == null) {
-            top.add(t);
-          } else {
-            children.putIfAbsent(t.parentTaskId!, () => []).add(t);
-          }
-        }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, 120),
-          itemCount: top.length,
-          itemBuilder: (_, i) => _TaskTile(
-            task: top[i],
-            subtasks: children[top[i].id] ?? const [],
-            workspaceId: workspace.id,
-          ),
-        );
-      },
-    );
-  }
-}
 
 // ── filter bar ───────────────────────────────────────────────────────────────
 
-class _FilterBar extends ConsumerWidget {
-  const _FilterBar();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final filter = ref.watch(taskFilterProvider);
-    final activeCount = filter.activeCount +
-        (filter.status != TaskStatusFilter.active ? 1 : 0);
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 6),
-      child: Row(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              _FilterChip(
-                label: 'Filters',
-                icon: Icons.tune_rounded,
-                selected: activeCount > 0,
-                color: cs.tertiary,
-                onTap: () => showTaskFilterSheet(context),
-              ),
-              if (activeCount > 0)
-                Positioned(
-                  top: -2,
-                  right: -2,
-                  child: Container(
-                    padding: const EdgeInsets.all(3),
-                    decoration: BoxDecoration(
-                      color: cs.tertiary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$activeCount',
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: cs.onTertiary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const Spacer(),
-          if (!filter.isDefault)
-            TextButton.icon(
-              onPressed: () =>
-                  ref.read(taskFilterProvider.notifier).state =
-                      const TaskFilter(),
-              icon: const Icon(Icons.close_rounded, size: 16),
-              label: const Text('Clear'),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _FilterChip extends StatelessWidget {
-  const _FilterChip({
-    required this.label,
-    required this.selected,
-    required this.color,
-    required this.onTap,
-    this.icon,
-  });
-
-  final String label;
-  final bool selected;
-  final Color color;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final bg = selected
-        ? color.withValues(alpha: 0.15)
-        : cs.surface.withValues(alpha: 0.5);
-    final fg = selected ? color : cs.onSurfaceVariant;
-    final border =
-        selected ? color.withValues(alpha: 0.45) : cs.outlineVariant.withValues(alpha: 0.4);
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: bg,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: border),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, size: 14, color: fg),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                    color: fg,
-                    fontWeight:
-                        selected ? FontWeight.w700 : FontWeight.w600,
-                  ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 // ── per-workspace list ───────────────────────────────────────────────────────
 
-class _TaskTile extends ConsumerWidget {
-  const _TaskTile({
-    required this.task,
-    required this.subtasks,
-    required this.workspaceId,
-  });
-  final Task task;
-  final List<Task> subtasks;
-  final String workspaceId;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    final hasCategory =
-        task.category != null && task.category!.trim().isNotEmpty;
-    final hasMeta =
-        task.dueAt != null || task.deadlineAt != null || hasCategory;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _Check(
-                  checked: task.isCompleted,
-                  size: 22,
-                  onTap: () => ref
-                      .read(tasksRepositoryProvider)
-                      .toggleCompletion(task.id,
-                          completed: !task.isCompleted),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => Navigator.of(context, rootNavigator: true).push(
-                      MaterialPageRoute(
-                        builder: (_) => TaskDetailScreen(taskId: task.id),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          task.title,
-                          style: tt.bodyLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            color: task.isCompleted
-                                ? cs.onSurfaceVariant
-                                : cs.onSurface,
-                            decoration: task.isCompleted
-                                ? TextDecoration.lineThrough
-                                : null,
-                            decorationColor: cs.onSurfaceVariant,
-                          ),
-                        ),
-                        if (hasMeta) ...[
-                          const SizedBox(height: 6),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 4,
-                            children: [
-                              if (hasCategory)
-                                _DateChip(
-                                  icon: Icons.label_rounded,
-                                  label: task.category!,
-                                  color: const Color(0xFF8B5CF6),
-                                ),
-                              if (task.recurrenceId != null)
-                                _DateChip(
-                                  icon: Icons.repeat_rounded,
-                                  label: 'Repeats',
-                                  color: const Color(0xFF14B8A6),
-                                ),
-                              if (task.dueAt != null)
-                                _DateChip(
-                                  icon: Icons.schedule_rounded,
-                                  label:
-                                      'Due ${DateFormat.MMMd().format(task.dueAt!)}',
-                                  color: const Color(0xFF3B82F6),
-                                ),
-                              if (task.deadlineAt != null)
-                                _DateChip(
-                                  icon: Icons.flag_rounded,
-                                  label:
-                                      'Deadline ${DateFormat.MMMd().format(task.deadlineAt!)}',
-                                  color: const Color(0xFFEF4444),
-                                ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                PopupMenuButton<String>(
-                  icon: Icon(Icons.more_vert_rounded,
-                      size: 18, color: cs.onSurfaceVariant),
-                  onSelected: (v) async {
-                    switch (v) {
-                      case 'details':
-                        Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    TaskDetailScreen(taskId: task.id)));
-                      case 'subtask':
-                        showTaskFormSheet(context,
-                            workspaceId: workspaceId, parentTaskId: task.id);
-                      case 'edit':
-                        showTaskFormSheet(context,
-                            workspaceId: workspaceId, existing: task);
-                      case 'history':
-                        Navigator.of(context, rootNavigator: true).push(
-                            MaterialPageRoute(
-                                builder: (_) =>
-                                    TaskHistoryScreen(taskId: task.id)));
-                      case 'delete':
-                        final ok = await showDialog<bool>(
-                          context: context,
-                          builder: (dCtx) => AlertDialog(
-                            title: Text('Delete "${task.title}"?'),
-                            content: const Text(
-                                'Subtasks under it will also be removed.'),
-                            actions: [
-                              TextButton(
-                                  onPressed: () => Navigator.pop(dCtx, false),
-                                  child: const Text('Cancel')),
-                              FilledButton(
-                                  style: FilledButton.styleFrom(
-                                      backgroundColor: cs.error),
-                                  onPressed: () => Navigator.pop(dCtx, true),
-                                  child: const Text('Delete')),
-                            ],
-                          ),
-                        );
-                        if (ok == true) {
-                          await ref
-                              .read(tasksRepositoryProvider)
-                              .deleteTask(task.id);
-                        }
-                    }
-                  },
-                  itemBuilder: (_) => const [
-                    PopupMenuItem(value: 'details', child: Text('Details')),
-                    PopupMenuItem(value: 'subtask', child: Text('Add subtask')),
-                    PopupMenuItem(value: 'edit', child: Text('Edit')),
-                    PopupMenuItem(value: 'history', child: Text('History')),
-                    PopupMenuItem(value: 'delete', child: Text('Delete')),
-                  ],
-                ),
-              ],
-            ),
-            if (subtasks.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Container(
-                margin: const EdgeInsets.only(left: 34),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.4)),
-                ),
-                child: Column(
-                  children: [
-                    for (int i = 0; i < subtasks.length; i++) ...[
-                      if (i > 0)
-                        Divider(
-                            height: 12,
-                            color: cs.outlineVariant.withValues(alpha: 0.3)),
-                      _SubtaskRow(task: subtasks[i], ref: ref),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
+/// One line saying how much is left across every workspace.
+String _openStatus(
+  Map<String, ({int done, int total})> counts,
+  List<Workspace> workspaces,
+) {
+  var done = 0;
+  var total = 0;
+  for (final w in workspaces) {
+    final c = counts[w.id];
+    if (c == null) continue;
+    done += c.done;
+    total += c.total;
   }
-}
-
-class _Check extends StatelessWidget {
-  const _Check({
-    required this.checked,
-    required this.onTap,
-    this.size = 22,
-  });
-  final bool checked;
-  final VoidCallback onTap;
-  final double size;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(top: 2),
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: checked ? const Color(0xFF22C55E) : Colors.transparent,
-          border: Border.all(
-            color: checked
-                ? const Color(0xFF22C55E)
-                : cs.outline.withValues(alpha: 0.5),
-            width: 2,
-          ),
-          borderRadius: BorderRadius.circular(size * 0.3),
-        ),
-        child: checked
-            ? Icon(Icons.check_rounded, size: size * 0.62, color: Colors.white)
-            : null,
-      ),
-    );
-  }
-}
-
-class _DateChip extends StatelessWidget {
-  const _DateChip({
-    required this.icon,
-    required this.label,
-    required this.color,
-  });
-  final IconData icon;
-  final String label;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(7),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 11, color: color),
-          const SizedBox(width: 4),
-          Flexible(
-            child: Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 11,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SubtaskRow extends StatelessWidget {
-  const _SubtaskRow({required this.task, required this.ref});
-  final Task task;
-  final WidgetRef ref;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final tt = Theme.of(context).textTheme;
-    return GestureDetector(
-      onTap: () => ref
-          .read(tasksRepositoryProvider)
-          .toggleCompletion(task.id, completed: !task.isCompleted),
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        children: [
-          _Check(
-            checked: task.isCompleted,
-            size: 18,
-            onTap: () => ref.read(tasksRepositoryProvider).toggleCompletion(
-                task.id,
-                completed: !task.isCompleted),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              task.title,
-              style: tt.bodyMedium?.copyWith(
-                color: task.isCompleted ? cs.onSurfaceVariant : cs.onSurface,
-                decoration:
-                    task.isCompleted ? TextDecoration.lineThrough : null,
-                decorationColor: cs.onSurfaceVariant,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  if (total == 0) return 'Nothing scheduled';
+  final open = total - done;
+  if (open == 0) return 'All $total done';
+  return '$open of $total still open';
 }

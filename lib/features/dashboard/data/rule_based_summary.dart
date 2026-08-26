@@ -27,7 +27,7 @@ abstract final class RuleBasedSummary {
       parts.add('${s.transactionCount} transaction$plural (net $net).$top');
     }
 
-    parts.add(s.workedOut ? 'Logged a workout — nice.' : 'No workout logged.');
+    parts.add(s.workedOut ? 'Logged a workout. Nice.' : 'No workout logged.');
 
     if (s.notesCount > 0) {
       final plural = s.notesCount == 1 ? '' : 's';

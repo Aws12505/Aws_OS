@@ -2,13 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import '../core/providers/settings_provider.dart';
 import '../core/services/settings_service.dart';
+import '../shared/design/app_theme.dart';
 
 /// User-controllable theme settings. Surfaced through `themeProvider` and
 /// persisted to the `app_settings` key/value table.
+@immutable
 class ThemeSettings {
   const ThemeSettings({
     required this.primaryColor,
@@ -47,6 +48,23 @@ class ThemeSettings {
       fontScale: fontScale ?? this.fontScale,
     );
   }
+
+  /// Value equality is what makes the [buildTheme] cache work. Without it every
+  /// rebuild of the app widget regenerates two seeded color schemes, a contrast
+  /// search per semantic role, and the whole type scale.
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is ThemeSettings &&
+          other.primaryColor == primaryColor &&
+          other.accentColor == accentColor &&
+          other.themeMode == themeMode &&
+          other.fontFamily == fontFamily &&
+          other.fontScale == fontScale;
+
+  @override
+  int get hashCode =>
+      Object.hash(primaryColor, accentColor, themeMode, fontFamily, fontScale);
 }
 
 const _kPrimary = 'theme.primary';
@@ -63,27 +81,51 @@ const _curatedFonts = <String>{
   'IBM Plex Sans',
 };
 
+ThemeMode? _parseMode(String? raw) => switch (raw) {
+  'light' => ThemeMode.light,
+  'dark' => ThemeMode.dark,
+  'system' => ThemeMode.system,
+  _ => null,
+};
+
+/// Reads the persisted theme without constructing a notifier.
+///
+/// Called from `main()` before the first frame so a cold start renders the
+/// theme the user actually chose. The app used to paint one frame of default
+/// indigo in the default font and then swap.
+Future<ThemeSettings> loadThemeSettings(SettingsService settings) async {
+  const base = ThemeSettings.defaults;
+  final primary = await settings.getInt(_kPrimary);
+  final accent = await settings.getInt(_kAccent);
+  final mode = await settings.getRaw(_kMode);
+  final font = await settings.getRaw(_kFont);
+  final scale = await settings.getRaw(_kScale);
+
+  return ThemeSettings(
+    primaryColor: primary != null ? Color(primary) : base.primaryColor,
+    accentColor: accent != null ? Color(accent) : base.accentColor,
+    themeMode: _parseMode(mode) ?? base.themeMode,
+    fontFamily: _curatedFonts.contains(font) ? font! : base.fontFamily,
+    fontScale: double.tryParse(scale ?? '') ?? base.fontScale,
+  );
+}
+
+/// Seeded by `main()` with the persisted settings so there is no first-frame
+/// theme flash. Falls back to [ThemeSettings.defaults] when not overridden,
+/// which is what tests and any other entry point get.
+final initialThemeSettingsProvider = Provider<ThemeSettings>(
+  (ref) => ThemeSettings.defaults,
+);
+
 class ThemeNotifier extends StateNotifier<ThemeSettings> {
-  ThemeNotifier(this._settings) : super(ThemeSettings.defaults) {
+  ThemeNotifier(this._settings, ThemeSettings initial) : super(initial) {
     unawaited(_load());
   }
 
   final SettingsService _settings;
 
   Future<void> _load() async {
-    final primary = await _settings.getInt(_kPrimary);
-    final accent = await _settings.getInt(_kAccent);
-    final mode = await _settings.getRaw(_kMode);
-    final font = await _settings.getRaw(_kFont);
-    final scale = await _settings.getRaw(_kScale);
-
-    state = ThemeSettings(
-      primaryColor: primary != null ? Color(primary) : state.primaryColor,
-      accentColor: accent != null ? Color(accent) : state.accentColor,
-      themeMode: _parseMode(mode) ?? state.themeMode,
-      fontFamily: _curatedFonts.contains(font) ? font! : state.fontFamily,
-      fontScale: double.tryParse(scale ?? '') ?? state.fontScale,
-    );
+    state = await loadThemeSettings(_settings);
   }
 
   Future<void> setPrimary(Color color) async {
@@ -112,42 +154,65 @@ class ThemeNotifier extends StateNotifier<ThemeSettings> {
     state = state.copyWith(fontScale: clamped);
     await _settings.setRaw(_kScale, clamped.toStringAsFixed(2));
   }
-
-  ThemeMode? _parseMode(String? raw) {
-    return switch (raw) {
-      'light' => ThemeMode.light,
-      'dark' => ThemeMode.dark,
-      'system' => ThemeMode.system,
-      _ => null,
-    };
-  }
 }
 
-final themeProvider =
-    StateNotifierProvider<ThemeNotifier, ThemeSettings>((ref) {
-  return ThemeNotifier(ref.watch(settingsServiceProvider));
+final themeProvider = StateNotifierProvider<ThemeNotifier, ThemeSettings>((
+  ref,
+) {
+  return ThemeNotifier(
+    ref.watch(settingsServiceProvider),
+    ref.watch(initialThemeSettingsProvider),
+  );
 });
 
 const Set<String> curatedFontFamilies = _curatedFonts;
 
+/// `AwsOsApp.build` calls this twice, once per brightness, and rebuilds on any
+/// theme or router change. Each uncached call generates a seeded HCT palette,
+/// runs a contrast search per semantic role and resolves fifteen font variants,
+/// so this cache is not a micro-optimization; it is what makes those
+/// affordable.
+final Map<(ThemeSettings, Brightness), ThemeData> _themeCache = {};
+
 ThemeData buildTheme(ThemeSettings s, Brightness brightness) {
+  if (_themeCache.length > 6) _themeCache.clear();
+  return _themeCache.putIfAbsent((
+    s,
+    brightness,
+  ), () => _buildTheme(s, brightness));
+}
+
+ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
   final scheme = ColorScheme.fromSeed(
     seedColor: s.primaryColor,
     brightness: brightness,
     secondary: s.accentColor,
   );
+  final type = AppTypeTokens.resolve(family: s.fontFamily, scale: s.fontScale);
+  final app = AppTheme.fromScheme(scheme, typography: type);
+  final surfaces = app.surfaces;
+  final isDark = brightness == Brightness.dark;
+
   final base = ThemeData(
     useMaterial3: true,
     brightness: brightness,
     colorScheme: scheme,
   );
-  final textTheme = s.fontFamily == 'system'
-      ? base.textTheme
-      : GoogleFonts.getTextTheme(s.fontFamily, base.textTheme);
-  final isDark = brightness == Brightness.dark;
+
+  OutlineInputBorder inputBorder(Color color, double width) =>
+      OutlineInputBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderSide: BorderSide(color: color, width: width),
+      );
+
   return base.copyWith(
-    textTheme: textTheme.apply(fontSizeFactor: s.fontScale),
+    extensions: <ThemeExtension<dynamic>>[app],
+    // The type scale already carries fontScale, letter spacing included. There
+    // must be no `* s.fontScale` anywhere below this line.
+    textTheme: type.textTheme,
     visualDensity: VisualDensity.adaptivePlatformDensity,
+    // Transparent so the single global AuroraBackground shows through on
+    // ambient screens. Working screens paint an opaque canvas over it.
     scaffoldBackgroundColor: Colors.transparent,
     appBarTheme: AppBarTheme(
       centerTitle: false,
@@ -156,104 +221,98 @@ ThemeData buildTheme(ThemeSettings s, Brightness brightness) {
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       foregroundColor: scheme.onSurface,
-      titleTextStyle: TextStyle(
-        fontSize: 20 * s.fontScale,
-        fontWeight: FontWeight.w700,
-        color: scheme.onSurface,
-        letterSpacing: -0.3,
-      ),
+      titleTextStyle: type.appBarTitle.copyWith(color: scheme.onSurface),
     ),
     cardTheme: CardThemeData(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 6,
+      ),
       elevation: 0,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: isDark ? 0.35 : 0.5),
-        ),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        side: BorderSide(color: surfaces.hairline),
       ),
-      color: scheme.surface,
+      color: surfaces.raised,
       surfaceTintColor: Colors.transparent,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: scheme.surfaceContainerHighest.withValues(alpha: 0.5),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: scheme.outline.withValues(alpha: 0.4),
-        ),
+      fillColor: surfaces.sunken.withValues(alpha: 0.5),
+      border: inputBorder(surfaces.hairlineStrong, 1),
+      enabledBorder: inputBorder(surfaces.hairlineStrong, 1),
+      focusedBorder: inputBorder(scheme.primary, 2),
+      errorBorder: inputBorder(scheme.error, 1),
+      focusedErrorBorder: inputBorder(scheme.error, 2),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 14,
       ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(
-          color: scheme.outline.withValues(alpha: 0.4),
-        ),
+      labelStyle: type.textTheme.bodyMedium?.copyWith(
+        color: surfaces.textSecondary,
       ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.primary, width: 2),
+      hintStyle: type.textTheme.bodyMedium?.copyWith(
+        color: surfaces.textTertiary,
       ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.error),
+      helperStyle: type.textTheme.bodySmall?.copyWith(
+        color: surfaces.textSecondary,
       ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: scheme.error, width: 2),
-      ),
-      contentPadding:
-          const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      labelStyle: TextStyle(color: scheme.onSurfaceVariant),
     ),
     chipTheme: ChipThemeData(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(
-          color: scheme.outlineVariant.withValues(alpha: 0.5),
-        ),
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        side: BorderSide(color: surfaces.hairline),
       ),
-      side: BorderSide(
-        color: scheme.outlineVariant.withValues(alpha: 0.5),
+      side: BorderSide(color: surfaces.hairline),
+      labelStyle: type.textTheme.labelLarge ?? const TextStyle(),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 2,
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
     ),
     navigationBarTheme: NavigationBarThemeData(
-      height: 72,
+      // Derived from the resolved label so the bar grows with the text scale
+      // instead of clipping at 1.30.
+      height: type.navBarHeight,
       elevation: 0,
       backgroundColor: Colors.transparent,
       indicatorColor: scheme.primaryContainer,
       indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
-        return TextStyle(
-          fontSize: 11 * s.fontScale,
-          fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-          color: selected ? scheme.primary : scheme.onSurfaceVariant,
-        );
+        return type.navLabel
+            .weight(selected ? FontWeight.w700 : FontWeight.w500)
+            .copyWith(
+              color: selected ? scheme.primary : surfaces.textSecondary,
+            );
       }),
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : scheme.onSurfaceVariant,
+          color: selected ? scheme.onPrimaryContainer : surfaces.textSecondary,
           size: 22,
         );
       }),
     ),
     bottomSheetTheme: BottomSheetThemeData(
       showDragHandle: true,
-      dragHandleColor: scheme.onSurfaceVariant.withValues(alpha: 0.35),
+      dragHandleColor: surfaces.textTertiary,
       dragHandleSize: const Size(36, 4),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppRadius.xxl),
+        ),
       ),
-      backgroundColor: scheme.surface,
-      elevation: 8,
+      backgroundColor: surfaces.overlay,
+      surfaceTintColor: Colors.transparent,
+      elevation: 0,
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
       elevation: 3,
       focusElevation: 4,
       hoverElevation: 5,
@@ -261,47 +320,63 @@ ThemeData buildTheme(ThemeSettings s, Brightness brightness) {
       foregroundColor: scheme.onPrimaryContainer,
     ),
     dividerTheme: DividerThemeData(
-      color: scheme.outlineVariant.withValues(alpha: 0.4),
+      color: surfaces.hairline,
       thickness: 1,
       space: 1,
     ),
-    listTileTheme: const ListTileThemeData(
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      minVerticalPadding: 8,
+    listTileTheme: ListTileThemeData(
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 2,
+      ),
+      minVerticalPadding: AppSpacing.sm,
+      titleTextStyle: type.textTheme.titleSmall,
+      subtitleTextStyle: type.textTheme.bodySmall?.copyWith(
+        color: surfaces.textSecondary,
+      ),
     ),
     dialogTheme: DialogThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      elevation: 8,
-      backgroundColor: scheme.surface,
-      titleTextStyle: TextStyle(
-        fontSize: 18 * s.fontScale,
-        fontWeight: FontWeight.w700,
-        color: scheme.onSurface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.xl),
+      ),
+      elevation: 0,
+      backgroundColor: surfaces.overlay,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: type.dialogTitle.copyWith(color: scheme.onSurface),
+      contentTextStyle: type.textTheme.bodyMedium?.copyWith(
+        color: surfaces.textSecondary,
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      color: surfaces.overlay,
+      surfaceTintColor: Colors.transparent,
       elevation: 4,
+      textStyle: type.textTheme.bodyMedium,
     ),
     tabBarTheme: TabBarThemeData(
-      labelStyle: TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 13 * s.fontScale,
-      ),
-      unselectedLabelStyle: TextStyle(
-        fontWeight: FontWeight.w500,
-        fontSize: 13 * s.fontScale,
-      ),
+      labelStyle: type.tabLabel,
+      unselectedLabelStyle: type.tabLabel.weight(FontWeight.w500),
       indicatorSize: TabBarIndicatorSize.label,
       dividerColor: Colors.transparent,
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      backgroundColor: isDark ? scheme.surfaceContainerHigh : scheme.inverseSurface,
-      contentTextStyle: TextStyle(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      backgroundColor: isDark
+          ? scheme.surfaceContainerHigh
+          : scheme.inverseSurface,
+      contentTextStyle: type.snackBody.copyWith(
         color: isDark ? scheme.onSurface : scheme.onInverseSurface,
-        fontSize: 14 * s.fontScale,
+      ),
+    ),
+    tooltipTheme: TooltipThemeData(
+      textStyle: type.textTheme.bodySmall?.copyWith(
+        color: scheme.onInverseSurface,
       ),
     ),
   );

@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../../../core/ai/ai_providers.dart';
 import '../../../core/ai/ai_service.dart';
-import '../../../shared/design/tokens.dart';
+import '../../../shared/design/app_theme.dart';
+import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_buttons.dart';
 import '../../../shared/widgets/app_empty_state.dart';
 import '../../../shared/widgets/app_error_view.dart';
@@ -33,14 +34,15 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _usedOffline = false;
 
   Color get _accent => switch (widget.kind) {
-        MentorKind.finance => DomainColors.income,
-        MentorKind.gym => DomainColors.gym,
-        MentorKind.productivity => DomainColors.tasks,
+        MentorKind.finance => context.sem.income.base,
+        MentorKind.gym => context.sem.gym.base,
+        MentorKind.productivity => context.sem.tasks.base,
       };
 
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
+      mode: SurfaceMode.ambient,
       appBar: AppBar(title: Text(widget.kind.title)),
       body: switch (widget.kind) {
         MentorKind.finance => _finance(),
@@ -88,8 +90,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                         maxLines: 1,
                         style: Theme.of(context).textTheme.headlineMedium
                             ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: -0.5)),
+                                letterSpacing: -0.5,
+                            )),
                   ),
                   const SizedBox(height: 12),
                   Row(
@@ -101,11 +103,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                               '${n.format(f.avgMonthlyNet.abs())}',
                           icon: Icons.trending_up_rounded,
                           accent: f.growing
-                              ? DomainColors.income
-                              : DomainColors.expense,
+                              ? context.sem.income.base
+                              : context.sem.expense.base,
                           valueColor: f.growing
-                              ? DomainColors.income
-                              : DomainColors.expense,
+                              ? context.sem.income.base
+                              : context.sem.expense.base,
                         ),
                       ),
                       const SizedBox(width: AppSpacing.md),
@@ -121,8 +123,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                               ? Icons.timelapse_rounded
                               : Icons.savings_rounded,
                           accent: f.runwayMonths != null
-                              ? DomainColors.warning
-                              : DomainColors.income,
+                              ? context.sem.warning.base
+                              : context.sem.income.base,
                         ),
                       ),
                     ],
@@ -138,7 +140,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                       style: Theme.of(context)
                           .textTheme
                           .titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                          ?.weight(FontWeight.w700)),
                   const SizedBox(height: 14),
                   Sparkline(
                     values: f.months.map((m) => m.net).toList(),
@@ -169,7 +171,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   children: [
                     Text('Where it goes',
                         style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                            ?.weight(FontWeight.w700)),
                     const SizedBox(height: 10),
                     for (var i = 0; i < f.topCategories.length; i++)
                       _CatBar(
@@ -212,7 +214,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   Expanded(
                     child: StatTile(
                       icon: Icons.event_repeat_rounded,
-                      color: DomainColors.gym,
+                      color: context.sem.gym.base,
                       label: 'Per week',
                       value: g.sessionsPerWeek.toStringAsFixed(1),
                       sub: '${g.totalSessions} in ${g.weeks} wks',
@@ -222,11 +224,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   Expanded(
                     child: StatTile(
                       icon: Icons.local_fire_department_rounded,
-                      color: DomainColors.warning,
+                      color: context.sem.warning.base,
                       label: 'Week streak',
                       value: '${g.currentWeekStreak}',
                       sub: g.lastSessionDaysAgo == null
-                          ? '—'
+                          ? '-'
                           : 'last ${g.lastSessionDaysAgo}d ago',
                     ),
                   ),
@@ -243,11 +245,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                         Expanded(
                           child: Text(m.name,
                               style: Theme.of(context).textTheme.titleSmall
-                                  ?.copyWith(fontWeight: FontWeight.w700)),
+                                  ?.weight(FontWeight.w700)),
                         ),
                         Text('${_t(m.latest)}${m.unit}',
                             style: Theme.of(context).textTheme.titleMedium
-                                ?.copyWith(fontWeight: FontWeight.w800)),
+                                ?.weight(FontWeight.w800)),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -308,7 +310,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   Expanded(
                     child: StatTile(
                       icon: Icons.percent_rounded,
-                      color: DomainColors.tasks,
+                      color: context.sem.tasks.base,
                       label: 'Completion',
                       value: '${(p.completionRate * 100).round()}%',
                       sub: '${p.done}/${p.due} in ${p.windowDays}d',
@@ -318,7 +320,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   Expanded(
                     child: StatTile(
                       icon: Icons.error_outline_rounded,
-                      color: DomainColors.expense,
+                      color: context.sem.expense.base,
                       label: 'Overdue',
                       value: '${p.overdue}',
                       sub: p.overdue == 0 ? 'all clear' : 'to clear',
@@ -333,7 +335,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 children: [
                   Text('Daily completion (last ${p.windowDays} days)',
                       style: Theme.of(context).textTheme.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                          ?.weight(FontWeight.w700)),
                   const SizedBox(height: 14),
                   Sparkline(
                       values: p.dailyCompletion, color: _accent, height: 48),
@@ -364,7 +366,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               Icon(Icons.psychology_rounded, color: _accent, size: 20),
               const SizedBox(width: AppSpacing.sm),
               Text('Mentor advice',
-                  style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  style: tt.titleMedium),
               const Spacer(),
               if (aiConfigured)
                 const MiniPill(label: 'AI', icon: Icons.bolt_rounded),
@@ -383,7 +385,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           if (_usedOffline && _advice != null)
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text('Offline suggestions — configure AI in Settings for more.',
+              child: Text('Offline suggestions. Configure AI in Settings for more.',
                   style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant)),
             ),
           const SizedBox(height: AppSpacing.md),
@@ -496,12 +498,12 @@ class _CatBar extends StatelessWidget {
                     style: tt.bodySmall, maxLines: 1, overflow: TextOverflow.ellipsis),
               ),
               Text(format(amount),
-                  style: tt.labelMedium?.copyWith(fontWeight: FontWeight.w700)),
+                  style: tt.labelMedium?.weight(FontWeight.w700)),
             ],
           ),
           const SizedBox(height: 4),
           ClipRRect(
-            borderRadius: BorderRadius.circular(4),
+            borderRadius: BorderRadius.circular(AppRadius.xs),
             child: LinearProgressIndicator(
               value: frac,
               minHeight: 6,

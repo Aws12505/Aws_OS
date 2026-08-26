@@ -4,6 +4,12 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 import '../widgets/confirm_occurrence_sheet.dart';
 import '../widgets/occurrence_history_sheet.dart';
@@ -19,7 +25,8 @@ class RecurringScreen extends ConsumerWidget {
     final recsById = {
       for (final r in recsAsync.value ?? const <Recurrence>[]) r.id: r,
     };
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Recurring'),
         actions: [
@@ -32,7 +39,7 @@ class RecurringScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, 96),
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, AppInsets.listBottomNoFab),
         children: [
           pendingAsync.when(
             loading: () => const SizedBox.shrink(),
@@ -80,8 +87,8 @@ class RecurringScreen extends ConsumerWidget {
           ),
           recsAsync.when(
             loading: () =>
-                const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Center(child: Text(e.toString())),
+                const AppLoading(),
+            error: (e, _) => AppErrorView(error: e),
             data: (items) {
               if (items.isEmpty) {
                 return const Padding(
@@ -161,23 +168,14 @@ class _RecurrenceTile extends ConsumerWidget {
               case 'edit':
                 showRecurrenceFormSheet(context, existing: recurrence);
               case 'delete':
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (dCtx) => AlertDialog(
-                    title: const Text('Delete recurring entry?'),
-                    content: const Text(
-                        'Pending occurrences will be removed. Already-confirmed transactions are kept.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dCtx, false),
-                          child: const Text('Cancel')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(dCtx, true),
-                          child: const Text('Delete')),
-                    ],
-                  ),
+                final ok = await showAppConfirmDialog(
+                  context,
+                  title: 'Delete recurring entry?',
+                  message: 'Pending occurrences will be removed. Already-confirmed transactions are kept.',
+                  confirmLabel: 'Delete',
+                  destructive: true,
                 );
-                if (ok == true) {
+                if (ok) {
                   await ref
                       .read(financeRepositoryProvider)
                       .deleteRecurrence(recurrence.id);

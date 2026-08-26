@@ -5,6 +5,10 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 import '../widgets/task_form_sheet.dart';
 import 'task_history_screen.dart';
@@ -27,7 +31,8 @@ class TaskDetailScreen extends ConsumerWidget {
     }
 
     if (task == null) {
-      return Scaffold(
+      return AppScaffold(
+      mode: SurfaceMode.working,
         appBar: AppBar(title: const Text('Task')),
         body: const Center(child: Text('This task no longer exists.')),
       );
@@ -39,7 +44,8 @@ class TaskDetailScreen extends ConsumerWidget {
     final repo = ref.read(tasksRepositoryProvider);
     final subtasks = all.where((s) => s.parentTaskId == t.id).toList();
 
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Task details'),
         actions: [
@@ -59,25 +65,14 @@ class TaskDetailScreen extends ConsumerWidget {
                   Navigator.of(context).push(MaterialPageRoute(
                       builder: (_) => TaskHistoryScreen(taskId: t.id)));
                 case 'delete':
-                  final ok = await showDialog<bool>(
-                    context: context,
-                    builder: (dCtx) => AlertDialog(
-                      title: Text('Delete "${t.title}"?'),
-                      content:
-                          const Text('Subtasks under it will also be removed.'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(dCtx, false),
-                            child: const Text('Cancel')),
-                        FilledButton(
-                            style:
-                                FilledButton.styleFrom(backgroundColor: cs.error),
-                            onPressed: () => Navigator.pop(dCtx, true),
-                            child: const Text('Delete')),
-                      ],
-                    ),
+                  final ok = await showAppConfirmDialog(
+                    context,
+                    title: 'Delete "${t.title}"?',
+                    message: 'Subtasks under it will also be removed.',
+                    confirmLabel: 'Delete',
+                    destructive: true,
                   );
-                  if (ok == true) {
+                  if (ok) {
                     await repo.deleteTask(t.id);
                     if (context.mounted) Navigator.of(context).pop();
                   }
@@ -107,11 +102,10 @@ class TaskDetailScreen extends ConsumerWidget {
                 child: Text(
                   t.title,
                   style: tt.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
                     decoration:
                         t.isCompleted ? TextDecoration.lineThrough : null,
                     color: t.isCompleted ? cs.onSurfaceVariant : cs.onSurface,
-                  ),
+                  ).weight(FontWeight.w700),
                 ),
               ),
             ],
@@ -127,26 +121,26 @@ class TaskDetailScreen extends ConsumerWidget {
                     : Icons.circle_outlined,
                 label: t.isCompleted ? 'Completed' : 'Active',
                 color: t.isCompleted
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFF14B8A6),
+                    ? context.sem.income.base
+                    : context.sem.tasks.base,
               ),
               if (t.category != null && t.category!.trim().isNotEmpty)
                 _Chip(
                   icon: Icons.label_rounded,
                   label: t.category!,
-                  color: const Color(0xFF8B5CF6),
+                  color: context.sem.exchange.base,
                 ),
               if (t.dueAt != null)
                 _Chip(
                   icon: Icons.schedule_rounded,
                   label: 'Due ${DateFormat.yMMMd().format(t.dueAt!)}',
-                  color: const Color(0xFF3B82F6),
+                  color: context.sem.transfer.base,
                 ),
               if (t.deadlineAt != null)
                 _Chip(
                   icon: Icons.flag_rounded,
                   label: 'Deadline ${DateFormat.yMMMd().format(t.deadlineAt!)}',
-                  color: const Color(0xFFEF4444),
+                  color: context.sem.expense.base,
                 ),
             ],
           ),
@@ -162,14 +156,14 @@ class TaskDetailScreen extends ConsumerWidget {
           if (t.bodyMd != null && t.bodyMd!.trim().isNotEmpty) ...[
             const SizedBox(height: 20),
             Text('Details',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                style: tt.titleSmall?.weight(FontWeight.w700)),
             const SizedBox(height: 8),
             MarkdownBody(data: t.bodyMd!, selectable: true),
           ],
           if (subtasks.isNotEmpty) ...[
             const SizedBox(height: 24),
             Text('Subtasks (${subtasks.where((s) => s.isCompleted).length}/${subtasks.length})',
-                style: tt.titleSmall?.copyWith(fontWeight: FontWeight.w700)),
+                style: tt.titleSmall?.weight(FontWeight.w700)),
             const SizedBox(height: 8),
             for (final s in subtasks)
               Padding(
@@ -278,17 +272,21 @@ class _Check extends StatelessWidget {
         width: size,
         height: size,
         decoration: BoxDecoration(
-          color: checked ? const Color(0xFF22C55E) : Colors.transparent,
+          color: checked ? context.sem.income.base : Colors.transparent,
           border: Border.all(
             color: checked
-                ? const Color(0xFF22C55E)
+                ? context.sem.income.base
                 : cs.outline.withValues(alpha: 0.5),
             width: 2,
           ),
           borderRadius: BorderRadius.circular(size * 0.3),
         ),
         child: checked
-            ? Icon(Icons.check_rounded, size: size * 0.62, color: Colors.white)
+            ? Icon(
+                Icons.check_rounded,
+                size: size * 0.62,
+                color: context.sem.income.onContainer,
+              )
             : null,
       ),
     );
@@ -307,7 +305,7 @@ class _Chip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(9),
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
@@ -319,8 +317,7 @@ class _Chip extends StatelessWidget {
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: color,
-                  fontWeight: FontWeight.w700,
-                ),
+            ).weight(FontWeight.w700),
           ),
         ],
       ),

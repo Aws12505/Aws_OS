@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
@@ -70,7 +71,7 @@ class _LinkPickerSheetState extends ConsumerState<_LinkPickerSheet> {
               style: Theme.of(context)
                   .textTheme
                   .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w800),
+                  ?.weight(FontWeight.w800),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -83,6 +84,7 @@ class _LinkPickerSheetState extends ConsumerState<_LinkPickerSheet> {
                 suffixIcon: _query.isEmpty
                     ? null
                     : IconButton(
+                        tooltip: 'Clear the search',
                         icon: const Icon(Icons.close_rounded, size: 18),
                         onPressed: () {
                           _search.clear();
@@ -96,7 +98,7 @@ class _LinkPickerSheetState extends ConsumerState<_LinkPickerSheet> {
               child: txAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.all(24),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: AppLoading(),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.all(24),
@@ -165,7 +167,7 @@ class _PickRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = entry.transaction;
-    final color = DomainColors.forTxKind(tx.kind);
+    final color = context.sem.forTxKind(tx.kind).base;
     final icon = DomainColors.iconForTxKind(tx.kind);
     final summary = entry.legs.map((l) {
       final cur = currencies[l.currencyId];
@@ -193,7 +195,7 @@ class _PickRow extends StatelessWidget {
                 height: 36,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                 ),
                 child: Icon(icon, color: color, size: 18),
               ),
@@ -204,13 +206,13 @@ class _PickRow extends StatelessWidget {
                   children: [
                     Text(
                       '${DomainColors.labelForTxKind(tx.kind)} · ${DateFormat.MMMd().format(tx.occurredAt)}',
-                      style: tt.labelMedium?.copyWith(fontWeight: FontWeight.w700),
+                      style: tt.labelMedium?.weight(FontWeight.w700),
                     ),
                     Text(
                       [
                         summary,
                         if (tx.note != null && tx.note!.isNotEmpty) tx.note!,
-                      ].join('  —  '),
+                      ].join('  ·  '),
                       style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

@@ -141,3 +141,29 @@ final pendingOccurrencesWindowProvider =
   final end = DateTime.now().add(Duration(days: days));
   return ref.watch(financeRepositoryProvider).watchPendingOccurrencesUpTo(end);
 });
+
+/// The most recent amount recorded against a category, and when.
+///
+/// Feeds the reference line in the income and expense sheet: entering a value
+/// with no idea what it usually is means guessing, and the app already knows.
+/// Absolute value, since expense legs are stored negative.
+final lastAmountForCategoryProvider =
+    Provider.family<({double amount, String currencyId, DateTime at})?, String>(
+  (ref, categoryId) {
+    final recent = ref.watch(recentTransactionsStreamProvider).value;
+    if (recent == null) return null;
+    for (final e in recent) {
+      if (e.transaction.categoryId != categoryId) continue;
+      if (e.legs.isEmpty) continue;
+      final leg = e.legs.reduce(
+        (a, b) => b.amount.abs() > a.amount.abs() ? b : a,
+      );
+      return (
+        amount: leg.amount.abs(),
+        currencyId: leg.currencyId,
+        at: e.transaction.occurredAt,
+      );
+    }
+    return null;
+  },
+);

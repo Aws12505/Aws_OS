@@ -24,7 +24,7 @@ class AppErrorView extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               'Something went wrong',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: tt.titleMedium,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AppSpacing.xs),

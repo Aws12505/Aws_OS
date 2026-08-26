@@ -197,7 +197,7 @@ class BackupService {
       return utf8.decode(clear);
     } catch (_) {
       throw const FormatException(
-          'Could not decrypt — wrong password or corrupt file.');
+          'Could not decrypt that. The password is wrong, or the file is corrupt.');
     }
   }
 

@@ -74,7 +74,7 @@ class ActivityHeatmap extends StatelessWidget {
               height: cellSize,
               decoration: BoxDecoration(
                 color: fill,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppRadius.xs),
               ),
             ),
           ),
@@ -142,7 +142,7 @@ class ActivityHeatmap extends StatelessWidget {
                   height: 11,
                   decoration: BoxDecoration(
                     color: Color.lerp(empty, color, a),
-                    borderRadius: BorderRadius.circular(3),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
                   ),
                 ),
               ),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/form_sheet.dart';
@@ -85,7 +85,7 @@ class _AccountFormState extends ConsumerState<_AccountForm> {
           children: [
             FormSheetHeader(
               icon: Icons.account_balance_wallet_rounded,
-              color: DomainColors.tasks,
+              color: context.sem.tasks.base,
               title: widget.existing == null ? 'New account' : 'Edit account',
             ),
             const SizedBox(height: 16),

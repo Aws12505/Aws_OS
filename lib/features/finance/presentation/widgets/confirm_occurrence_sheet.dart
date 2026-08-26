@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
@@ -140,7 +140,7 @@ class _SheetState extends ConsumerState<_Sheet> {
     final byCur = {for (final c in currencies) c.id: c};
     final rec = _rec;
     final cs = Theme.of(context).colorScheme;
-    final color = rec == null ? cs.primary : DomainColors.forTxKind(rec.kind);
+    final color = rec == null ? cs.primary : context.sem.forTxKind(rec.kind).base;
     final icon = rec == null
         ? Icons.event_repeat_rounded
         : DomainColors.iconForTxKind(rec.kind);
@@ -276,7 +276,7 @@ class _LineRow extends StatelessWidget {
                     value: a.id,
                     child: Text(
                         '${a.name} (${currencies[a.currencyId]?.code ?? '?'})'
-                        '${a.archived ? ' — archived' : ''}',
+                        '${a.archived ? ', archived' : ''}',
                         overflow: TextOverflow.ellipsis),
                   ),
               ],

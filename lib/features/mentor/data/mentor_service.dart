@@ -15,19 +15,19 @@ class MentorService {
       'You are a sharp, practical personal-finance mentor. You receive the '
           "user's real recent cash flow, balance, projections, top spending, "
           'and this-month budget adherence. Give a brief, concrete assessment '
-          'and 3–5 prioritized, specific recommendations grounded in these '
+          'and 3 to 5 prioritized, specific recommendations grounded in these '
           'exact numbers. Reference figures. No generic platitudes, no '
           'disclaimers.',
     MentorKind.gym =>
       'You are an experienced strength & conditioning coach. You receive the '
           "user's real training frequency, streak, body-measurement trends, "
           'and per-exercise strength progression (top-set weight and '
-          'estimated 1RM). Give a brief assessment and 3–5 specific, '
+          'estimated 1RM). Give a brief assessment and 3 to 5 specific, '
           'actionable coaching cues grounded in these numbers (frequency, '
           'progression, plateaus). No generic advice, no medical disclaimers.',
     MentorKind.productivity =>
       'You are a pragmatic productivity coach. You receive the user\'s task '
-          'completion stats and trend. Give a brief assessment and 3–5 '
+          'completion stats and trend. Give a brief assessment and 3 to 5 '
           'specific, actionable suggestions grounded in the numbers. No '
           'platitudes.',
   };
@@ -71,7 +71,7 @@ class MentorService {
     if (f.budgets.isNotEmpty) {
       b.writeln('This month vs budget:');
       for (final bud in f.budgets) {
-        final flag = bud.over ? ' — OVER' : '';
+        final flag = bud.over ? ' OVER' : '';
         b.writeln(
           '  ${bud.name}: ${n.format(bud.spent)} of '
           '${n.format(bud.limit)} (${(bud.fraction * 100).round()}%)$flag',
@@ -145,7 +145,7 @@ class MentorService {
     final tips = <String>[];
     if (f.runwayMonths != null) {
       tips.add(
-        'You\'re spending more than you earn — about '
+        'You\'re spending more than you earn, about '
         '${f.runwayMonths!.toStringAsFixed(1)} months of runway at this rate. '
         'Trimming your top category would extend it.',
       );
@@ -179,7 +179,7 @@ class MentorService {
     if (g.sessionsPerWeek < 2) {
       tips.add(
         'Frequency is low (${g.sessionsPerWeek.toStringAsFixed(1)}/week). '
-        'Target 3 short sessions a week — consistency beats intensity.',
+        'Target 3 short sessions a week. Consistency beats intensity.',
       );
     } else {
       tips.add(
@@ -205,7 +205,7 @@ class MentorService {
         final l = stalled.first;
         tips.add(
           '${l.name} has stalled at ${_t(l.latestWeight)} across '
-          '${l.entries} logs — change reps, tempo, or add a small load to '
+          '${l.entries} logs. Change reps, tempo, or add a small load to '
           'break the plateau.',
         );
       } else if (rising.isNotEmpty) {
@@ -217,7 +217,7 @@ class MentorService {
       }
     } else {
       tips.add(
-        'After you hit a set, edit its weight/reps to log it — that '
+        'After you hit a set, edit its weight and reps to log it, so that '
         'builds your progression history.',
       );
     }
@@ -232,7 +232,7 @@ class MentorService {
     );
     if (p.overdue > 0) {
       tips.add(
-        '${p.overdue} task(s) overdue — clear or reschedule them first to '
+        '${p.overdue} task(s) overdue. Clear or reschedule them first to '
         'reset momentum.',
       );
     }

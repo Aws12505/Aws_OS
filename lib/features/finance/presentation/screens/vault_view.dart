@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/money.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../providers.dart';
 import 'accounts_screen.dart';
 import 'currencies_screen.dart';
@@ -18,7 +21,7 @@ class VaultView extends ConsumerWidget {
     final balancesAsync = ref.watch(accountBalancesStreamProvider);
 
     return currenciesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
+      loading: () => const AppLoading(),
       error: (e, _) => _ErrorBox(e.toString()),
       data: (currencies) {
         if (currencies.isEmpty) {
@@ -32,7 +35,7 @@ class VaultView extends ConsumerWidget {
           );
         }
         return accountsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const AppLoading(),
           error: (e, _) => _ErrorBox(e.toString()),
           data: (accounts) {
             if (accounts.isEmpty) {
@@ -79,7 +82,7 @@ class _VaultBody extends StatelessWidget {
     final grouped = accounts.groupListsBy((a) => a.currencyId);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
       children: [
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -88,7 +91,7 @@ class _VaultBody extends StatelessWidget {
                 alpha: Theme.of(context).brightness == Brightness.dark
                     ? 0.55
                     : 0.72),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -106,7 +109,7 @@ class _VaultBody extends StatelessWidget {
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
                         color: Theme.of(context).colorScheme.primaryContainer,
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(AppRadius.md),
                       ),
                       child: Icon(
                         Icons.account_balance_rounded,
@@ -117,14 +120,12 @@ class _VaultBody extends StatelessWidget {
                     const SizedBox(width: 10),
                     Text(
                       'Total per currency',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
-                if (totals.isEmpty) const Text('—'),
+                if (totals.isEmpty) const Text('-'),
                 for (final entry in totals.entries)
                   _TotalRow(
                     currency: byId[entry.key],
@@ -170,13 +171,12 @@ class _TotalRow extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
             decoration: BoxDecoration(
               color: cs.primaryContainer,
-              borderRadius: BorderRadius.circular(6),
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Text(
               code,
               style: tt.labelSmall?.copyWith(
                 color: cs.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ),
@@ -188,7 +188,6 @@ class _TotalRow extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: tt.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
                 letterSpacing: -0.3,
               ),
             ),
@@ -216,14 +215,13 @@ class _CurrencyHeader extends StatelessWidget {
             '${currency!.code} Accounts',
             style: tt.labelLarge?.copyWith(
               color: cs.primary,
-              fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
-            ),
+            ).weight(FontWeight.w700),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: Divider(
-              color: cs.outlineVariant.withValues(alpha: 0.5),
+              color: context.surfaces.hairline,
             ),
           ),
         ],
@@ -250,24 +248,21 @@ class _AccountTile extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final isPositive = balance >= 0;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+    return AppCard(
+      margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 5),
+      radius: AppRadius.lg,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 14,
       ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        child: Row(
+      child: Row(
           children: [
             Container(
               width: 42,
               height: 42,
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(Icons.account_balance_wallet_rounded,
                   color: cs.onPrimaryContainer, size: 20),
@@ -279,7 +274,7 @@ class _AccountTile extends StatelessWidget {
                 children: [
                   Text(account.name,
                       style: tt.titleSmall
-                          ?.copyWith(fontWeight: FontWeight.w700)),
+                          ?.weight(FontWeight.w700)),
                   const SizedBox(height: 2),
                   Text(
                     account.kind,
@@ -296,14 +291,12 @@ class _AccountTile extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.end,
                 style: tt.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
                   color: isPositive ? cs.onSurface : cs.error,
                   letterSpacing: -0.3,
                 ),
               ),
             ),
           ],
-        ),
       ),
     );
   }

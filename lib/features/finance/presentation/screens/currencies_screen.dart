@@ -2,6 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_dialog.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 import '../widgets/currency_form_sheet.dart';
 
@@ -11,11 +17,12 @@ class CurrenciesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currenciesStreamProvider);
-    return Scaffold(
+    return AppScaffold(
+      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Currencies')),
       body: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text(e.toString())),
+        loading: () => const AppLoading(),
+        error: (e, _) => AppErrorView(error: e),
         data: (items) {
           if (items.isEmpty) {
             return const Center(
@@ -29,7 +36,7 @@ class CurrenciesScreen extends ConsumerWidget {
             );
           }
           return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
             itemCount: items.length,
             itemBuilder: (_, i) => _CurrencyTile(currency: items[i]),
           );
@@ -63,24 +70,15 @@ class _CurrencyTile extends ConsumerWidget {
               case 'edit':
                 showCurrencyFormSheet(context, existing: currency);
               case 'delete':
-                final ok = await showDialog<bool>(
-                  context: context,
-                  builder: (dCtx) => AlertDialog(
-                    title: Text('Delete ${currency.code}?'),
-                    content: const Text(
-                        'Accounts or transactions using this currency will fail to load. '
-                        'Use only if nothing depends on it.'),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(dCtx, false),
-                          child: const Text('Cancel')),
-                      FilledButton(
-                          onPressed: () => Navigator.pop(dCtx, true),
-                          child: const Text('Delete')),
-                    ],
-                  ),
+                final ok = await showAppConfirmDialog(
+                  context,
+                  title: 'Delete ${currency.code}?',
+                  message: 'Accounts or transactions using this currency will fail to load. '
+                        'Use only if nothing depends on it.',
+                  confirmLabel: 'Delete',
+                  destructive: true,
                 );
-                if (ok == true) {
+                if (ok) {
                   await ref
                       .read(financeRepositoryProvider)
                       .deleteCurrency(currency.id);

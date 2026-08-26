@@ -59,7 +59,7 @@ class ShareSessionController extends StateNotifier<ShareSession> {
         } else {
           activeMode = ConnectionMode.lan;
           state = state.copyWith(
-            error: 'Wi-Fi Direct unavailable — using Wi-Fi/LAN',
+            error: 'Wi-Fi Direct unavailable, using Wi-Fi or LAN',
           );
         }
       }
@@ -94,8 +94,8 @@ class ShareSessionController extends StateNotifier<ShareSession> {
         mode: activeMode,
         serverRunning: true,
         status: activeMode == ConnectionMode.wifiDirect
-            ? 'Wi-Fi Direct ready — have them join & scan'
-            : 'Ready — scan the code or pick this device',
+            ? 'Wi-Fi Direct ready. Have them join and scan'
+            : 'Ready. Scan the code or pick this device',
         tasks: const [],
       );
       try {
@@ -140,7 +140,7 @@ class ShareSessionController extends StateNotifier<ShareSession> {
     try {
       _ref.read(notificationServiceProvider).showTransfer(
         title: 'Incoming files from ${m.senderName}',
-        body: '${m.files.length} item(s) — open the app to accept',
+        body: '${m.files.length} item(s). Open the app to accept',
       );
     } catch (_) {}
     return c.future.timeout(
@@ -344,7 +344,7 @@ class ShareSessionController extends StateNotifier<ShareSession> {
       status: hasShizuku
           ? 'Installed / restored received apps'
           : anyApk
-          ? 'Apps saved — open Received files to install them'
+          ? 'Apps saved. Open Received files to install them'
           : 'Received app data saved',
     );
     _ref.read(receivedFilesStoreProvider).invalidate();

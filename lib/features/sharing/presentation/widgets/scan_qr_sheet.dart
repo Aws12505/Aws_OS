@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../data/models/connection_mode.dart';
 import '../../data/models/share_device.dart';
@@ -79,11 +80,11 @@ class _ScanSheetState extends State<_ScanSheet> {
           children: [
             Text(
               'Scan the QR on the other phone',
-              style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              style: tt.titleMedium,
             ),
             const SizedBox(height: 12),
             ClipRRect(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               child: SizedBox(
                 height: 320,
                 width: double.infinity,

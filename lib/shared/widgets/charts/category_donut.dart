@@ -1,6 +1,8 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
+import '../../design/app_theme.dart';
+
 /// One donut slice.
 class DonutDatum {
   const DonutDatum({
@@ -89,9 +91,8 @@ class CategoryDonut extends StatelessWidget {
                     centerValue,
                     maxLines: 1,
                     style: tt.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
                       letterSpacing: -0.5,
-                    ),
+                    ).weight(FontWeight.w800),
                   ),
                   if (centerLabel != null)
                     Text(
@@ -142,7 +143,7 @@ class CategoryDonut extends StatelessWidget {
             height: 10,
             decoration: BoxDecoration(
               color: d.color,
-              borderRadius: BorderRadius.circular(3),
+              borderRadius: BorderRadius.circular(AppRadius.xs),
             ),
           ),
           const SizedBox(width: 8),

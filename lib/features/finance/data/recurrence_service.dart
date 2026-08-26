@@ -140,7 +140,7 @@ class RecurrenceService {
     final note = rec.noteTemplate?.trim();
     return note != null && note.isNotEmpty
         ? '$kindLabel: $note'
-        : '$kindLabel pending — tap to confirm or skip.';
+        : '$kindLabel pending. Tap to confirm or skip.';
   }
 
   // -- Template helpers ----------------------------------------------------

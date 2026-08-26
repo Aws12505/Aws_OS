@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/form_sheet.dart';
@@ -79,7 +79,7 @@ class _CurrencyFormState extends ConsumerState<_CurrencyForm> {
           children: [
             FormSheetHeader(
               icon: Icons.currency_exchange_rounded,
-              color: DomainColors.exchange,
+              color: context.sem.exchange.base,
               title: widget.existing == null ? 'New currency' : 'Edit currency',
             ),
             const SizedBox(height: 16),

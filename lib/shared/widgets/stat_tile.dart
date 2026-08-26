@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../design/tokens.dart';
+import '../design/app_theme.dart';
+import 'app_card.dart';
 
 /// Bento-style stat tile: tinted icon, big value, label + optional sub-line.
 /// Promoted from the dashboard so the debrief and analytics screens can reuse it.
@@ -26,9 +27,9 @@ class StatTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surface = resolveSurface(context);
     return Material(
-      color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+      color: surface.fill,
       borderRadius: BorderRadius.circular(AppRadius.xl),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -38,7 +39,7 @@ class StatTile extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(AppRadius.xl),
             border: Border.all(
-              color: cs.outlineVariant.withValues(alpha: 0.45),
+              color: surface.border,
             ),
           ),
           child: Column(
@@ -60,7 +61,6 @@ class StatTile extends StatelessWidget {
                   value,
                   maxLines: 1,
                   style: tt.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
                     letterSpacing: -0.5,
                   ),
                 ),
@@ -68,7 +68,7 @@ class StatTile extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 label,
-                style: tt.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: tt.labelMedium,
               ),
               if (sub != null)
                 Text(
@@ -113,7 +113,7 @@ class MetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: cs.surface.withValues(alpha: 0.5),
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.4)),
+        border: Border.all(color: context.surfaces.hairline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -142,10 +142,9 @@ class MetricCard extends StatelessWidget {
               value,
               maxLines: 1,
               style: tt.titleLarge?.copyWith(
-                fontWeight: FontWeight.w800,
                 letterSpacing: -0.5,
                 color: valueColor,
-              ),
+              ).weight(FontWeight.w800),
             ),
           ),
         ],

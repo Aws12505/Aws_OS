@@ -5,6 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/auth_provider.dart';
+import '../../../shared/design/app_theme.dart';
+import '../../../shared/design/surface_scope.dart';
+import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/glass.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
@@ -92,7 +95,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
       setState(() => _error = null);
     } else {
       setState(() =>
-          _error = 'Wrong PIN — ${_maxAttempts - _attempts} attempts left.');
+          _error = 'Wrong PIN. ${_maxAttempts - _attempts} attempts left.');
     }
   }
 
@@ -101,9 +104,11 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final cooling = _cooling;
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
+    return AppScaffold(
+      // Ambient: the lock screen is a moment, not a working surface.
+      mode: SurfaceMode.ambient,
+      bottomSafeArea: true,
+      body: Center(
           child: SingleChildScrollView(
             child: GlassCard(
               blur: true,
@@ -131,16 +136,16 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                       ],
                     ),
                     child: Icon(cooling ? Icons.lock_clock_rounded : Icons.lock_rounded,
-                        size: 36, color: Colors.white),
+                        size: 36, color: context.sem.onPrimary),
                   ),
                   const SizedBox(height: 18),
                   Text('Aws OS',
                       style: tt.headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w800)),
+                          ),
                   const SizedBox(height: 4),
                   Text(
                     cooling
-                        ? 'Too many attempts — wait ${_cooldownLeft}s'
+                        ? 'Too many attempts. Wait ${_cooldownLeft}s'
                         : 'Enter PIN to unlock',
                     style: tt.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
                     textAlign: TextAlign.center,
@@ -153,10 +158,9 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                     obscureText: true,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                        letterSpacing: 12,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w700),
+                    style: context.type.numericLarge
+                        .copyWith(fontSize: 24, letterSpacing: 12)
+                        .weight(FontWeight.w700),
                     onSubmitted: (_) => _submit(),
                     decoration: const InputDecoration(hintText: '••••'),
                   ),
@@ -187,7 +191,6 @@ class _LockScreenState extends ConsumerState<LockScreen> {
             ),
           ),
         ),
-      ),
     );
   }
 }

@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
 import 'package:uuid/uuid.dart';
 
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../data/models/share_item.dart';
 import '../../data/services/installed_apps_service.dart';
@@ -224,7 +226,7 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
       children: [
         Text(
           'Share an app',
-          style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+          style: tt.titleLarge?.weight(FontWeight.w800),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -240,7 +242,7 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
         if (apps == null)
           const Padding(
             padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
+            child: AppLoading(),
           )
         else
           SizedBox(
@@ -283,13 +285,14 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
         Row(
           children: [
             IconButton(
+              tooltip: 'Back to the app list',
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () => setState(() => _selected = null),
             ),
             Expanded(
               child: Text(
                 app.label,
-                style: tt.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                style: tt.titleLarge?.weight(FontWeight.w800),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

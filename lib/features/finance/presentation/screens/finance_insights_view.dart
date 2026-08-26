@@ -3,19 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/charts/category_donut.dart';
 import '../../../../shared/widgets/charts/grouped_bar_chart.dart';
 import '../../../../shared/widgets/charts/trend_line_chart.dart';
-import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/insights_card.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../../../shared/widgets/stat_tile.dart';
 import '../../../../shared/utils/insights_range.dart';
 import '../../../dashboard/data/insights_service.dart';
 import '../../../dashboard/presentation/insights_providers.dart';
+import '../../../dashboard/presentation/widgets/insights_range_selector.dart';
 import '../../data/finance_breakdown.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart' as fin;
@@ -50,7 +51,7 @@ class FinanceInsightsView extends ConsumerWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
       children: [
-        const _RangeSelector(),
+        const InsightsRangeSelector(),
         ciA.when(
           loading: () => const Padding(
             padding: EdgeInsets.only(top: 40),
@@ -86,21 +87,6 @@ class FinanceInsightsView extends ConsumerWidget {
         ),
         const _BudgetsCard(),
       ],
-    );
-  }
-}
-
-class _RangeSelector extends ConsumerWidget {
-  const _RangeSelector();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final range = ref.watch(insightsRangeProvider);
-    const ranges = InsightsRange.values;
-    return SegmentedControl(
-      labels: [for (final r in ranges) r.label],
-      index: ranges.indexOf(range),
-      onTap: (i) =>
-          ref.read(insightsRangeProvider.notifier).state = ranges[i],
     );
   }
 }
@@ -159,52 +145,22 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
     final donutTotal = slices.fold<double>(0, (s, x) => s + x.amount);
     final nf = NumberFormat.compact();
 
-    return GlassCard(
+    return InsightsCard(
+      icon: Icons.account_balance_wallet_rounded,
+      color: context.sem.income.base,
+      title: cur.code,
+      subtitle: 'Balance ${_full(ins.currentBalance, cur)}',
+      takeaway: _flowTakeaway(ins, cur),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: DomainColors.income.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: const Icon(
-                  Icons.account_balance_wallet_rounded,
-                  color: DomainColors.income,
-                  size: 18,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      cur.code,
-                      style: tt.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    Text(
-                      'Balance ${_full(ins.currentBalance, cur)}',
-                      style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
                 child: MetricCard(
                   label: 'Income',
                   value: _money(ins.totalIncome, cur),
-                  accent: DomainColors.income,
+                  accent: context.sem.income.base,
                 ),
               ),
               const SizedBox(width: 8),
@@ -212,7 +168,7 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
                 child: MetricCard(
                   label: 'Expense',
                   value: _money(ins.totalExpense, cur),
-                  accent: DomainColors.expense,
+                  accent: context.sem.expense.base,
                 ),
               ),
               const SizedBox(width: 8),
@@ -221,8 +177,8 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
                   label: 'Net',
                   value: _money(ins.netFlow, cur),
                   valueColor: ins.netFlow >= 0
-                      ? DomainColors.income
-                      : DomainColors.expense,
+                      ? context.sem.income.base
+                      : context.sem.expense.base,
                 ),
               ),
             ],
@@ -264,7 +220,6 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
             'Income vs expense',
             style: tt.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -274,12 +229,12 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
             series: [
               BarSeries(
                 label: 'Income',
-                color: DomainColors.income,
+                color: context.sem.income.base,
                 values: ins.incomes,
               ),
               BarSeries(
                 label: 'Expense',
-                color: DomainColors.expense,
+                color: context.sem.expense.base,
                 values: ins.expenses,
               ),
             ],
@@ -289,7 +244,6 @@ class _CurrencyInsightCardState extends State<_CurrencyInsightCard> {
             'Balance trend',
             style: tt.labelMedium?.copyWith(
               color: cs.onSurfaceVariant,
-              fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -323,15 +277,15 @@ class _BudgetsCard extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final fmt = NumberFormat.decimalPattern();
-    return GlassCard(
+    return InsightsCard(
+      icon: Icons.savings_rounded,
+      color: context.sem.warning.base,
+      title: 'Budgets',
+      subtitle: DateFormat('MMMM').format(DateTime.now()),
+      takeaway: _budgetTakeaway(list),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Budgets · ${DateFormat('MMMM').format(DateTime.now())}',
-            style: tt.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: AppSpacing.md),
           for (final b in list)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.md),
@@ -345,32 +299,29 @@ class _BudgetsCard extends ConsumerWidget {
                           b.category.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: tt.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                          ),
+                          style: tt.bodyMedium?.weight(FontWeight.w600),
                         ),
                       ),
                       Text(
                         '${fmt.format(b.spent)} / ${fmt.format(b.budget.amount)}',
                         style: tt.labelMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                          color: b.over ? DomainColors.expense : cs.onSurface,
-                        ),
+                          color: b.over ? context.sem.expense.base : cs.onSurface,
+                        ).weight(FontWeight.w700),
                       ),
                     ],
                   ),
                   const SizedBox(height: 6),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
+                    borderRadius: BorderRadius.circular(AppRadius.xs),
                     child: LinearProgressIndicator(
                       value: b.fraction,
                       minHeight: 7,
                       backgroundColor: cs.surfaceContainerHighest,
                       color: b.over
-                          ? DomainColors.expense
+                          ? context.sem.expense.base
                           : b.rawFraction > 0.85
-                          ? DomainColors.warning
-                          : DomainColors.income,
+                          ? context.sem.warning.base
+                          : context.sem.income.base,
                     ),
                   ),
                 ],
@@ -388,3 +339,29 @@ String _money(double v, Currency c) =>
 String _full(double v, Currency c) =>
     '${NumberFormat.decimalPatternDigits(decimalDigits: c.decimalPlaces).format(v)} '
     '${c.symbol.isNotEmpty ? c.symbol : c.code}';
+
+/// Whether this currency gained or lost over the selected range.
+String? _flowTakeaway(CurrencyInsight ins, Currency cur) {
+  if (!ins.hasActivity) return null;
+  final net = ins.netFlow;
+  if (net > 0) return 'Up ${_full(net, cur)} over this range.';
+  if (net < 0) return 'Down ${_full(net.abs(), cur)} over this range.';
+  return 'Income and spending balanced out over this range.';
+}
+
+/// Which budget needs attention, so the bars do not have to be scanned.
+String? _budgetTakeaway(List<BudgetActual> list) {
+  if (list.isEmpty) return null;
+  final over = list.where((b) => b.over).toList();
+  if (over.isNotEmpty) {
+    final worst = over.reduce((a, b) => b.rawFraction > a.rawFraction ? b : a);
+    return over.length == 1
+        ? '${worst.category.name} is over budget.'
+        : '${over.length} budgets are over, ${worst.category.name} by the most.';
+  }
+  final tightest = list.reduce((a, b) => b.rawFraction > a.rawFraction ? b : a);
+  final percent = (tightest.rawFraction * 100).round();
+  return percent >= 80
+      ? '${tightest.category.name} is the tightest at $percent% used.'
+      : 'Every budget still has room, the tightest at $percent%.';
+}

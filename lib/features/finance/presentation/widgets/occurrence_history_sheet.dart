@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/form_sheet.dart';
 import '../providers.dart';
@@ -45,12 +46,12 @@ class _Sheet extends ConsumerWidget {
           children: [
             FormSheetHeader(
               icon: DomainColors.iconForTxKind(recurrence.kind),
-              color: DomainColors.forTxKind(recurrence.kind),
+              color: context.sem.forTxKind(recurrence.kind).base,
               title: recurrence.noteTemplate ??
                   (recurrence.kind == 'income' ? 'Income' : 'Expense'),
             ),
             const SizedBox(height: 4),
-            Text('All occurrences — review or skip any of them directly.',
+            Text('All occurrences. Review or skip any of them directly.',
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
@@ -61,7 +62,7 @@ class _Sheet extends ConsumerWidget {
                 loading: () =>
                     const Padding(
                       padding: EdgeInsets.all(24),
-                      child: Center(child: CircularProgressIndicator()),
+                      child: AppLoading(),
                     ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.all(24),

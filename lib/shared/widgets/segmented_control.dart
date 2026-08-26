@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-import '../design/tokens.dart';
+import '../design/app_theme.dart';
+import '../design/color_ops.dart';
+import 'app_card.dart';
 
 /// A pill-style segmented control — the app's house alternative to a raw
 /// [TabBar]. The selected segment gets a filled primary background with a soft
@@ -37,28 +40,36 @@ class SegmentedControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     final selectedBg = color ?? cs.primary;
-    final selectedFg = color != null ? Colors.white : cs.onPrimary;
+    // White is not always readable on a caller-supplied accent, and the user
+    // can pick any seed. Ask which of the two extremes actually passes.
+    final selectedFg = color != null
+        ? bestForegroundOn(selectedBg)
+        : cs.onPrimary;
+    final surface = resolveSurface(context);
     return Container(
       margin: margin,
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: isDark ? 0.55 : 0.72),
+        color: surface.fill,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+        border: Border.all(color: surface.border),
       ),
       child: Row(
         children: [
           for (var i = 0; i < labels.length; i++)
             Expanded(
               child: GestureDetector(
-                onTap: () => onTap(i),
+                onTap: () {
+                  if (i == index) return;
+                  HapticFeedback.selectionClick();
+                  onTap(i);
+                },
                 behavior: HitTestBehavior.opaque,
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 240),
-                  curve: Curves.easeOut,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  duration: context.motion.short,
+                  curve: context.motion.standardCurve,
+                                    padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
                     color: i == index ? selectedBg : Colors.transparent,
                     borderRadius: BorderRadius.circular(AppRadius.md),
@@ -96,8 +107,7 @@ class SegmentedControl extends StatelessWidget {
                             color: i == index
                                 ? selectedFg
                                 : cs.onSurfaceVariant,
-                            fontWeight: FontWeight.w700,
-                          ),
+                          ).weight(FontWeight.w700),
                         ),
                       ],
                     ),

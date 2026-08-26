@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/design/surface_scope.dart';
+import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/segmented_control.dart';
+import '../../../mentor/data/forecast_service.dart';
+import '../../../mentor/presentation/mentor_providers.dart';
 import '../gym_insights_view.dart';
 import 'measurements_view.dart';
 import 'programs_view.dart';
@@ -39,70 +44,72 @@ class _GymScreenState extends ConsumerState<GymScreen>
 
   @override
   Widget build(BuildContext context) {
-    final tt = Theme.of(context).textTheme;
-    const accent = Color(0xFFEF4444);
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 14, 12, 6),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'TRAINING',
-                          style: tt.labelSmall?.copyWith(
-                            color: accent,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.6,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'Gym',
-                          style: tt.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.6,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  IconButton.filledTonal(
-                    tooltip: 'Gym mentor',
-                    icon: const Icon(Icons.psychology_rounded),
-                    onPressed: () => context.push('/mentor?kind=gym'),
-                  ),
-                ],
-              ),
+    final accent = context.sem.gym;
+    final forecast = ref.watch(gymForecastProvider).valueOrNull;
+
+    // Ambient host: the aurora shows through on Insights. The two dense tabs
+    // cover it with their own working canvas.
+    return AppScaffold(
+      mode: SurfaceMode.ambient,
+      body: Column(
+        children: [
+          SectionHeader(
+            title: 'Gym',
+            status: _trainingStatus(forecast),
+            statusIcon: Icons.bolt_rounded,
+            statusColor: _statusIsWarm(forecast) ? accent.fg : null,
+            trailing: IconButton.filledTonal(
+              tooltip: 'Gym mentor',
+              icon: const Icon(Icons.psychology_rounded),
+              onPressed: () => context.push('/mentor?kind=gym'),
             ),
-            SegmentedControl(
-              labels: _labels,
-              icons: _icons,
-              index: _tabs.index,
-              color: accent,
-              onTap: (i) => _tabs.animateTo(i),
+          ),
+          SegmentedControl(
+            labels: _labels,
+            icons: _icons,
+            index: _tabs.index,
+            color: accent.base,
+            onTap: (i) => _tabs.animateTo(i),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Expanded(
+            child: TabBarView(
+              controller: _tabs,
+              children: const [
+                GymInsightsView(),
+                WorkingSurface(child: MeasurementsView()),
+                WorkingSurface(child: ProgramsView()),
+              ],
             ),
-            const SizedBox(height: 4),
-            Expanded(
-              child: TabBarView(
-                controller: _tabs,
-                children: const [
-                  GymInsightsView(),
-                  MeasurementsView(),
-                  ProgramsView(),
-                ],
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
+
+/// What the training week looks like right now.
+///
+/// This line replaces the uppercase 'TRAINING' kicker, which only repeated the
+/// Gym label the user had just tapped in the nav bar.
+String? _trainingStatus(GymForecast? f) {
+  if (f == null) return null;
+  if (!f.hasData) return 'No sessions logged yet';
+
+  final days = f.lastSessionDaysAgo;
+  final last = switch (days) {
+    null => 'No sessions yet',
+    0 => 'Trained today',
+    1 => 'Trained yesterday',
+    final d => 'Last session $d days ago',
+  };
+  if (f.currentWeekStreak > 1) {
+    return '$last, ${f.currentWeekStreak} week streak';
+  }
+  return last;
+}
+
+/// Tints the status only when it is worth noticing: trained today, or a streak
+/// worth keeping. Neutral information stays neutral.
+bool _statusIsWarm(GymForecast? f) =>
+    f != null && f.hasData && (f.lastSessionDaysAgo == 0 || f.currentWeekStreak > 1);

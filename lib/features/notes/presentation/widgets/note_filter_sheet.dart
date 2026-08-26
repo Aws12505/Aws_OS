@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/utils/date_preset.dart';
 import '../../../../shared/widgets/app_chip.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
-import '../../../../shared/widgets/date_time_picker.dart';
+import '../../../../shared/widgets/date_range_row.dart';
+import '../../../../shared/widgets/section_header.dart';
 import '../note_filter.dart';
 import '../providers.dart';
 
-/// Resolved display color for a tag — its stored color, or the notes accent.
-Color tagColor(Tag t) => t.color != null ? Color(t.color!) : DomainColors.notes;
+/// Display color for a tag: its own stored color, or the notes accent.
+Color tagColor(BuildContext context, Tag t) =>
+    t.color != null ? Color(t.color!) : context.sem.notes.base;
 
 void showNoteFilterSheet(BuildContext context) {
   showAppModalBottomSheet(
@@ -56,7 +57,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                 height: 4,
                 decoration: BoxDecoration(
                   color: cs.outlineVariant,
-                  borderRadius: BorderRadius.circular(2),
+                  borderRadius: BorderRadius.circular(AppRadius.xs),
                 ),
               ),
             ),
@@ -66,9 +67,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                 children: [
                   Text(
                     'Filter notes',
-                    style: tt.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
+                    style: tt.titleMedium,
                   ),
                   const Spacer(),
                   TextButton(
@@ -87,7 +86,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
                 children: [
                   if (tags.isNotEmpty) ...[
-                    const _SectionLabel('TAGS'),
+                    const SectionLabel('Tags'),
                     const SizedBox(height: 8),
                     Wrap(
                       spacing: 8,
@@ -96,7 +95,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                         for (final t in tags)
                           AppChip(
                             label: t.name,
-                            color: tagColor(t),
+                            color: tagColor(context, t),
                             selected: filter.tagIds.contains(t.id),
                             onTap: () => update(filter.toggleTag(t.id)),
                           ),
@@ -105,7 +104,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                     const SizedBox(height: 20),
                   ],
 
-                  const _SectionLabel('DATE'),
+                  const SectionLabel('Date'),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
@@ -115,7 +114,7 @@ class _NoteFilterSheet extends ConsumerWidget {
                         if (p != DatePreset.custom)
                           AppChip(
                             label: p.label,
-                            color: DomainColors.notes,
+                            color: context.sem.notes.base,
                             selected: filter.datePreset == p,
                             onTap: () => update(
                               filter.copyWith(
@@ -128,10 +127,29 @@ class _NoteFilterSheet extends ConsumerWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  _CustomDateRow(filter: filter, onUpdate: update),
+                  DateRangeRow(
+                    from: filter.customFrom,
+                    to: filter.customTo,
+                    selected: filter.datePreset == DatePreset.custom,
+                    color: context.sem.notes.base,
+                    onPicked: (from, to) => update(
+                      filter.copyWith(
+                        datePreset: DatePreset.custom,
+                        customFrom: from,
+                        customTo: to,
+                      ),
+                    ),
+                    onCleared: () => update(
+                      filter.copyWith(
+                        datePreset: DatePreset.all,
+                        customFrom: null,
+                        customTo: null,
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 20),
 
-                  const _SectionLabel('OPTIONS'),
+                  const SectionLabel('Options'),
                   const SizedBox(height: 4),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
@@ -155,85 +173,3 @@ class _NoteFilterSheet extends ConsumerWidget {
   }
 }
 
-class _CustomDateRow extends StatelessWidget {
-  const _CustomDateRow({required this.filter, required this.onUpdate});
-  final NoteFilter filter;
-  final void Function(NoteFilter) onUpdate;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final fmt = DateFormat.MMMd();
-    final isCustom = filter.datePreset == DatePreset.custom;
-
-    Future<void> pickRange() async {
-      final from = await pickDate(
-        context,
-        initial: filter.customFrom ?? DateTime.now(),
-      );
-      if (from == null || !context.mounted) return;
-      final to = await pickDate(
-        context,
-        initial: filter.customTo ?? from,
-        firstDate: from,
-      );
-      if (to == null) return;
-      onUpdate(
-        filter.copyWith(
-          datePreset: DatePreset.custom,
-          customFrom: from,
-          customTo: to,
-        ),
-      );
-    }
-
-    return Row(
-      children: [
-        AppChip(
-          label: isCustom && filter.customFrom != null
-              ? '${fmt.format(filter.customFrom!)} – ${fmt.format(filter.customTo ?? filter.customFrom!)}'
-              : 'Custom range…',
-          icon: Icons.date_range_rounded,
-          color: DomainColors.notes,
-          selected: isCustom,
-          onTap: pickRange,
-        ),
-        if (isCustom) ...[
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () => onUpdate(
-              filter.copyWith(
-                datePreset: DatePreset.all,
-                customFrom: null,
-                customTo: null,
-              ),
-            ),
-            child: Icon(
-              Icons.close_rounded,
-              size: 18,
-              color: cs.onSurfaceVariant,
-            ),
-          ),
-        ],
-      ],
-    );
-  }
-}
-
-class _SectionLabel extends StatelessWidget {
-  const _SectionLabel(this.text);
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Text(
-      text,
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: cs.onSurfaceVariant,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 1.2,
-      ),
-    );
-  }
-}

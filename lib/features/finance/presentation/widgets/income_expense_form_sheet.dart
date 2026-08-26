@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
@@ -133,7 +133,7 @@ class _FormState extends ConsumerState<_Form> {
     final byCurrency = {for (final c in currencies) c.id: c};
 
     final title = _isExpense ? 'New expense' : 'New income';
-    final color = DomainColors.forTxKind(widget.kind);
+    final color = context.sem.forTxKind(widget.kind).base;
     final icon = DomainColors.iconForTxKind(widget.kind);
 
     return Padding(
@@ -246,7 +246,7 @@ class _LinkedChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tx = entry.transaction;
-    final color = DomainColors.forTxKind(tx.kind);
+    final color = context.sem.forTxKind(tx.kind).base;
     return Chip(
       avatar: Icon(DomainColors.iconForTxKind(tx.kind), size: 16, color: color),
       label: Text(
@@ -326,8 +326,9 @@ class _LineEditor extends StatelessWidget {
             ),
           ),
           IconButton(
+            tooltip: 'Remove this row',
             onPressed: canRemove ? onRemove : null,
-            icon: const Icon(Icons.close),
+            icon: const Icon(Icons.close_rounded),
           ),
         ],
       ),
@@ -368,19 +369,20 @@ class _CategoryTypePicker extends ConsumerWidget {
           initialValue: categoryId,
           decoration: const InputDecoration(labelText: 'Category (optional)'),
           items: [
-            const DropdownMenuItem(value: null, child: Text('— none —')),
+            const DropdownMenuItem(value: null, child: Text('None')),
             for (final c in cats)
               DropdownMenuItem(value: c.id, child: Text(c.name)),
           ],
           onChanged: onCategoryChanged,
         ),
         if (categoryId != null) ...[
-          const SizedBox(height: 12),
+          _LastAmountHint(categoryId: categoryId!),
+          const SizedBox(height: AppSpacing.md),
           DropdownButtonFormField<String?>(
             initialValue: typeId,
             decoration: const InputDecoration(labelText: 'Type (optional)'),
             items: [
-              const DropdownMenuItem(value: null, child: Text('— none —')),
+              const DropdownMenuItem(value: null, child: Text('None')),
               for (final t in types)
                 DropdownMenuItem(value: t.id, child: Text(t.name)),
             ],
@@ -388,6 +390,42 @@ class _CategoryTypePicker extends ConsumerWidget {
           ),
         ],
       ],
+    );
+  }
+}
+
+/// What this category cost last time.
+///
+/// Same idea as the "last time" line beside a gym set: entering a number is
+/// easier when the app shows you the one it already has.
+class _LastAmountHint extends ConsumerWidget {
+  const _LastAmountHint({required this.categoryId});
+
+  final String categoryId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final last = ref.watch(lastAmountForCategoryProvider(categoryId));
+    if (last == null) return const SizedBox.shrink();
+
+    final currencies = ref.watch(currenciesStreamProvider).value ?? const [];
+    Currency? cur;
+    for (final c in currencies) {
+      if (c.id == last.currencyId) cur = c;
+    }
+    final amount = NumberFormat.decimalPatternDigits(
+      decimalDigits: cur?.decimalPlaces ?? 2,
+    ).format(last.amount);
+    final code = cur?.symbol.isNotEmpty == true ? cur!.symbol : (cur?.code ?? '');
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, left: 4),
+      child: Text(
+        'last $amount $code on ${DateFormat.MMMd().format(last.at)}',
+        style: context.type.numericSmall.copyWith(
+          color: context.surfaces.textTertiary,
+        ),
+      ),
     );
   }
 }

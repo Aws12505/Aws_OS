@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -14,6 +14,7 @@ import '../features/settings/presentation/lock_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/sharing/presentation/sharing_screen.dart';
 import '../features/tasks/presentation/screens/tasks_screen.dart';
+import '../shared/design/app_theme.dart';
 import '../shared/widgets/main_scaffold.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
@@ -36,52 +37,55 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/',
             pageBuilder: (c, s) =>
-                const NoTransitionPage(child: DashboardScreen()),
+                _fadeThrough(c, const DashboardScreen()),
           ),
           GoRoute(
             path: '/finance',
             pageBuilder: (c, s) =>
-                const NoTransitionPage(child: FinanceScreen()),
+                _fadeThrough(c, const FinanceScreen()),
           ),
           GoRoute(
             path: '/tasks',
-            pageBuilder: (c, s) => const NoTransitionPage(child: TasksScreen()),
+            pageBuilder: (c, s) => _fadeThrough(c, const TasksScreen()),
           ),
           GoRoute(
             path: '/gym',
-            pageBuilder: (c, s) => const NoTransitionPage(child: GymScreen()),
+            pageBuilder: (c, s) => _fadeThrough(c, const GymScreen()),
           ),
           GoRoute(
             path: '/notes',
-            pageBuilder: (c, s) => const NoTransitionPage(child: NotesScreen()),
+            pageBuilder: (c, s) => _fadeThrough(c, const NotesScreen()),
           ),
           GoRoute(
             path: '/sharing',
             pageBuilder: (c, s) =>
-                const NoTransitionPage(child: SharingScreen()),
+                _fadeThrough(c, const SharingScreen()),
           ),
         ],
       ),
       GoRoute(
         path: '/debrief',
-        builder: (c, s) {
+        pageBuilder: (c, s) {
           final raw = s.uri.queryParameters['date'];
           final date = raw != null ? DateTime.tryParse(raw) : null;
-          return DebriefScreen(date: date);
+          return _detailPage(c, DebriefScreen(date: date));
         },
       ),
       GoRoute(
         path: '/mentor',
-        builder: (c, s) {
+        pageBuilder: (c, s) {
           final raw = s.uri.queryParameters['kind'];
           final kind = MentorKind.values.firstWhere(
             (k) => k.name == raw,
             orElse: () => MentorKind.finance,
           );
-          return MentorScreen(kind: kind);
+          return _detailPage(c, MentorScreen(kind: kind));
         },
       ),
-      GoRoute(path: '/settings', builder: (c, s) => const SettingsScreen()),
+      GoRoute(
+        path: '/settings',
+        pageBuilder: (c, s) => _detailPage(c, const SettingsScreen()),
+      ),
       GoRoute(path: '/lock', builder: (c, s) => const LockScreen()),
     ],
   );
@@ -94,4 +98,48 @@ class _RouterRefresh extends ChangeNotifier {
     ref.listen<auth.LockState>(auth.lockProvider, (_, _) => notifyListeners());
   }
   final Ref ref;
+}
+
+/// Content-only fade between the six shell tabs.
+///
+/// These are peers, so nothing should slide: a direction would imply a
+/// hierarchy that is not there. The aurora sits above the router and is not
+/// part of the page, so it stays perfectly still through the swap, which is
+/// the whole reason the shell used `NoTransitionPage` before.
+CustomTransitionPage<void> _fadeThrough(BuildContext context, Widget child) {
+  final motion = context.motion;
+  return CustomTransitionPage<void>(
+    child: child,
+    transitionDuration: motion.short,
+    reverseTransitionDuration: motion.quick,
+    transitionsBuilder: (_, animation, _, page) => FadeTransition(
+      opacity: CurvedAnimation(parent: animation, curve: motion.standardCurve),
+      child: page,
+    ),
+  );
+}
+
+/// One transition for every pushed detail route, defined here rather than
+/// per route so they cannot drift apart.
+CustomTransitionPage<void> _detailPage(BuildContext context, Widget child) {
+  final motion = context.motion;
+  return CustomTransitionPage<void>(
+    child: child,
+    transitionDuration: motion.medium,
+    reverseTransitionDuration: motion.short,
+    transitionsBuilder: (_, animation, _, page) {
+      final curved = CurvedAnimation(
+        parent: animation,
+        curve: motion.enter,
+        reverseCurve: motion.exit,
+      );
+      return FadeTransition(
+        opacity: curved,
+        child: ScaleTransition(
+          scale: Tween<double>(begin: 0.97, end: 1).animate(curved),
+          child: page,
+        ),
+      );
+    },
+  );
 }

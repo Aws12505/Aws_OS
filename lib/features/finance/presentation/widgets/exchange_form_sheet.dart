@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
-import '../../../../shared/design/tokens.dart';
+import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/date_time_picker.dart';
@@ -74,7 +74,7 @@ class _FormState extends ConsumerState<_Form> {
     final to = accounts.firstWhere((a) => a.id == _toId);
     if (from.currencyId == to.currencyId) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Same currency — use Transfer instead.'),
+        content: Text('Same currency. Use Transfer instead.'),
       ));
       return;
     }
@@ -114,7 +114,7 @@ class _FormState extends ConsumerState<_Form> {
     final toAmt = double.tryParse(_toAmount.text.replaceAll(',', '.'));
     final rateText = (fromAmt != null && fromAmt > 0 && toAmt != null)
         ? '1 ${fromCur?.code ?? '?'} = ${NumberFormat.decimalPatternDigits(decimalDigits: 6).format(toAmt / fromAmt)} ${toCur?.code ?? '?'}'
-        : '—';
+        : '-';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
@@ -127,7 +127,7 @@ class _FormState extends ConsumerState<_Form> {
             children: [
               FormSheetHeader(
                 icon: Icons.swap_horiz_rounded,
-                color: DomainColors.exchange,
+                color: context.sem.exchange.base,
                 title: 'Exchange',
               ),
               const SizedBox(height: 16),

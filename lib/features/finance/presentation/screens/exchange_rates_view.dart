@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
+import '../../../../shared/design/app_theme.dart';
+import '../../../../shared/widgets/app_error_view.dart';
+import '../../../../shared/widgets/app_loading.dart';
 import '../providers.dart';
 
 class ExchangeRatesView extends ConsumerWidget {
@@ -14,8 +17,8 @@ class ExchangeRatesView extends ConsumerWidget {
     final currenciesAsync = ref.watch(currenciesStreamProvider);
 
     return ratesAsync.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(child: Text(e.toString())),
+      loading: () => const AppLoading(),
+      error: (e, _) => AppErrorView(error: e),
       data: (rates) {
         if (rates.isEmpty) {
           return const Center(
@@ -33,7 +36,7 @@ class ExchangeRatesView extends ConsumerWidget {
             c.id: c,
         };
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
           itemCount: rates.length,
           separatorBuilder: (_, _) => const SizedBox(height: 4),
           itemBuilder: (_, i) {
