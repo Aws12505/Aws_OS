@@ -18,7 +18,7 @@ class BarSeries {
 }
 
 /// A themed grouped bar chart built on `fl_chart`. Handles empty data, thins
-/// x-labels, and auto-scales the y-axis. Wrap it in a [GlassCard] at the call
+/// x-labels, and auto-scales the y-axis. Wrap it in a [AppCard] at the call
 /// site and render the legend from the [BarSeries] labels.
 class GroupedBarChart extends StatelessWidget {
   const GroupedBarChart({

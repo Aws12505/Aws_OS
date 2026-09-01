@@ -5,13 +5,13 @@ import 'package:intl/intl.dart';
 import '../../../core/ai/ai_providers.dart';
 import '../../../core/ai/ai_service.dart';
 import '../../../shared/design/app_theme.dart';
-import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_buttons.dart';
 import '../../../shared/widgets/app_empty_state.dart';
 import '../../../shared/widgets/app_error_view.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/pills.dart';
 import '../../../shared/widgets/sparkline.dart';
 import '../../../shared/widgets/stat_tile.dart';
 import '../data/forecast_service.dart';
@@ -42,7 +42,6 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      mode: SurfaceMode.ambient,
       appBar: AppBar(title: Text(widget.kind.title)),
       body: switch (widget.kind) {
         MentorKind.finance => _finance(),
@@ -69,7 +68,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         return ListView(
           padding: const EdgeInsets.fromLTRB(0, 8, 0, 40),
           children: [
-            GlassCard(
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -132,7 +131,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 ],
               ),
             ),
-            GlassCard(
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -165,7 +164,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               ),
             ),
             if (f.topCategories.isNotEmpty)
-              GlassCard(
+              AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -236,7 +235,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               ),
             ),
             for (final m in g.measurements)
-              GlassCard(
+              AppCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -329,7 +328,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 ],
               ),
             ),
-            GlassCard(
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -356,7 +355,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         ref.watch(aiConfigProvider).value?.isConfigured ?? false;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    return GlassCard(
+    return AppCard(
+      style: CardStyle.block,
       borderColor: _accent.withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -484,7 +484,6 @@ class _CatBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
-    final cs = Theme.of(context).colorScheme;
     final frac = max <= 0 ? 0.0 : (amount / max).clamp(0.0, 1.0);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
@@ -507,7 +506,7 @@ class _CatBar extends StatelessWidget {
             child: LinearProgressIndicator(
               value: frac,
               minHeight: 6,
-              backgroundColor: cs.surfaceContainerHighest,
+              backgroundColor: context.surfaces.sunken,
               color: color,
             ),
           ),

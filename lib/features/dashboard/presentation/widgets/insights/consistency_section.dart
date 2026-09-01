@@ -38,7 +38,7 @@ class _ConsistencyCard extends ConsumerWidget {
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard();
   @override
-  Widget build(BuildContext context) => const GlassCard(
+  Widget build(BuildContext context) => const AppCard(
     child: SizedBox(height: 120, child: AppLoading()),
   );
 }

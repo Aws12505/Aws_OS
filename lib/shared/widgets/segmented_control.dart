@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../design/app_theme.dart';
-import '../design/color_ops.dart';
-import 'app_card.dart';
 
-/// A pill-style segmented control — the app's house alternative to a raw
-/// [TabBar]. The selected segment gets a filled primary background with a soft
-/// glow; the rest stay flat. Promoted from finance_screen so the dashboard,
-/// finance and any future screens share one implementation.
+/// Underlined tabs. The app's one segmented control.
+///
+/// It used to be a pill: a bordered track with a filled, glowing capsule
+/// sliding between segments. That is three decorations to say one thing. A rule
+/// under the row and a heavier rule under the selected label says it with two
+/// lines, and it matches the rules everything else on the page is separated by.
+///
+/// The selected marker animates its width and offset, which is the one place
+/// in this design where motion carries meaning rather than polish: it shows
+/// which way you moved.
 class SegmentedControl extends StatelessWidget {
   const SegmentedControl({
     super.key,
@@ -17,10 +21,7 @@ class SegmentedControl extends StatelessWidget {
     required this.onTap,
     this.icons,
     this.color,
-    this.margin = const EdgeInsets.symmetric(
-      horizontal: AppSpacing.lg,
-      vertical: 6,
-    ),
+    this.margin = const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
   });
 
   final List<String> labels;
@@ -29,8 +30,8 @@ class SegmentedControl extends StatelessWidget {
   /// the affected segments render label-only.
   final List<IconData>? icons;
 
-  /// Selected-segment fill. Defaults to the theme primary; pass a feature accent
-  /// (e.g. the gym red) to tint the control.
+  /// Marker and selected-label colour. Defaults to the theme primary; pass a
+  /// feature accent to tint the control.
   final Color? color;
   final int index;
   final ValueChanged<int> onTap;
@@ -40,21 +41,12 @@ class SegmentedControl extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final selectedBg = color ?? cs.primary;
-    // White is not always readable on a caller-supplied accent, and the user
-    // can pick any seed. Ask which of the two extremes actually passes.
-    final selectedFg = color != null
-        ? bestForegroundOn(selectedBg)
-        : cs.onPrimary;
-    final surface = resolveSurface(context);
-    return Container(
-      margin: margin,
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: surface.fill,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: surface.border),
-      ),
+    final surfaces = context.surfaces;
+    final motion = context.motion;
+    final accent = color ?? cs.primary;
+
+    return Padding(
+      padding: margin,
       child: Row(
         children: [
           for (var i = 0; i < labels.length; i++)
@@ -66,52 +58,63 @@ class SegmentedControl extends StatelessWidget {
                   onTap(i);
                 },
                 behavior: HitTestBehavior.opaque,
-                child: AnimatedContainer(
-                  duration: context.motion.short,
-                  curve: context.motion.standardCurve,
-                                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: i == index ? selectedBg : Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppRadius.md),
-                    boxShadow: i == index
-                        ? [
-                            BoxShadow(
-                              color: selectedBg.withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: const Offset(0, 4),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.md,
+                      ),
+                      // Scale down rather than truncate: several of these
+                      // carry three or four long labels on a 360dp screen.
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (icons != null && i < icons!.length) ...[
+                              Icon(
+                                icons![i],
+                                size: 15,
+                                color: i == index
+                                    ? accent
+                                    : surfaces.textTertiary,
+                              ),
+                              const SizedBox(width: AppSpacing.xs + 2),
+                            ],
+                            Text(
+                              labels[i],
+                              maxLines: 1,
+                              textAlign: TextAlign.center,
+                              style: tt.labelLarge
+                                  ?.copyWith(
+                                    color: i == index
+                                        ? surfaces.textPrimary
+                                        : surfaces.textTertiary,
+                                  )
+                                  .weight(
+                                    i == index
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
                             ),
-                          ]
-                        : null,
-                  ),
-                  // Scale the icon+label down to fit narrow segments (many
-                  // tabs / long labels) instead of truncating the text.
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (icons != null && i < icons!.length) ...[
-                          Icon(
-                            icons![i],
-                            size: 16,
-                            color:
-                                i == index ? selectedFg : cs.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 6),
-                        ],
-                        Text(
-                          labels[i],
-                          maxLines: 1,
-                          textAlign: TextAlign.center,
-                          style: tt.labelLarge?.copyWith(
-                            color: i == index
-                                ? selectedFg
-                                : cs.onSurfaceVariant,
-                          ).weight(FontWeight.w700),
+                          ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                    // The unselected segments carry the hairline, so the rule
+                    // runs unbroken under the whole row and the marker reads as
+                    // a thickening of it rather than a separate bar.
+                    AnimatedContainer(
+                      duration: motion.short,
+                      curve: motion.standardCurve,
+                      height: i == index ? 2 : AppSurfaces.hairlineWidth,
+                      margin: EdgeInsets.only(
+                        bottom: i == index ? 0 : 2 - AppSurfaces.hairlineWidth,
+                      ),
+                      color: i == index ? accent : surfaces.hairline,
+                    ),
+                  ],
                 ),
               ),
             ),

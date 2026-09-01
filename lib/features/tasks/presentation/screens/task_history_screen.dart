@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
@@ -16,7 +15,6 @@ class TaskHistoryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(taskHistoryStreamProvider(taskId));
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Task history')),
       body: async.when(
         loading: () => const AppLoading(),

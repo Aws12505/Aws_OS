@@ -1,12 +1,14 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../app/shell_navigator.dart';
 import '../design/app_theme.dart';
+import 'app_nav_bar.dart';
 import 'quick_action_fab.dart';
 
+/// The shell around the six tabs: the nav bar, the quick-add button, and the
+/// rule that switching tab always works.
 class MainScaffold extends StatelessWidget {
   const MainScaffold({super.key, required this.child, required this.location});
 
@@ -16,39 +18,51 @@ class MainScaffold extends StatelessWidget {
   static const _destinations = <_NavDestination>[
     _NavDestination(
       '/',
-      Icons.dashboard_outlined,
-      Icons.dashboard_rounded,
-      'Home',
+      NavItem(
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard_rounded,
+        label: 'Home',
+      ),
     ),
     _NavDestination(
       '/finance',
-      Icons.account_balance_wallet_outlined,
-      Icons.account_balance_wallet_rounded,
-      'Finance',
+      NavItem(
+        icon: Icons.account_balance_wallet_outlined,
+        selectedIcon: Icons.account_balance_wallet_rounded,
+        label: 'Finance',
+      ),
     ),
     _NavDestination(
       '/tasks',
-      Icons.checklist_outlined,
-      Icons.checklist_rounded,
-      'Tasks',
+      NavItem(
+        icon: Icons.checklist_outlined,
+        selectedIcon: Icons.checklist_rounded,
+        label: 'Tasks',
+      ),
     ),
     _NavDestination(
       '/gym',
-      Icons.fitness_center_outlined,
-      Icons.fitness_center_rounded,
-      'Gym',
+      NavItem(
+        icon: Icons.fitness_center_outlined,
+        selectedIcon: Icons.fitness_center_rounded,
+        label: 'Gym',
+      ),
     ),
     _NavDestination(
       '/notes',
-      Icons.sticky_note_2_outlined,
-      Icons.sticky_note_2_rounded,
-      'Notes',
+      NavItem(
+        icon: Icons.sticky_note_2_outlined,
+        selectedIcon: Icons.sticky_note_2_rounded,
+        label: 'Notes',
+      ),
     ),
     _NavDestination(
       '/sharing',
-      Icons.share_outlined,
-      Icons.share_rounded,
-      'Share',
+      NavItem(
+        icon: Icons.share_outlined,
+        selectedIcon: Icons.share_rounded,
+        label: 'Share',
+      ),
     ),
   ];
 
@@ -62,62 +76,51 @@ class MainScaffold extends StatelessWidget {
     return 0;
   }
 
+  /// Switches tab, unwinding anything pushed on top of the current one first.
+  ///
+  /// Without the unwind the tap is swallowed: detail screens are pushed onto
+  /// the shell navigator, so `go` replaces the page beneath them and the pushed
+  /// screen stays on top. Tapping the tab you are already on unwinds without
+  /// navigating, which is the usual way back to the top of a section.
+  void _onDestinationSelected(BuildContext context, int i) {
+    final index = _indexFor(location);
+    final nav = shellNavigatorKey.currentState;
+    final wasDeep = nav != null && nav.canPop();
+    if (i == index && !wasDeep) return;
+
+    HapticFeedback.selectionClick();
+    if (wasDeep) nav.popUntil((route) => route.isFirst);
+    if (i != index) context.go(_destinations[i].route);
+  }
+
   @override
   Widget build(BuildContext context) {
-    final index = _indexFor(location);
-    final surfaces = context.surfaces;
-
     return Scaffold(
-      extendBody: true,
-      backgroundColor: Colors.transparent,
+      // The bar is opaque now, so it takes its own space rather than having
+      // content scroll under it.
+      extendBody: false,
+      backgroundColor: context.surfaces.canvas,
       body: child,
-      floatingActionButton: const QuickActionFab(),
-      bottomNavigationBar: ClipRect(
-        // ClipRect, not ClipRRect: the bar is square-edged, and the clip is
-        // here only to bound the blur to the bar's own rectangle.
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: surfaces.navFill,
-              border: Border(
-                top: BorderSide(color: surfaces.navBorder, width: 1),
-              ),
-            ),
-            child: NavigationBar(
-              selectedIndex: index,
-              onDestinationSelected: (i) {
-                if (i == index) return;
-                HapticFeedback.selectionClick();
-                context.go(_destinations[i].route);
-              },
-              backgroundColor: Colors.transparent,
-              destinations: [
-                for (final d in _destinations)
-                  NavigationDestination(
-                    icon: Icon(d.icon),
-                    selectedIcon: Icon(d.selectedIcon),
-                    label: d.label,
-                    tooltip: d.label,
-                  ),
-              ],
-            ),
-          ),
-        ),
+      // Hidden while a detail screen is open over the tab. Those screens have
+      // their own actions, and two floating buttons in one corner is a choice
+      // nobody wants to make.
+      floatingActionButton: ValueListenableBuilder<int>(
+        valueListenable: shellDepth,
+        builder: (_, depth, _) =>
+            depth == 0 ? const QuickActionFab() : const SizedBox.shrink(),
+      ),
+      bottomNavigationBar: AppNavBar(
+        items: [for (final d in _destinations) d.item],
+        selectedIndex: _indexFor(location),
+        onSelected: (i) => _onDestinationSelected(context, i),
       ),
     );
   }
 }
 
+/// A nav item and the route it goes to.
 class _NavDestination {
-  const _NavDestination(
-    this.route,
-    this.icon,
-    this.selectedIcon,
-    this.label,
-  );
+  const _NavDestination(this.route, this.item);
   final String route;
-  final IconData icon;
-  final IconData selectedIcon;
-  final String label;
+  final NavItem item;
 }

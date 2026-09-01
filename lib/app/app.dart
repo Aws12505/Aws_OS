@@ -7,7 +7,6 @@ import '../core/providers/auth_provider.dart';
 import '../core/providers/reminder_time_provider.dart';
 import '../features/finance/presentation/providers.dart';
 import '../features/tasks/presentation/providers.dart' as tasks;
-import '../shared/widgets/app_background.dart';
 import 'router.dart';
 import 'theme.dart';
 
@@ -64,11 +63,6 @@ class _AwsOsAppState extends ConsumerState<AwsOsApp>
       darkTheme: buildTheme(themeSettings, Brightness.dark),
       themeMode: themeSettings.themeMode,
       routerConfig: router,
-      builder: (context, child) {
-        // A single persistent aurora backdrop sits behind every route, so
-        // content slides over a continuous, living background.
-        return AuroraBackground(child: child);
-      },
     );
   }
 }

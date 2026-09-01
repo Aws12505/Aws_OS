@@ -20,7 +20,7 @@ class _SummaryCard extends ConsumerWidget {
     final aiConfigured =
         ref.watch(aiConfigProvider).value?.isConfigured ?? false;
     final summary = entry?.aiSummary;
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

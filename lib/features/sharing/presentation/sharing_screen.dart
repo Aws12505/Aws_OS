@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../shared/design/app_theme.dart';
-import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_scaffold.dart';
 import '../../../shared/widgets/segmented_control.dart';
@@ -84,7 +83,6 @@ class _SharingScreenState extends ConsumerState<SharingScreen> {
     final session = ref.watch(shareSessionProvider);
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       body: Column(
         children: [
           SectionHeader(

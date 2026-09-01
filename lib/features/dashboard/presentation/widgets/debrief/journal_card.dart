@@ -31,7 +31,7 @@ class _JournalCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -147,12 +147,12 @@ class _ScalePicker extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: value != null && i <= value!
                             ? colorFor(value!).withValues(alpha: 0.9)
-                            : cs.surfaceContainerHighest.withValues(alpha: 0.6),
+                            : context.surfaces.sunken,
                         borderRadius: BorderRadius.circular(AppRadius.sm),
                         border: Border.all(
                           color: value == i
                               ? colorFor(i)
-                              : cs.outlineVariant.withValues(alpha: 0.4),
+                              : context.surfaces.hairline,
                           width: value == i ? 2 : 1,
                         ),
                       ),

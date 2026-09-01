@@ -21,7 +21,7 @@ class LineSeries {
 
 /// A themed multi-series line chart built on `fl_chart`. Handles empty, flat and
 /// negative data, auto-frames the y-range, and thins x-labels so they never
-/// overlap. Wrap it in a [GlassCard] at the call site.
+/// overlap. Wrap it in a [AppCard] at the call site.
 class TrendLineChart extends StatelessWidget {
   const TrendLineChart({
     super.key,

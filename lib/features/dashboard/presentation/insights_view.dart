@@ -8,7 +8,6 @@ import '../../../shared/design/app_theme.dart';
 import '../../../shared/widgets/charts/activity_heatmap.dart';
 import '../../../shared/widgets/charts/grouped_bar_chart.dart';
 import '../../../shared/widgets/charts/trend_line_chart.dart';
-import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/insights_card.dart';
 import '../../../shared/widgets/metric_grid.dart';
 import '../../../shared/widgets/sparkline.dart';
@@ -20,6 +19,7 @@ import '../data/insights_service.dart';
 import 'insights_providers.dart';
 import '../../../shared/widgets/app_loading.dart';
 import 'widgets/insights_range_selector.dart';
+import '../../../shared/widgets/app_card.dart';
 
 part 'widgets/insights/kpi_strip.dart';
 part 'widgets/insights/finance_section.dart';

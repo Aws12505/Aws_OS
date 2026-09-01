@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
 import '../../../../shared/widgets/app_dialog.dart';
-import '../../../../shared/widgets/glass.dart';
 import '../../data/models/connection_mode.dart';
 import '../../data/models/share_device.dart';
 import '../../data/models/share_item.dart';
@@ -16,6 +15,7 @@ import 'app_clone_sheet.dart';
 import 'payload_picker.dart';
 import 'scan_qr_sheet.dart';
 import 'transfer_progress.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class SendPanel extends ConsumerStatefulWidget {
   const SendPanel({super.key});
@@ -132,7 +132,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, AppInsets.listBottom),
       children: [
-        GlassCard(
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -211,7 +211,7 @@ class _SendPanelState extends ConsumerState<SendPanel> {
             ],
           ),
         ),
-        GlassCard(
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

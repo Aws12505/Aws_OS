@@ -23,7 +23,7 @@ class _TransactionsForDayCard extends ConsumerWidget {
     if (dayTxs.isEmpty) return const SizedBox.shrink();
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -168,7 +168,7 @@ class _TasksForDayCard extends ConsumerWidget {
     final done = today.where((t) => t.isCompleted).length;
     final progress = today.isEmpty ? 0.0 : done / today.length;
     final teal = context.sem.tasks.base;
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -196,7 +196,7 @@ class _TasksForDayCard extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 6,
-              backgroundColor: cs.surfaceContainerHighest,
+              backgroundColor: context.surfaces.sunken,
               color: progress == 1.0 ? context.sem.income.base : teal,
             ),
           ),
@@ -314,7 +314,7 @@ class _NotesForDayCard extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     final violet = context.sem.exchange.base;
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

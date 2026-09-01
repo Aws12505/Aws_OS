@@ -13,7 +13,8 @@ class _NeedsAttentionCard extends ConsumerWidget {
     if (pending.isEmpty) return const SizedBox.shrink();
     final tt = Theme.of(context).textTheme;
     final amber = context.sem.warning.base;
-    return GlassCard(
+    return AppCard(
+      style: CardStyle.block,
       borderColor: amber.withValues(alpha: 0.4),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class CategoriesScreen extends ConsumerStatefulWidget {
   const CategoriesScreen({super.key});
@@ -37,13 +37,15 @@ class _CategoriesScreenState extends ConsumerState<CategoriesScreen>
   @override
   Widget build(BuildContext context) {
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Categories'),
-        bottom: TabBar(controller: _tabs, tabs: const [
-          Tab(text: 'Expense'),
-          Tab(text: 'Income'),
-        ]),
+        bottom: TabBar(
+          controller: _tabs,
+          tabs: const [
+            Tab(text: 'Expense'),
+            Tab(text: 'Income'),
+          ],
+        ),
       ),
       body: TabBarView(
         controller: _tabs,
@@ -87,7 +89,7 @@ class _CategoryListView extends ConsumerWidget {
           );
         }
         return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, AppInsets.listBottomNoFab),
+          padding: const EdgeInsets.only(bottom: AppInsets.listBottomNoFab),
           itemCount: items.length,
           itemBuilder: (_, i) => _CategoryCard(category: items[i]),
         );
@@ -103,18 +105,20 @@ class _CategoryCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final typesAsync = ref.watch(typesForCategoryProvider(category.id));
-    return Card(
+    return AppCard(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Row(
               children: [
                 const SizedBox(width: 8),
-                Icon(category.kind == 'expense'
-                    ? Icons.trending_down
-                    : Icons.trending_up),
+                Icon(
+                  category.kind == 'expense'
+                      ? Icons.trending_down
+                      : Icons.trending_up,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -126,8 +130,11 @@ class _CategoryCard extends ConsumerWidget {
                   onSelected: (v) async {
                     switch (v) {
                       case 'edit':
-                        _showCategoryForm(context,
-                            kind: category.kind, existing: category);
+                        _showCategoryForm(
+                          context,
+                          kind: category.kind,
+                          existing: category,
+                        );
                       case 'delete':
                         final ok = await showAppConfirmDialog(
                           context,
@@ -174,10 +181,8 @@ class _CategoryCard extends ConsumerWidget {
                     ActionChip(
                       avatar: const Icon(Icons.add, size: 18),
                       label: const Text('Add type'),
-                      onPressed: () => _showTypeForm(
-                        context,
-                        categoryId: category.id,
-                      ),
+                      onPressed: () =>
+                          _showTypeForm(context, categoryId: category.id),
                     ),
                   ],
                 );
@@ -208,43 +213,45 @@ Future<void> _showCategoryForm(
         right: 20,
         top: 8,
       ),
-      child: Consumer(builder: (ctx2, ref, _) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              existing == null
-                  ? 'New ${kind == 'expense' ? 'expense' : 'income'} category'
-                  : 'Edit category',
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(
-                  labelText: 'Name', hintText: 'Food, Rent, Salary, …'),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) return;
-                await ref.read(financeRepositoryProvider).saveCategory(
-                      id: existing?.id,
-                      kind: kind,
-                      name: name,
-                    );
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              icon: const Icon(Icons.save),
-              label: const Text('Save'),
-            ),
-            const SizedBox(height: 24),
-          ],
-        );
-      }),
+      child: Consumer(
+        builder: (ctx2, ref, _) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                existing == null
+                    ? 'New ${kind == 'expense' ? 'expense' : 'income'} category'
+                    : 'Edit category',
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
+                  labelText: 'Name',
+                  hintText: 'Food, Rent, Salary, …',
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () async {
+                  final name = controller.text.trim();
+                  if (name.isEmpty) return;
+                  await ref
+                      .read(financeRepositoryProvider)
+                      .saveCategory(id: existing?.id, kind: kind, name: name);
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                },
+                icon: const Icon(Icons.save),
+                label: const Text('Save'),
+              ),
+              const SizedBox(height: 24),
+            ],
+          );
+        },
+      ),
     ),
   );
 }
@@ -266,42 +273,47 @@ Future<void> _showTypeForm(
         right: 20,
         top: 8,
       ),
-      child: Consumer(builder: (ctx2, ref, _) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              existing == null ? 'New type' : 'Edit type',
-              style: Theme.of(ctx).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: controller,
-              autofocus: true,
-              decoration: const InputDecoration(
+      child: Consumer(
+        builder: (ctx2, ref, _) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                existing == null ? 'New type' : 'Edit type',
+                style: Theme.of(ctx).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: const InputDecoration(
                   labelText: 'Name',
-                  hintText: 'Brother, Lunch, Bonus, …'),
-            ),
-            const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: () async {
-                final name = controller.text.trim();
-                if (name.isEmpty) return;
-                await ref.read(financeRepositoryProvider).saveType(
-                      id: existing?.id,
-                      categoryId: categoryId,
-                      name: name,
-                    );
-                if (ctx.mounted) Navigator.of(ctx).pop();
-              },
-              icon: const Icon(Icons.save),
-              label: const Text('Save'),
-            ),
-            const SizedBox(height: 24),
-          ],
-        );
-      }),
+                  hintText: 'Brother, Lunch, Bonus, …',
+                ),
+              ),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () async {
+                  final name = controller.text.trim();
+                  if (name.isEmpty) return;
+                  await ref
+                      .read(financeRepositoryProvider)
+                      .saveType(
+                        id: existing?.id,
+                        categoryId: categoryId,
+                        name: name,
+                      );
+                  if (ctx.mounted) Navigator.of(ctx).pop();
+                },
+                icon: const Icon(Icons.save),
+                label: const Text('Save'),
+              ),
+              const SizedBox(height: 24),
+            ],
+          );
+        },
+      ),
     ),
   );
 }

@@ -23,7 +23,7 @@ class _GlanceCard extends ConsumerWidget {
         ? null
         : (net.first.value >= 0 ? context.sem.income.base : context.sem.expense.base);
 
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -101,7 +101,7 @@ class _GlanceCard extends ConsumerWidget {
               child: LinearProgressIndicator(
                 value: summary.taskCompletion,
                 minHeight: 8,
-                backgroundColor: cs.surfaceContainerHighest,
+                backgroundColor: context.surfaces.sunken,
                 color: summary.taskCompletion >= 1
                     ? context.sem.income.base
                     : context.sem.tasks.base,

@@ -20,6 +20,7 @@ class _EntryTile extends ConsumerWidget {
     final accent = context.sem.gym;
 
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,

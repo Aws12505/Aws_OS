@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/providers/settings_provider.dart';
@@ -201,7 +202,7 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
 
   OutlineInputBorder inputBorder(Color color, double width) =>
       OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         borderSide: BorderSide(color: color, width: width),
       );
 
@@ -209,15 +210,35 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
     extensions: <ThemeExtension<dynamic>>[app],
     // The type scale already carries fontScale, letter spacing included. There
     // must be no `* s.fontScale` anywhere below this line.
-    textTheme: type.textTheme,
+    //
+    // The colours have to be applied here. `ThemeData`'s constructor merges a
+    // bare text theme onto Typography.black/white, but `copyWith` does not, so
+    // a scale built with null colours stays null — and a null `TextStyle.color`
+    // paints white in dart:ui. That rendered every heading, value and title
+    // white-on-white in the light theme while dark mode looked correct by
+    // coincidence.
+    textTheme: type.textTheme.apply(
+      bodyColor: surfaces.textPrimary,
+      displayColor: surfaces.textPrimary,
+      decorationColor: surfaces.textPrimary,
+    ),
     visualDensity: VisualDensity.adaptivePlatformDensity,
-    // Transparent so the single global AuroraBackground shows through on
-    // ambient screens. Working screens paint an opaque canvas over it.
-    scaffoldBackgroundColor: Colors.transparent,
+    // Opaque. There is no backdrop behind the routes any more, so a
+    // transparent page would show the raw window.
+    scaffoldBackgroundColor: surfaces.canvas,
     appBarTheme: AppBarTheme(
       centerTitle: false,
       elevation: 0,
       scrolledUnderElevation: 0,
+      // Without this, AppBar derives the overlay style from its own background
+      // colour — which is transparent here — and guesses wrong. Its
+      // AnnotatedRegion sits deeper than AppScaffold's, so it wins, and the
+      // status-bar icons went invisible on every screen with an app bar.
+      systemOverlayStyle: SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: isDark ? Brightness.light : Brightness.dark,
+        statusBarBrightness: isDark ? Brightness.dark : Brightness.light,
+      ),
       backgroundColor: Colors.transparent,
       surfaceTintColor: Colors.transparent,
       foregroundColor: scheme.onSurface,
@@ -226,7 +247,7 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
     cardTheme: CardThemeData(
       margin: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
-        vertical: 6,
+        vertical: AppSpacing.xs,
       ),
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -236,11 +257,14 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
       color: surfaces.raised,
       surfaceTintColor: Colors.transparent,
     ),
+    // Filled, with no resting outline. A field that is a soft filled shape
+    // reads as somewhere to type; a rectangle drawn in outline reads as a
+    // border, and a form of them reads as a table.
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: surfaces.sunken.withValues(alpha: 0.5),
-      border: inputBorder(surfaces.hairlineStrong, 1),
-      enabledBorder: inputBorder(surfaces.hairlineStrong, 1),
+      fillColor: surfaces.sunken,
+      border: inputBorder(Colors.transparent, 0),
+      enabledBorder: inputBorder(Colors.transparent, 0),
       focusedBorder: inputBorder(scheme.primary, 2),
       errorBorder: inputBorder(scheme.error, 1),
       focusedErrorBorder: inputBorder(scheme.error, 2),
@@ -276,10 +300,15 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
       height: type.navBarHeight,
       elevation: 0,
       backgroundColor: Colors.transparent,
-      indicatorColor: scheme.primaryContainer,
-      indicatorShape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
+      // The selected destination gets a tonal pill. It is the one piece of
+      // chrome on every screen, and a filled marker says where you are from
+      // across the room where a colour change alone does not.
+      indicatorColor: surfaces.tint(
+        scheme.primary,
+        over: surfaces.navFill,
+        strength: isDark ? 0.30 : 0.18,
       ),
+      indicatorShape: const StadiumBorder(),
       labelTextStyle: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return type.navLabel
@@ -291,15 +320,15 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
       iconTheme: WidgetStateProperty.resolveWith((states) {
         final selected = states.contains(WidgetState.selected);
         return IconThemeData(
-          color: selected ? scheme.onPrimaryContainer : surfaces.textSecondary,
-          size: 22,
+          color: selected ? scheme.primary : surfaces.textTertiary,
+          size: 23,
         );
       }),
     ),
     bottomSheetTheme: BottomSheetThemeData(
       showDragHandle: true,
       dragHandleColor: surfaces.textTertiary,
-      dragHandleSize: const Size(36, 4),
+      dragHandleSize: const Size(28, 3),
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(
           top: Radius.circular(AppRadius.xxl),
@@ -311,13 +340,54 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
     ),
     floatingActionButtonTheme: FloatingActionButtonThemeData(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.lg),
+        borderRadius: BorderRadius.circular(AppRadius.xl),
       ),
       elevation: 3,
       focusElevation: 4,
-      hoverElevation: 5,
-      backgroundColor: scheme.primaryContainer,
-      foregroundColor: scheme.onPrimaryContainer,
+      hoverElevation: 4,
+      highlightElevation: 6,
+      backgroundColor: scheme.primary,
+      foregroundColor: scheme.onPrimary,
+    ),
+    // Buttons were on Material defaults, which means fully rounded stadiums.
+    // A capsule is the one shape this design does not use outside of chips.
+    filledButtonTheme: FilledButtonThemeData(
+      style: FilledButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        elevation: 0,
+        textStyle: type.textTheme.labelLarge,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: 14,
+        ),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        side: BorderSide(
+          color: surfaces.hairlineStrong,
+          width: AppSurfaces.hairlineWidth,
+        ),
+        foregroundColor: surfaces.textPrimary,
+        textStyle: type.textTheme.labelLarge,
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xl,
+          vertical: 14,
+        ),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.sm),
+        ),
+        textStyle: type.textTheme.labelLarge,
+      ),
     ),
     dividerTheme: DividerThemeData(
       color: surfaces.hairline,
@@ -325,8 +395,10 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
       space: 1,
     ),
     listTileTheme: ListTileThemeData(
+      // The page margin, so a tile lines up with the section label above it
+      // and with every header on every other screen.
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.lg,
+        horizontal: AppSpacing.xl,
         vertical: 2,
       ),
       minVerticalPadding: AppSpacing.sm,
@@ -337,7 +409,7 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
     ),
     dialogTheme: DialogThemeData(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.xl),
+        borderRadius: BorderRadius.circular(AppRadius.xxl),
       ),
       elevation: 0,
       backgroundColor: surfaces.overlay,
@@ -349,14 +421,16 @@ ThemeData _buildTheme(ThemeSettings s, Brightness brightness) {
     ),
     popupMenuTheme: PopupMenuThemeData(
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppRadius.md),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
       color: surfaces.overlay,
       surfaceTintColor: Colors.transparent,
-      elevation: 4,
+      elevation: 3,
       textStyle: type.textTheme.bodyMedium,
     ),
     tabBarTheme: TabBarThemeData(
+      labelColor: surfaces.textPrimary,
+      unselectedLabelColor: surfaces.textTertiary,
       labelStyle: type.tabLabel,
       unselectedLabelStyle: type.tabLabel.weight(FontWeight.w500),
       indicatorSize: TabBarIndicatorSize.label,

@@ -65,7 +65,7 @@ class _AppIcon extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            color: cs.surfaceContainerHighest,
+            color: context.surfaces.sunken,
             borderRadius: radius,
           ),
           child: Icon(
@@ -312,7 +312,10 @@ class _AppCloneSheetState extends ConsumerState<_AppCloneSheet> {
             '${formatBytes(app.apkSize)}'
             '${app.hasSplits ? ' · base + splits' : ''}',
           ),
-          trailing: const Icon(Icons.check_circle_rounded, color: Colors.green),
+          trailing: Icon(
+            Icons.check_circle_rounded,
+            color: context.sem.positive.base,
+          ),
         ),
         if (_shizuku) ...[
           CheckboxListTile(

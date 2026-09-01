@@ -9,7 +9,6 @@ import '../../../../shared/design/color_ops.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_filter_bar.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../providers.dart';
@@ -19,6 +18,8 @@ import '../widgets/task_form_sheet.dart';
 import '../widgets/workspace_form_sheet.dart';
 import 'task_detail_screen.dart';
 import 'task_history_screen.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/stagger.dart';
 
 part '../widgets/home/empty_workspaces.dart';
 part '../widgets/home/workspace_card.dart';
@@ -41,11 +42,9 @@ class TasksScreen extends ConsumerWidget {
     return async.when(
       loading: () =>
           const AppScaffold(
-            mode: SurfaceMode.working,
             body: AppLoading(message: 'Loading your workspaces'),
           ),
       error: (e, _) => AppScaffold(
-        mode: SurfaceMode.working,
         body: AppErrorView(error: e),
       ),
       data: (workspaces) {
@@ -115,7 +114,6 @@ class _TasksHomeState extends ConsumerState<_TasksHome> {
       // dense task list costs more legibility than it buys atmosphere. The
       // workspace accent lives in the cards and the rail, not in a second
       // background gradient stacked on the global one.
-      mode: SurfaceMode.working,
       body: Column(
             children: [
               SectionHeader(

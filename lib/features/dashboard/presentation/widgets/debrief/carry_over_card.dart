@@ -14,7 +14,7 @@ class _CarryOverCard extends ConsumerWidget {
     final cs = Theme.of(context).colorScheme;
     if (unfinished <= 0) return const SizedBox.shrink();
     final target = day.addDays(1);
-    return GlassCard(
+    return AppCard(
       child: Row(
         children: [
           Container(

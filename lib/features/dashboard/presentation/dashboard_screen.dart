@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../core/db/app_database.dart';
 import '../../../core/utils/date_ext.dart';
 import '../../../shared/widgets/charts/category_donut.dart';
-import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/segmented_control.dart';
 import '../../../shared/widgets/stat_tile.dart';
 import '../../finance/data/finance_breakdown.dart';
@@ -21,8 +20,9 @@ import 'debrief_providers.dart';
 import 'insights_view.dart';
 import '../../../shared/design/app_theme.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/design/surface_scope.dart';
 import 'package:go_router/go_router.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/pills.dart';
 
 part 'widgets/hero_balance.dart';
 part 'widgets/day_selector.dart';
@@ -56,7 +56,6 @@ class DashboardScreen extends ConsumerWidget {
     // Ambient: the aurora is part of what makes this screen feel like the
     // front door rather than a list.
     return const AppScaffold(
-      mode: SurfaceMode.ambient,
       body: _DashboardBody(),
     );
   }

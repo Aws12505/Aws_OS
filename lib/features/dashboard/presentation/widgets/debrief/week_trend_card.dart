@@ -14,7 +14,7 @@ class _WeekTrendCard extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final cs = Theme.of(context).colorScheme;
 
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -140,7 +140,7 @@ class _DayBar extends StatelessWidget {
                                   ? context.sem.income.base
                                   : context.sem.tasks.base)
                               .withValues(alpha: 0.85)
-                        : cs.surfaceContainerHighest,
+                        : context.surfaces.sunken,
                     borderRadius: BorderRadius.circular(AppRadius.sm),
                   ),
                 ),
@@ -163,7 +163,7 @@ class _DayBar extends StatelessWidget {
               shape: BoxShape.circle,
               color: mood != null
                   ? MoodColors.forScore(mood!)
-                  : cs.outlineVariant.withValues(alpha: 0.5),
+                  : context.surfaces.hairline,
             ),
           ),
         ),

@@ -68,12 +68,9 @@ class GymInsightsView extends ConsumerWidget {
                 );
               }
               return ListView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                  AppSpacing.md,
-                  AppInsets.listBottom,
-                ),
+                // No horizontal padding: every child carries the page margin
+                // itself, the same as the other two insights views.
+                padding: const EdgeInsets.only(bottom: AppInsets.listBottom),
                 children: [
                   _KpiGrid(gi: gi),
                   if (gi.hasSessions) ...[
@@ -136,7 +133,10 @@ class _KpiGrid extends ConsumerWidget {
       ),
     ];
 
-    return MetricGrid(tiles: cards);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      child: MetricGrid(tiles: cards),
+    );
   }
 
   String _lastLabel(int? daysAgo) => switch (daysAgo) {

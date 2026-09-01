@@ -14,29 +14,39 @@ abstract final class AppSpacing {
 
 /// Corner-radius scale.
 ///
-/// Every corner in the app snaps to one of these. Before this, sixteen distinct
-/// literals were in use (2, 3, 4, 6, 7, 9, 10, 11, 13, 14 among them), which is
-/// not a shape system, it is an accident.
+/// Generous. A tight radius reads as severe on a phone; the softness is a large
+/// part of what makes a surface feel like something you could pick up. Sixteen
+/// distinct literals were in use before this existed (2, 3, 4, 6, 7, 9, 10, 11,
+/// 13, 14 among them), which is not a shape system, it is an accident.
 abstract final class AppRadius {
   /// Bars, dots, tiny indicators.
   static const double xs = 4;
   static const double sm = 8;
   static const double md = 12;
+
+  /// Inner elements: icon chips, fields, nested tiles.
   static const double lg = 16;
+
+  /// The default card.
   static const double xl = 20;
-  static const double xxl = 22;
-  static const double pill = 28;
+
+  /// Hero surfaces and sheets.
+  static const double xxl = 26;
+
+  /// Fully rounded ends. Chips, badges, progress tracks.
+  static const double pill = 999;
 }
 
 /// Fixed-chrome clearances.
 abstract final class AppInsets {
-  /// Bottom padding a scrolling list needs to clear the translucent nav bar
-  /// and the floating action button. Replaces the three different magic
-  /// numbers (110, 120, 156) that were all reaching for the same clearance.
-  static const double listBottom = 120;
+  /// Bottom padding a scrolling list needs to clear the floating action
+  /// button. The nav bar no longer overlaps content — it was translucent and
+  /// blurred, and the body ran under it; it is opaque now and takes its own
+  /// space — so this is the button's clearance and nothing else.
+  static const double listBottom = 88;
 
-  /// Same clearance for a screen with no floating action button over it.
-  static const double listBottomNoFab = 96;
+  /// Same list, on a screen with no floating action button over it.
+  static const double listBottomNoFab = AppSpacing.xxl;
 }
 
 /// Semantic domain colors — the single source of truth for the literals that

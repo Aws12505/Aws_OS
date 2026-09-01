@@ -19,6 +19,7 @@ class AppStepper extends StatefulWidget {
     super.key,
     required this.controller,
     required this.label,
+    this.showLabel = true,
     this.step = 1,
     this.min = 0,
     this.max = 9999,
@@ -34,6 +35,11 @@ class AppStepper extends StatefulWidget {
   /// Sits above the field. Never a placeholder: placeholder-as-label
   /// disappears exactly when the user needs it.
   final String label;
+
+  /// Whether to draw the label. Off for repeated rows, where the first row
+  /// already names the columns. The label still reaches screen readers and the
+  /// button tooltips, so only the repetition is lost.
+  final bool showLabel;
 
   final double step;
   final double min;
@@ -98,7 +104,7 @@ class _AppStepperState extends State<AppStepper> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          widget.label,
+          widget.showLabel ? widget.label : '',
           style: tt.labelMedium?.copyWith(color: surfaces.textSecondary),
         ),
         const SizedBox(height: 4),

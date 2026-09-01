@@ -16,6 +16,7 @@ import '../features/sharing/presentation/sharing_screen.dart';
 import '../features/tasks/presentation/screens/tasks_screen.dart';
 import '../shared/design/app_theme.dart';
 import '../shared/widgets/main_scaffold.dart';
+import 'shell_navigator.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -30,6 +31,8 @@ final routerProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       ShellRoute(
+        navigatorKey: shellNavigatorKey,
+        observers: [ShellDepthObserver()],
         builder: (context, state, child) {
           return MainScaffold(location: state.uri.path, child: child);
         },
@@ -103,9 +106,9 @@ class _RouterRefresh extends ChangeNotifier {
 /// Content-only fade between the six shell tabs.
 ///
 /// These are peers, so nothing should slide: a direction would imply a
-/// hierarchy that is not there. The aurora sits above the router and is not
-/// part of the page, so it stays perfectly still through the swap, which is
-/// the whole reason the shell used `NoTransitionPage` before.
+/// hierarchy that is not there. Only the content crossfades — the nav bar and
+/// the page background are above the router, so they stay still through the
+/// swap and the movement reads as the content changing, not the app.
 CustomTransitionPage<void> _fadeThrough(BuildContext context, Widget child) {
   final motion = context.motion;
   return CustomTransitionPage<void>(

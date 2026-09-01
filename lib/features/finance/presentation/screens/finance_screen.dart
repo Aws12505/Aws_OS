@@ -6,7 +6,6 @@ import 'package:go_router/go_router.dart';
 import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../data/finance_dao.dart';
 import '../providers.dart';
@@ -56,7 +55,6 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
     // Ambient host so the aurora shows through on the Insights tab. The three
     // dense tabs cover it with their own working canvas.
     return AppScaffold(
-      mode: SurfaceMode.ambient,
       body: Column(
         children: [
           SectionHeader(
@@ -87,10 +85,10 @@ class _FinanceScreenState extends ConsumerState<FinanceScreen>
             child: TabBarView(
               controller: _tabs,
               children: const [
-                WorkingSurface(child: VaultView()),
-                WorkingSurface(child: TransactionsListView()),
+                VaultView(),
+                TransactionsListView(),
                 FinanceInsightsView(),
-                WorkingSurface(child: ExchangeRatesView()),
+                ExchangeRatesView(),
               ],
             ),
           ),
@@ -113,10 +111,9 @@ class _ManageMenu extends StatelessWidget {
           'budgets': const BudgetsScreen(),
           'recurring': const RecurringScreen(),
         };
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).push(MaterialPageRoute(builder: (_) => routes[v]!));
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => routes[v]!),
+        );
       },
       itemBuilder: (_) => const [
         PopupMenuItem(value: 'currencies', child: Text('Manage currencies')),

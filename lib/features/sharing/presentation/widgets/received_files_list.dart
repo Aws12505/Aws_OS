@@ -8,11 +8,11 @@ import 'package:share_plus/share_plus.dart';
 import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_modal_sheet.dart';
-import '../../../../shared/widgets/glass.dart';
 import '../../data/models/share_item.dart';
 import '../../data/share_format.dart';
 import '../providers.dart';
 import 'transfer_progress.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 /// A browser of files already received into the save folder. Images render as
 /// real thumbnails; everything else gets a type icon. Tapping a row opens the
@@ -28,7 +28,7 @@ class ReceivedFilesCard extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final filesAsync = ref.watch(receivedFilesListProvider);
 
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -252,7 +252,7 @@ class _GlyphTile extends StatelessWidget {
       width: 40,
       height: 40,
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHighest,
+        color: context.surfaces.sunken,
         borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Icon(iconForKind(kind), size: 22, color: cs.onSurfaceVariant),

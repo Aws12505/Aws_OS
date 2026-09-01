@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../design/app_theme.dart';
-import '../design/surface_scope.dart';
 
 /// The app's confirmation dialog.
 ///
@@ -26,37 +25,32 @@ Future<bool> showAppConfirmDialog(
     context: context,
     useRootNavigator: true,
     builder: (ctx) {
-      // Dialogs render through the root navigator, so they sit outside any
-      // screen's SurfaceScope and have to state their own.
-      return SurfaceScope(
-        mode: SurfaceMode.working,
-        child: AlertDialog(
-          title: Text(title),
-          content: message == null ? null : Text(message),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(false),
-              child: Text(cancelLabel),
-            ),
-            if (destructive)
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: ctx.sem.expense.base,
-                  foregroundColor: ctx.sem.expense.onContainer,
-                ),
-                onPressed: () {
-                  HapticFeedback.mediumImpact();
-                  Navigator.of(ctx).pop(true);
-                },
-                child: Text(confirmLabel),
-              )
-            else
-              FilledButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(confirmLabel),
+      return AlertDialog(
+        title: Text(title),
+        content: message == null ? null : Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(cancelLabel),
+          ),
+          if (destructive)
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: ctx.sem.expense.base,
+                foregroundColor: ctx.sem.expense.onContainer,
               ),
-          ],
-        ),
+              onPressed: () {
+                HapticFeedback.mediumImpact();
+                Navigator.of(ctx).pop(true);
+              },
+              child: Text(confirmLabel),
+            )
+          else
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: Text(confirmLabel),
+            ),
+        ],
       );
     },
   );
@@ -88,10 +82,8 @@ void showUndoSnackBar(
 /// Generic dialog host for the cases that need real content rather than a
 /// yes/no: a text field, a picker, a form.
 ///
-/// Exists so those still get the app's surface treatment. Dialogs render
-/// through the root navigator, which puts them outside the screen's
-/// [SurfaceScope], and a raw `showDialog` therefore resolved its surfaces
-/// against whatever the root happened to be.
+/// Exists so those still get the app's dialog theme and its confirm/cancel
+/// ordering rather than each call site rebuilding an `AlertDialog`.
 Future<T?> showAppDialog<T>(
   BuildContext context, {
   required WidgetBuilder builder,

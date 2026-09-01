@@ -23,7 +23,10 @@ class InsightsCard extends StatelessWidget {
     this.trailing,
     this.takeaway,
     this.onTap,
-    this.margin = const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+    this.margin = const EdgeInsets.symmetric(
+      horizontal: AppSpacing.lg,
+      vertical: AppSpacing.sm - 2,
+    ),
   });
 
   final IconData icon;
@@ -47,7 +50,6 @@ class InsightsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final surfaces = context.surfaces;
     final tt = Theme.of(context).textTheme;
-    final role = SemanticRole.derive(color, Theme.of(context).colorScheme);
 
     return AppCard(
       margin: margin,
@@ -58,14 +60,7 @@ class InsightsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: role.container,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Icon(icon, color: role.onContainer, size: 18),
-              ),
+              IconBadge(icon: icon, color: color, size: 34, iconSize: 17),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -76,7 +71,7 @@ class InsightsCard extends StatelessWidget {
                       Text(
                         subtitle!,
                         style: tt.bodySmall?.copyWith(
-                          color: surfaces.textSecondary,
+                          color: surfaces.textTertiary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -97,9 +92,22 @@ class InsightsCard extends StatelessWidget {
           child,
           if (takeaway != null) ...[
             const SizedBox(height: AppSpacing.md),
-            Text(
-              takeaway!,
-              style: tt.bodySmall?.copyWith(color: surfaces.textSecondary),
+            // Set on the sunken step so the sentence reads as a caption
+            // belonging to the chart rather than as more body copy.
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              decoration: BoxDecoration(
+                color: surfaces.sunken,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+              ),
+              child: Text(
+                takeaway!,
+                style: tt.bodySmall?.copyWith(color: surfaces.textSecondary),
+              ),
             ),
           ],
         ],

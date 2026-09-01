@@ -274,6 +274,7 @@ class _ProgramTile extends ConsumerWidget {
     final finished = program.endedAt != null;
 
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,

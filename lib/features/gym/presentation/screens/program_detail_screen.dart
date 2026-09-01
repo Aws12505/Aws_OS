@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -29,7 +28,6 @@ class ProgramDetailScreen extends ConsumerWidget {
     final daysAsync = ref.watch(daysForProgramProvider(program.id));
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: HeroTitle(
           tag: 'program-${program.id}',
@@ -221,6 +219,7 @@ class _DayTile extends ConsumerWidget {
     final totalSets = exercises.fold<int>(0, (s, e) => s + e.targetSets);
 
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
@@ -228,10 +227,10 @@ class _DayTile extends ConsumerWidget {
         AppSpacing.sm,
         AppSpacing.md,
       ),
-      // Root navigator on purpose: the workout screen is a focused mode, and
-      // it wants the whole screen. That also means no Hero on the day title,
-      // since go_router scopes hero controllers per navigator.
-      onTap: () => Navigator.of(context, rootNavigator: true).push(
+      // Shell navigator, like every other detail push: the nav bar has to stay
+      // reachable. Covering it meant a tab tap mid-workout did nothing until
+      // you had pressed back out of the screen.
+      onTap: () => Navigator.of(context).push(
         MaterialPageRoute(builder: (_) => DayDetailScreen(day: day)),
       ),
       semanticsLabel: 'Open ${day.name}',

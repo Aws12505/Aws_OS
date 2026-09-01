@@ -6,9 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/auth_provider.dart';
 import '../../../shared/design/app_theme.dart';
-import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/glass.dart';
+import '../../../shared/widgets/app_card.dart';
 
 class LockScreen extends ConsumerStatefulWidget {
   const LockScreen({super.key});
@@ -106,12 +105,11 @@ class _LockScreenState extends ConsumerState<LockScreen> {
     final cooling = _cooling;
     return AppScaffold(
       // Ambient: the lock screen is a moment, not a working surface.
-      mode: SurfaceMode.ambient,
       bottomSafeArea: true,
       body: Center(
           child: SingleChildScrollView(
-            child: GlassCard(
-              blur: true,
+            child: AppCard(
+              style: CardStyle.block,
               margin: const EdgeInsets.all(24),
               padding: const EdgeInsets.all(28),
               child: Column(
@@ -121,19 +119,7 @@ class _LockScreenState extends ConsumerState<LockScreen> {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: LinearGradient(
-                        colors: [
-                          cs.primary,
-                          Color.lerp(cs.primary, cs.tertiary, 0.6)!,
-                        ],
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: cs.primary.withValues(alpha: 0.4),
-                          blurRadius: 24,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
+                      color: cs.primary,
                     ),
                     child: Icon(cooling ? Icons.lock_clock_rounded : Icons.lock_rounded,
                         size: 36, color: context.sem.onPrimary),

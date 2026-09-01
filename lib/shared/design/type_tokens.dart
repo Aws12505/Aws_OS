@@ -136,30 +136,36 @@ class AppTypeTokens {
 
     return AppTypeTokens._(
       textTheme: TextTheme(
-        displayLarge: s(44, FontWeight.w800, tr: -1.0, h: 1.02),
-        displayMedium: s(36, FontWeight.w800, tr: -0.8, h: 1.03),
-        displaySmall: s(30, FontWeight.w800, tr: -0.6, h: 1.05),
-        headlineLarge: s(28, FontWeight.w800, tr: -0.6, h: 1.05),
-        headlineMedium: s(24, FontWeight.w800, tr: -0.6, h: 1.06),
-        headlineSmall: s(21, FontWeight.w800, tr: -0.5, h: 1.08),
-        titleLarge: s(19, FontWeight.w700, tr: -0.3, h: 1.15),
-        titleMedium: s(16, FontWeight.w700, tr: -0.1, h: 1.2),
-        titleSmall: s(14, FontWeight.w600, h: 1.25),
-        bodyLarge: s(16, FontWeight.w400, h: 1.45),
-        bodyMedium: s(14, FontWeight.w400, tr: 0.1, h: 1.45),
-        bodySmall: s(12.5, FontWeight.w400, tr: 0.15, h: 1.4),
-        labelLarge: s(14, FontWeight.w600, tr: 0.1, h: 1.2),
-        labelMedium: s(12, FontWeight.w600, tr: 0.4, h: 1.2),
-        labelSmall: s(11, FontWeight.w700, tr: 1.4, h: 1.2),
+        // The display end is set far tighter and heavier than Material's
+        // defaults. Editorial hierarchy is carried by the size jump between a
+        // number and its label, not by colour or by a container, so the jump
+        // has to be large enough to do that work on its own.
+        displayLarge: s(56, FontWeight.w800, tr: -2.2, h: 0.96),
+        displayMedium: s(44, FontWeight.w800, tr: -1.7, h: 0.98),
+        displaySmall: s(34, FontWeight.w800, tr: -1.2, h: 1.0),
+        headlineLarge: s(30, FontWeight.w800, tr: -1.0, h: 1.02),
+        headlineMedium: s(26, FontWeight.w800, tr: -0.85, h: 1.04),
+        headlineSmall: s(21, FontWeight.w700, tr: -0.6, h: 1.08),
+        titleLarge: s(18, FontWeight.w700, tr: -0.35, h: 1.16),
+        titleMedium: s(15.5, FontWeight.w600, tr: -0.15, h: 1.2),
+        titleSmall: s(13.5, FontWeight.w600, h: 1.25),
+        bodyLarge: s(15.5, FontWeight.w400, h: 1.5),
+        bodyMedium: s(14, FontWeight.w400, tr: 0.05, h: 1.5),
+        bodySmall: s(12.5, FontWeight.w400, tr: 0.1, h: 1.45),
+        labelLarge: s(13.5, FontWeight.w600, tr: 0.05, h: 1.2),
+        labelMedium: s(11.5, FontWeight.w600, tr: 0.3, h: 1.2),
+        // The tracked micro-label. Set in caps by the widgets that use it, and
+        // the tracking is what keeps caps at this size readable.
+        labelSmall: s(10.5, FontWeight.w700, tr: 1.7, h: 1.2),
       ),
-      appBarTitle: s(20, FontWeight.w700, tr: -0.3),
-      navLabel: s(11, FontWeight.w600, tr: 0.1),
-      dialogTitle: s(18, FontWeight.w700, tr: -0.2),
-      tabLabel: s(13, FontWeight.w600),
-      snackBody: s(14, FontWeight.w400, h: 1.35),
-      kicker: s(11, FontWeight.w700, tr: 1.4),
-      numeric: s(15, FontWeight.w600, tab: true),
-      numericLarge: s(32, FontWeight.w800, tr: -1.0, h: 1.02, tab: true),
+      appBarTitle: s(18, FontWeight.w700, tr: -0.35),
+      navLabel: s(10.5, FontWeight.w600, tr: 0.2),
+      dialogTitle: s(19, FontWeight.w700, tr: -0.5),
+      tabLabel: s(13, FontWeight.w600, tr: -0.1),
+      snackBody: s(14, FontWeight.w400, h: 1.4),
+      kicker: s(10.5, FontWeight.w700, tr: 1.7),
+      numeric: s(15, FontWeight.w600, tr: -0.1, tab: true),
+      numericLarge: s(40, FontWeight.w800, tr: -1.8, h: 0.98, tab: true),
       numericSmall: s(12.5, FontWeight.w500, tab: true),
     );
   }

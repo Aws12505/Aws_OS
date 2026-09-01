@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/widgets/glass.dart';
 import '../../data/models/share_item.dart';
 import '../../data/models/transfer_task.dart';
 import '../../data/share_format.dart';
 import '../providers.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 IconData iconForKind(ShareItemKind k) => switch (k) {
   ShareItemKind.photo => Icons.image_rounded,
@@ -32,7 +32,7 @@ class TransferProgressCard extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final controller = ref.read(shareSessionProvider.notifier);
 
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -57,7 +57,7 @@ class TransferProgressCard extends ConsumerWidget {
             child: LinearProgressIndicator(
               value: s.progress == 0 ? null : s.progress,
               minHeight: 6,
-              backgroundColor: cs.surfaceContainerHighest,
+              backgroundColor: context.surfaces.sunken,
               color: cs.primary,
             ),
           ),
@@ -124,7 +124,7 @@ class _TaskRow extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: task.progress == 0 ? null : task.progress,
                       minHeight: 4,
-                      backgroundColor: cs.surfaceContainerHighest,
+                      backgroundColor: context.surfaces.sunken,
                       color: color,
                     ),
                   ),

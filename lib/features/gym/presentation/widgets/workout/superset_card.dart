@@ -23,6 +23,7 @@ class _SupersetCard extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
 
     return AppCard(
+      style: CardStyle.block,
       tone: SurfaceTone.raised,
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.fromLTRB(

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../design/surface_scope.dart';
 
 /// Shows a modal bottom sheet on the **root** navigator.
 ///
@@ -18,11 +17,7 @@ import '../design/surface_scope.dart';
 ///
 /// Always call this instead of `showModalBottomSheet` directly so new
 /// sheets don't regress into the same problem.
-///
-/// Because the sheet renders on the root navigator it also sits outside the
-/// screen's [SurfaceScope], so this supplies one. [mode] defaults to
-/// [SurfaceMode.working]: a sheet is a form or a list, and frosted glass
-/// behind an input costs legibility for nothing.
+
 Future<T?> showAppModalBottomSheet<T>({
   required BuildContext context,
   required WidgetBuilder builder,
@@ -30,7 +25,6 @@ Future<T?> showAppModalBottomSheet<T>({
   bool? showDragHandle,
   bool useSafeArea = false,
   Color? backgroundColor,
-  SurfaceMode mode = SurfaceMode.working,
 }) {
   return showModalBottomSheet<T>(
     context: context,
@@ -39,9 +33,6 @@ Future<T?> showAppModalBottomSheet<T>({
     showDragHandle: showDragHandle,
     useSafeArea: useSafeArea,
     backgroundColor: backgroundColor,
-    builder: (ctx) => SurfaceScope(
-      mode: mode,
-      child: Builder(builder: builder),
-    ),
+    builder: (ctx) => Builder(builder: builder),
   );
 }

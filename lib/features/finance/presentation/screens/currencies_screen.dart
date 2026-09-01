@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
 import '../widgets/currency_form_sheet.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class CurrenciesScreen extends ConsumerWidget {
   const CurrenciesScreen({super.key});
@@ -18,7 +18,6 @@ class CurrenciesScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(currenciesStreamProvider);
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Currencies')),
       body: async.when(
         loading: () => const AppLoading(),
@@ -35,9 +34,13 @@ class CurrenciesScreen extends ConsumerWidget {
               ),
             );
           }
-          return ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
+          return ListView.separated(
+            // Rows on the page, ruled between. A Card per row put a border and
+            // a radius round every single line of a settings-style list.
+            padding: const EdgeInsets.only(bottom: AppInsets.listBottomNoFab),
             itemCount: items.length,
+            separatorBuilder: (_, _) =>
+                const AppRule(indent: AppSpacing.xl, endIndent: AppSpacing.xl),
             itemBuilder: (_, i) => _CurrencyTile(currency: items[i]),
           );
         },
@@ -57,41 +60,40 @@ class _CurrencyTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      child: ListTile(
-        title: Text('${currency.code} (${currency.symbol})'),
-        subtitle: Text(
-          '${currency.decimalPlaces} decimal places  •  '
-          '${currency.isActive ? 'active' : 'inactive'}',
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) async {
-            switch (v) {
-              case 'edit':
-                showCurrencyFormSheet(context, existing: currency);
-              case 'delete':
-                final ok = await showAppConfirmDialog(
-                  context,
-                  title: 'Delete ${currency.code}?',
-                  message: 'Accounts or transactions using this currency will fail to load. '
-                        'Use only if nothing depends on it.',
-                  confirmLabel: 'Delete',
-                  destructive: true,
-                );
-                if (ok) {
-                  await ref
-                      .read(financeRepositoryProvider)
-                      .deleteCurrency(currency.id);
-                }
-            }
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
-        ),
-        onTap: () => showCurrencyFormSheet(context, existing: currency),
+    return ListTile(
+      title: Text('${currency.code} (${currency.symbol})'),
+      subtitle: Text(
+        '${currency.decimalPlaces} decimal places  •  '
+        '${currency.isActive ? 'active' : 'inactive'}',
       ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (v) async {
+          switch (v) {
+            case 'edit':
+              showCurrencyFormSheet(context, existing: currency);
+            case 'delete':
+              final ok = await showAppConfirmDialog(
+                context,
+                title: 'Delete ${currency.code}?',
+                message:
+                    'Accounts or transactions using this currency will fail to load. '
+                    'Use only if nothing depends on it.',
+                confirmLabel: 'Delete',
+                destructive: true,
+              );
+              if (ok) {
+                await ref
+                    .read(financeRepositoryProvider)
+                    .deleteCurrency(currency.id);
+              }
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'edit', child: Text('Edit')),
+          PopupMenuItem(value: 'delete', child: Text('Delete')),
+        ],
+      ),
+      onTap: () => showCurrencyFormSheet(context, existing: currency),
     );
   }
 }

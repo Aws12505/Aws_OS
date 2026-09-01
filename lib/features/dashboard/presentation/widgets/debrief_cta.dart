@@ -12,7 +12,8 @@ class _DebriefCta extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final isToday = date.isSameDay(DateTime.now());
     final reviewed = ref.watch(debriefForDayProvider(date)).value != null;
-    return GlassCard(
+    return AppCard(
+      style: CardStyle.block,
       borderColor: cs.primary.withValues(alpha: 0.35),
       onTap: () => context.push('/debrief?date=${date.toIso8601String()}'),
       child: Row(
@@ -20,10 +21,8 @@ class _DebriefCta extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [cs.primary, Color.lerp(cs.primary, cs.tertiary, 0.6)!],
-              ),
-              borderRadius: BorderRadius.circular(AppRadius.md),
+              color: cs.primary,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Icon(
               reviewed
@@ -44,7 +43,7 @@ class _DebriefCta extends ConsumerWidget {
                 ),
                 Text(
                   reviewed
-                      ? 'Reviewed — tap to revisit'
+                      ? 'Reviewed, tap to revisit'
                       : 'Reflect, see trends & plan tomorrow',
                   style: tt.bodySmall?.copyWith(color: cs.onSurfaceVariant),
                   maxLines: 1,

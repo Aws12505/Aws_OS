@@ -5,19 +5,18 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_filter_bar.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
-import '../../../../shared/widgets/glass.dart';
 import '../../../../shared/widgets/hero_title.dart';
 import '../../../../shared/widgets/stagger.dart';
 import '../note_filter.dart';
 import '../providers.dart';
 import '../widgets/note_filter_sheet.dart';
 import '../widgets/note_form_sheet.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
@@ -43,7 +42,6 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
     final mappingsAsync = ref.watch(noteTagsStreamProvider);
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       body: Column(
         children: [
           SectionHeader(
@@ -125,9 +123,13 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                 final tagsById = {
                   for (final t in (tagsAsync.value ?? const <Tag>[])) t.id: t,
                 };
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(0, 4, 0, AppInsets.listBottom),
+                return ListView.separated(
+                  padding: const EdgeInsets.only(
+                    bottom: AppInsets.listBottom,
+                  ),
                   itemCount: filtered.length,
+                  separatorBuilder: (_, _) =>
+                      const AppRule(indent: AppSpacing.xl),
                   itemBuilder: (_, i) => StaggeredEntry(
                     index: i,
                     child: _NoteTile(
@@ -186,9 +188,18 @@ class _NoteTile extends ConsumerWidget {
     final preview = note.title?.isNotEmpty == true
         ? _firstLine(note.contentMd)
         : null;
-    return GlassCard(
+    // A note is a row, not a card: the accent bar on the left already marks
+    // where one ends and the next begins.
+    return PressableSurface(
       onTap: () => _openViewer(context),
-      padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+      semanticsLabel: 'Open note',
+      child: Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.xl,
+        14,
+        AppSpacing.sm,
+        14,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -283,6 +294,7 @@ class _NoteTile extends ConsumerWidget {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -310,7 +322,6 @@ class _NoteViewer extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: HeroTitle(
           tag: 'note-${note.id}',

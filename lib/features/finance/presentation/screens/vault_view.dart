@@ -30,8 +30,9 @@ class VaultView extends ConsumerWidget {
             message:
                 'Add a currency before creating accounts (e.g. USD, SYP).',
             actionLabel: 'Add currency',
-            onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                MaterialPageRoute(builder: (_) => const CurrenciesScreen())),
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CurrenciesScreen()),
+            ),
           );
         }
         return accountsAsync.when(
@@ -43,8 +44,9 @@ class VaultView extends ConsumerWidget {
                 title: 'No accounts yet',
                 message: 'Add at least one account to start tracking balances.',
                 actionLabel: 'Add account',
-                onPressed: () => Navigator.of(context, rootNavigator: true).push(
-                    MaterialPageRoute(builder: (_) => const AccountsScreen())),
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const AccountsScreen()),
+                ),
               );
             }
             final balances = balancesAsync.value ?? const <String, double>{};
@@ -249,6 +251,7 @@ class _AccountTile extends StatelessWidget {
     final tt = Theme.of(context).textTheme;
     final isPositive = balance >= 0;
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 5),
       radius: AppRadius.lg,
       padding: const EdgeInsets.symmetric(

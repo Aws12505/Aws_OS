@@ -29,9 +29,7 @@ void _showExerciseHistory(
           minChildSize: 0.3,
           maxChildSize: 0.9,
           expand: false,
-          builder: (ctx3, scrollController) => SurfaceScope(
-            mode: SurfaceMode.working,
-            child: Builder(
+          builder: (ctx3, scrollController) => Builder(
               builder: (ctx4) {
                 final surfaces = ctx4.surfaces;
                 return ListView(
@@ -96,7 +94,6 @@ void _showExerciseHistory(
                   ],
                 );
               },
-            ),
           ),
         );
       },

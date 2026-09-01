@@ -47,13 +47,20 @@ class _WorkspaceTaskList extends ConsumerWidget {
             children.putIfAbsent(t.parentTaskId!, () => []).add(t);
           }
         }
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(8, 8, 8, AppInsets.listBottom),
+        // separatorBuilder rather than a rule inside the tile: a rule belongs
+        // between rows, and a tile that draws its own leaves a stray line under
+        // the last one.
+        return ListView.separated(
+          padding: const EdgeInsets.only(bottom: AppInsets.listBottom),
           itemCount: top.length,
-          itemBuilder: (_, i) => _TaskTile(
-            task: top[i],
-            subtasks: children[top[i].id] ?? const [],
-            workspaceId: workspace.id,
+          separatorBuilder: (_, _) => const AppRule(),
+          itemBuilder: (_, i) => StaggeredEntry(
+            index: i,
+            child: _TaskTile(
+              task: top[i],
+              subtasks: children[top[i].id] ?? const [],
+              workspaceId: workspace.id,
+            ),
           ),
         );
       },

@@ -17,8 +17,8 @@ export 'type_tokens.dart';
 ///
 /// One composite rather than five separate extensions: the groups are all
 /// derived from one [ColorScheme], so splitting them would mean threading the
-/// scheme five times — exactly the drift that left `(isDark ? 0.55 : 0.72)`
-/// retyped by hand in five different files. It also keeps `copyWith`/`lerp`,
+/// scheme five times — exactly the drift that left the same hand-typed alpha
+/// pair in five different files. It also keeps `copyWith`/`lerp`,
 /// which have to be written out by hand, to one implementation instead of five,
 /// and costs one extension map lookup per build instead of five.
 @immutable

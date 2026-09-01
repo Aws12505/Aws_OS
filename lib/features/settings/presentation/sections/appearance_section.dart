@@ -2,34 +2,6 @@ part of '../settings_screen.dart';
 
 // Colour, theme, typeface and text size.
 
-class _SectionHeader extends StatelessWidget {
-  const _SectionHeader(this.title);
-  final String title;
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 4),
-      child: Row(
-        children: [
-          Text(
-            title.toUpperCase(),
-            style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              color: cs.primary,
-              letterSpacing: 0.8,
-            ).weight(FontWeight.w700),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Divider(
-              color: cs.outlineVariant.withValues(alpha: 0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _Swatch extends StatelessWidget {
   const _Swatch({required this.color});
@@ -43,16 +15,9 @@ class _Swatch extends StatelessWidget {
         color: color,
         borderRadius: BorderRadius.circular(AppRadius.sm),
         border: Border.all(
-          color: Theme.of(context).colorScheme.outlineVariant,
-          width: 1.5,
+          color: context.surfaces.hairlineStrong,
+          width: AppSurfaces.hairlineWidth,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.3),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
     );
   }

@@ -9,7 +9,8 @@ import '../../../../shared/widgets/app_empty_state.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_filter_bar.dart';
 import '../../../../shared/widgets/app_loading.dart';
-import '../../../../shared/widgets/glass.dart';
+import '../../../../shared/widgets/app_card.dart';
+import '../../../../shared/widgets/pills.dart';
 import '../../../../shared/widgets/section_header.dart';
 import '../../../../shared/widgets/stagger.dart';
 import '../../data/finance_dao.dart';
@@ -144,9 +145,9 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
 
               return ListView.builder(
                 padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.md,
-                  AppSpacing.xs,
-                  AppSpacing.md,
+                  AppSpacing.xl,
+                  0,
+                  AppSpacing.xl,
                   AppInsets.listBottomNoFab,
                 ),
                 itemCount: days.length,
@@ -158,36 +159,28 @@ class _TransactionsListViewState extends ConsumerState<TransactionsListView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        SectionLabel(
-                          _dayLabel(day),
-                          padding: const EdgeInsets.fromLTRB(
-                            AppSpacing.xs,
-                            AppSpacing.md,
-                            AppSpacing.xs,
-                            6,
-                          ),
-                        ),
+                        SectionLabel(_dayLabel(day)),
+                        // One card per day, rows ruled inside it. The card is
+                        // the group; the rules are what keep it from becoming a
+                        // stack of boxes at list length.
                         AppCard(
                           margin: EdgeInsets.zero,
-                          padding: EdgeInsets.zero,
-                          child: Column(
-                            children: [
-                              for (var j = 0; j < rows.length; j++) ...[
-                                if (j > 0)
-                                  Divider(
-                                    height: 1,
-                                    indent: 68,
-                                    color: context.surfaces.hairline,
-                                  ),
-                                _TransactionTile(
-                                  entry: rows[j],
-                                  currencies: currencies,
-                                  accounts: accounts,
-                                  categoryNames: categoryNames,
-                                  typeNames: typeNames,
-                                  onDelete: () => _confirmDelete(rows[j]),
-                                ),
-                              ],
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xs,
+                          ),
+                          child: RuledColumn(
+                            indent: 52,
+                            endIndent: AppSpacing.lg,
+                          children: [
+                            for (final r in rows)
+                              _TransactionTile(
+                                entry: r,
+                                currencies: currencies,
+                                accounts: accounts,
+                                categoryNames: categoryNames,
+                                typeNames: typeNames,
+                                onDelete: () => _confirmDelete(r),
+                              ),
                             ],
                           ),
                         ),
@@ -323,7 +316,7 @@ class _TransactionTile extends StatelessWidget {
                               vertical: 1,
                             ),
                             decoration: BoxDecoration(
-                              color: cs.surfaceContainerHighest,
+                              color: context.surfaces.sunken,
                               borderRadius: BorderRadius.circular(AppRadius.xs),
                             ),
                             child: Text(

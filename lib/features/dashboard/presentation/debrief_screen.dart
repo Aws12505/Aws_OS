@@ -8,18 +8,18 @@ import '../../../core/db/app_database.dart';
 import '../../../core/utils/date_ext.dart';
 import '../../../shared/design/app_theme.dart';
 import '../../../shared/design/color_ops.dart';
-import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_buttons.dart';
 import '../../../shared/widgets/app_error_view.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/app_scaffold.dart';
-import '../../../shared/widgets/glass.dart';
 import '../../../shared/widgets/stat_tile.dart';
 import '../../finance/presentation/providers.dart' as fin;
 import '../../tasks/presentation/providers.dart' as tasks;
 import '../data/day_summary.dart';
 import '../data/rule_based_summary.dart';
 import 'debrief_providers.dart';
+import '../../../shared/widgets/app_card.dart';
+import '../../../shared/widgets/pills.dart';
 
 part 'widgets/debrief/day_header.dart';
 part 'widgets/debrief/glance_card.dart';
@@ -191,7 +191,6 @@ class _DebriefScreenState extends ConsumerState<DebriefScreen> {
     final isToday = _day.isSameDay(DateTime.now());
 
     return AppScaffold(
-      mode: SurfaceMode.ambient,
       appBar: AppBar(title: const Text('Debrief')),
       body: summaryAsync.when(
         loading: () => const AppLoading(),

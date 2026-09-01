@@ -3,8 +3,11 @@ import 'package:flutter/material.dart';
 import '../design/app_theme.dart';
 import 'app_card.dart';
 
-/// Bento-style stat tile: tinted icon, big value, label + optional sub-line.
-/// Promoted from the dashboard so the debrief and analytics screens can reuse it.
+/// A headline figure with its label and a tinted icon.
+///
+/// The icon chip is the point. A row of statistics in one colour is a table;
+/// the same row with each figure carrying its domain's colour is scannable
+/// without reading, which is what a dashboard is for.
 class StatTile extends StatelessWidget {
   const StatTile({
     super.key,
@@ -17,7 +20,10 @@ class StatTile extends StatelessWidget {
   });
 
   final IconData icon;
+
+  /// The module's semantic colour.
   final Color color;
+
   final String label;
   final String value;
   final String? sub;
@@ -25,66 +31,51 @@ class StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    final surface = resolveSurface(context);
-    return Material(
-      color: surface.fill,
-      borderRadius: BorderRadius.circular(AppRadius.xl),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.xl),
-            border: Border.all(
-              color: surface.border,
+    final surfaces = context.surfaces;
+
+    return AppCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      onTap: onTap,
+      semanticsLabel: onTap == null ? null : '$label, $value',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          IconBadge(icon: icon, color: color, size: 36, iconSize: 18),
+          const SizedBox(height: AppSpacing.md),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value, maxLines: 1, style: tt.headlineMedium),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: tt.labelLarge?.copyWith(color: surfaces.textSecondary),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (sub != null)
+            Text(
+              sub!,
+              style: tt.bodySmall?.copyWith(color: surfaces.textTertiary),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.sm),
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(height: AppSpacing.md),
-              FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  value,
-                  maxLines: 1,
-                  style: tt.headlineSmall?.copyWith(
-                    letterSpacing: -0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: tt.labelMedium,
-              ),
-              if (sub != null)
-                Text(
-                  sub!,
-                  style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
-                ),
-            ],
-          ),
-        ),
+        ],
       ),
     );
   }
 }
 
-/// Compact metric: small label + a big value (+ optional leading icon/accent).
-/// For dense debrief and analytics grids.
+/// The compact form of [StatTile], for dense grids.
+///
+/// Takes a tonal wash of its accent rather than the neutral card fill. Four of
+/// these side by side is the one place in the app where colour is doing the
+/// most work per pixel: it turns a block of numbers into four distinguishable
+/// things.
 class MetricCard extends StatelessWidget {
   const MetricCard({
     super.key,
@@ -107,55 +98,61 @@ class MetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
+    final surfaces = context.surfaces;
     final c = accent ?? cs.primary;
-    final card = Container(
-      padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        border: Border.all(color: context.surfaces.hairline),
-      ),
+    final role = SemanticRole.derive(c, cs);
+
+    return AppCard(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
+      radius: AppRadius.lg,
+      // The container/onContainer pair, not a hand-rolled tint: those two are
+      // derived together and contrast-checked against each other, so the label
+      // stays readable whatever accent the caller passes.
+      fillColor: accent == null ? null : role.container,
+      borderColor: accent == null ? null : Colors.transparent,
+      onTap: onTap,
+      semanticsLabel: onTap == null ? null : '$label, $value',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Row(
             children: [
               if (icon != null) ...[
-                Icon(icon, size: 14, color: c),
-                const SizedBox(width: 6),
+                Icon(icon, size: 13, color: role.onContainer),
+                const SizedBox(width: AppSpacing.xs + 1),
               ],
               Expanded(
                 child: Text(
                   label,
-                  style: tt.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+                  style: tt.labelMedium?.copyWith(
+                    color: accent == null
+                        ? surfaces.textSecondary
+                        : role.onContainer,
+                  ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: AppSpacing.sm),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
             child: Text(
               value,
               maxLines: 1,
-              style: tt.titleLarge?.copyWith(
-                letterSpacing: -0.5,
-                color: valueColor,
-              ).weight(FontWeight.w800),
+              style: tt.headlineSmall?.copyWith(
+                color:
+                    valueColor ??
+                    (accent == null ? null : role.onContainer),
+              ),
             ),
           ),
         ],
       ),
-    );
-    if (onTap == null) return card;
-    return Material(
-      color: Colors.transparent,
-      borderRadius: BorderRadius.circular(AppRadius.lg),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(onTap: onTap, child: card),
     );
   }
 }

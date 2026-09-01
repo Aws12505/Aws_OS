@@ -81,7 +81,7 @@ class _SpendingBreakdownCardState
     final tt = Theme.of(context).textTheme;
     final income = _kind == 'income';
 
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

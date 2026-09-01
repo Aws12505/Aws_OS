@@ -316,7 +316,7 @@ class _BudgetsCard extends ConsumerWidget {
                     child: LinearProgressIndicator(
                       value: b.fraction,
                       minHeight: 7,
-                      backgroundColor: cs.surfaceContainerHighest,
+                      backgroundColor: context.surfaces.sunken,
                       color: b.over
                           ? context.sem.expense.base
                           : b.rawFraction > 0.85

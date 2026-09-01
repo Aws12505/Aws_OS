@@ -105,6 +105,7 @@ class _ExerciseCard extends ConsumerWidget {
       );
     }
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.only(bottom: AppSpacing.md),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.md,

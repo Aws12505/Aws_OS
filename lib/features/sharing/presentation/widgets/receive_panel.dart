@@ -6,7 +6,6 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_buttons.dart';
-import '../../../../shared/widgets/glass.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../data/models/connection_mode.dart';
 import '../../data/models/transfer_task.dart';
@@ -14,6 +13,7 @@ import '../providers.dart';
 import '../save_location.dart';
 import 'received_files_list.dart';
 import 'transfer_progress.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class ReceivePanel extends ConsumerStatefulWidget {
   const ReceivePanel({super.key});
@@ -123,7 +123,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, AppInsets.listBottom),
       children: [
         if (wd != null)
-          GlassCard(
+          AppCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -148,7 +148,7 @@ class _ReceivePanelState extends ConsumerState<ReceivePanel> {
               ],
             ),
           ),
-        GlassCard(
+        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -209,7 +209,7 @@ class _SaveLocationCard extends ConsumerWidget {
     final tt = Theme.of(context).textTheme;
     final pathAsync = ref.watch(saveDirectoryProvider);
     final custom = ref.watch(shareSettingsStoreProvider);
-    return GlassCard(
+    return AppCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

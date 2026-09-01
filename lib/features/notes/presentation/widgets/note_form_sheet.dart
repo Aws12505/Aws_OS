@@ -192,7 +192,7 @@ class _FormState extends ConsumerState<_Form> {
                   constraints: const BoxConstraints(minHeight: 140),
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerHighest
+                    color: context.surfaces.sunken
                         .withValues(alpha: 0.4),
                     borderRadius: BorderRadius.circular(AppRadius.md),
                     border: Border.all(

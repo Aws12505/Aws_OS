@@ -188,7 +188,7 @@ class _FormState extends ConsumerState<_Form> {
               ),
               const SizedBox(height: 12),
               Card(
-                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                color: context.surfaces.sunken,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: Row(

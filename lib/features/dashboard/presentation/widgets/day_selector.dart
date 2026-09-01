@@ -15,9 +15,9 @@ class _DaySelector extends ConsumerWidget {
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 2),
       child: Container(
         decoration: BoxDecoration(
-          color: cs.surface.withValues(alpha: 0.7),
+          color: context.surfaces.raised,
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
+          border: Border.all(color: context.surfaces.hairline),
         ),
         child: Row(
           children: [

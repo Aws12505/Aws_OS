@@ -34,7 +34,7 @@ class _WorkspaceCard extends StatelessWidget {
       margin: const EdgeInsets.only(right: 12),
       child: Material(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(AppRadius.xxl),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
@@ -42,33 +42,16 @@ class _WorkspaceCard extends StatelessWidget {
             duration: context.motion.medium,
       curve: context.motion.standardCurve,
                         padding: const EdgeInsets.all(14),
+            // Selection is a flat fill of the workspace colour. It used to be
+            // a gradient plus a coloured glow, which read as the loudest thing
+            // on a screen whose actual content is the task list below it.
             decoration: BoxDecoration(
-              gradient: selected
-                  ? LinearGradient(
-                      colors: [
-                        color,
-                        Color.lerp(color, Colors.black, 0.22)!,
-                      ],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    )
-                  : null,
-              color: selected ? null : cs.surface.withValues(alpha: 0.7),
-              borderRadius: BorderRadius.circular(AppRadius.xxl),
+              color: selected ? color : context.surfaces.raised,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
               border: Border.all(
-                color: selected
-                    ? Colors.transparent
-                    : cs.outlineVariant.withValues(alpha: 0.5),
+                color: selected ? color : context.surfaces.hairline,
+                width: AppSurfaces.hairlineWidth,
               ),
-              boxShadow: selected
-                  ? [
-                      BoxShadow(
-                        color: color.withValues(alpha: 0.45),
-                        blurRadius: 22,
-                        offset: const Offset(0, 10),
-                      ),
-                    ]
-                  : null,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -120,7 +103,7 @@ class _WorkspaceCard extends StatelessWidget {
                     minHeight: 5,
                     backgroundColor: selected
                         ? onAccent.withValues(alpha: 0.25)
-                        : cs.surfaceContainerHighest,
+                        : context.surfaces.sunken,
                     color: selected ? onAccent : color,
                   ),
                 ),

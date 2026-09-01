@@ -136,6 +136,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                 child: AppStepper(
                   controller: _reps,
                   label: 'Reps',
+                  showLabel: widget.setIndex == 1,
                   max: 200,
                   onSubmitted: (_) => _trySave(),
                 ),
@@ -145,6 +146,7 @@ class _SetRowState extends ConsumerState<_SetRow> {
                 child: AppStepper(
                   controller: _weight,
                   label: 'Weight',
+                  showLabel: widget.setIndex == 1,
                   decimal: true,
                   step: 2.5,
                   onSubmitted: (_) => _trySave(),

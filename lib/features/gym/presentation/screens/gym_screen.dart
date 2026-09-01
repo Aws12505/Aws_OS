@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../../../../shared/widgets/segmented_control.dart';
 import '../../../mentor/data/forecast_service.dart';
@@ -50,7 +49,6 @@ class _GymScreenState extends ConsumerState<GymScreen>
     // Ambient host: the aurora shows through on Insights. The two dense tabs
     // cover it with their own working canvas.
     return AppScaffold(
-      mode: SurfaceMode.ambient,
       body: Column(
         children: [
           SectionHeader(
@@ -77,8 +75,8 @@ class _GymScreenState extends ConsumerState<GymScreen>
               controller: _tabs,
               children: const [
                 GymInsightsView(),
-                WorkingSurface(child: MeasurementsView()),
-                WorkingSurface(child: ProgramsView()),
+                MeasurementsView(),
+                ProgramsView(),
               ],
             ),
           ),

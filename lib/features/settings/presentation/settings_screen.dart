@@ -17,7 +17,6 @@ import '../../../core/providers/backup_provider.dart';
 import '../../../core/providers/reminder_time_provider.dart';
 import '../../../core/services/auth_service.dart';
 import '../../../shared/design/app_theme.dart';
-import '../../../shared/design/surface_scope.dart';
 import '../../../shared/widgets/app_dialog.dart';
 import '../../../shared/widgets/app_loading.dart';
 import '../../../shared/widgets/app_scaffold.dart';
@@ -40,11 +39,18 @@ class SettingsScreen extends ConsumerWidget {
     final reminder = ref.watch(reminderTimeProvider);
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(
         children: [
-          _SectionHeader('Appearance'),
+          const SectionLabel(
+            'Appearance',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           ListTile(
             title: const Text('Primary color'),
             trailing: _Swatch(color: theme.primaryColor),
@@ -126,7 +132,15 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const Divider(),
-          _SectionHeader('Reminders'),
+          const SectionLabel(
+            'Reminders',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           ListTile(
             title: const Text('Daily reminder time'),
             subtitle: Text(reminder.format(context)),
@@ -142,16 +156,48 @@ class SettingsScreen extends ConsumerWidget {
             },
           ),
           const Divider(),
-          _SectionHeader('AI'),
+          const SectionLabel(
+            'AI',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           const _AiSection(),
           const Divider(),
-          _SectionHeader('Security'),
+          const SectionLabel(
+            'Security',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           const _SecuritySection(),
           const Divider(),
-          _SectionHeader('Local sharing'),
+          const SectionLabel(
+            'Local sharing',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           const _SharingSection(),
           const Divider(),
-          _SectionHeader('Backup'),
+          const SectionLabel(
+            'Backup',
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.xl,
+              AppSpacing.xxl,
+              AppSpacing.xl,
+              AppSpacing.sm,
+            ),
+          ),
           const _BackupSection(),
         ],
       ),

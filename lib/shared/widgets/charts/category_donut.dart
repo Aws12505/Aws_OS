@@ -16,7 +16,7 @@ class DonutDatum {
 }
 
 /// A clean donut with a value in the hole and an amount/percentage legend —
-/// the app's standard replacement for a bare pie. Wrap it in a [GlassCard] at
+/// the app's standard replacement for a bare pie. Wrap it in a [AppCard] at
 /// the call site.
 class CategoryDonut extends StatelessWidget {
   const CategoryDonut({

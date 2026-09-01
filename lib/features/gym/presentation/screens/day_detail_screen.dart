@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 
 import '../../../../core/db/app_database.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -58,7 +57,6 @@ class DayDetailScreen extends ConsumerWidget {
     });
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: Text(day.name),
         bottom: _SessionProgress(done: doneSets, total: totalSets),

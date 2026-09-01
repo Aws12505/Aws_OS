@@ -7,6 +7,7 @@ import '../../../../shared/design/app_theme.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
 import '../providers.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class ExchangeRatesView extends ConsumerWidget {
   const ExchangeRatesView({super.key});
@@ -36,9 +37,10 @@ class ExchangeRatesView extends ConsumerWidget {
             c.id: c,
         };
         return ListView.separated(
-          padding: const EdgeInsets.fromLTRB(12, 8, 12, AppInsets.listBottomNoFab),
+          padding: const EdgeInsets.only(bottom: AppInsets.listBottomNoFab),
           itemCount: rates.length,
-          separatorBuilder: (_, _) => const SizedBox(height: 4),
+          separatorBuilder: (_, _) =>
+              const AppRule(indent: AppSpacing.xl, endIndent: AppSpacing.xl),
           itemBuilder: (_, i) {
             final r = rates[i];
             final from = currencies[r.fromCurrencyId]?.code ?? '?';
@@ -47,16 +49,14 @@ class ExchangeRatesView extends ConsumerWidget {
             final formatted = NumberFormat.decimalPatternDigits(
               decimalDigits: 6,
             ).format(r.rate);
-            return Card(
-              child: ListTile(
-                leading: const Icon(Icons.swap_horiz),
-                title: Text(
-                  '1 $from = $formatted $to',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                subtitle: Text(dateStr),
+            return ListTile(
+              leading: const Icon(Icons.swap_horiz),
+              title: Text(
+                '1 $from = $formatted $to',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
+              subtitle: Text(dateStr),
             );
           },
         );

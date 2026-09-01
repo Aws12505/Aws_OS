@@ -13,7 +13,8 @@ import 'package:aws_os/shared/widgets/app_empty_state.dart';
 import 'package:aws_os/shared/widgets/app_error_view.dart';
 import 'package:aws_os/shared/widgets/app_loading.dart';
 import 'package:aws_os/shared/widgets/count_badge.dart';
-import 'package:aws_os/shared/widgets/glass.dart';
+import 'package:aws_os/shared/widgets/app_card.dart';
+import 'package:aws_os/shared/widgets/pills.dart';
 import 'package:aws_os/shared/widgets/segmented_control.dart';
 import 'package:aws_os/shared/widgets/stat_tile.dart';
 import 'package:flutter/material.dart';
@@ -175,7 +176,7 @@ class _Kit extends StatelessWidget {
             ),
           ],
         ),
-        const GlassCard(
+        const AppCard(
           child: Row(
             children: [
               MiniPill(label: 'Recurring'),

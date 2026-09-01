@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_error_view.dart';
 import '../../../../shared/widgets/app_loading.dart';
@@ -14,6 +13,7 @@ import '../providers.dart';
 import '../widgets/confirm_occurrence_sheet.dart';
 import '../widgets/occurrence_history_sheet.dart';
 import '../widgets/recurrence_form_sheet.dart';
+import '../../../../shared/widgets/app_card.dart';
 
 class RecurringScreen extends ConsumerWidget {
   const RecurringScreen({super.key});
@@ -26,7 +26,6 @@ class RecurringScreen extends ConsumerWidget {
       for (final r in recsAsync.value ?? const <Recurrence>[]) r.id: r,
     };
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Recurring'),
         actions: [
@@ -39,38 +38,46 @@ class RecurringScreen extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(8, 8, 8, AppInsets.listBottomNoFab),
+        padding: const EdgeInsets.only(bottom: AppInsets.listBottomNoFab),
         children: [
           pendingAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (e, _) => const SizedBox.shrink(),
             data: (pending) {
               if (pending.isEmpty) return const SizedBox.shrink();
-              return Card(
-                color: Theme.of(context).colorScheme.tertiaryContainer,
+              // A notice, not a page section: it is temporary and it wants
+              // to be picked out, so it keeps a box and takes the warning rule.
+              return AppCard(
+                style: CardStyle.block,
+                borderColor: context.sem.warning.base,
                 child: Padding(
-                  padding: const EdgeInsets.all(12),
+                  padding: EdgeInsets.zero,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Needs your review',
-                          style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Needs your review',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
                       const SizedBox(height: 4),
                       Text(
-                          '${pending.length} pending occurrence(s). Review any of them, in any order.',
-                          style: Theme.of(context).textTheme.bodySmall),
+                        '${pending.length} pending occurrence(s). Review any of them, in any order.',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                       const Divider(),
                       for (final o in pending)
                         ListTile(
                           dense: true,
                           contentPadding: EdgeInsets.zero,
                           title: Text(
-                              recsById[o.recurrenceId]?.noteTemplate ??
-                                  (recsById[o.recurrenceId]?.kind == 'income'
-                                      ? 'Income'
-                                      : 'Expense')),
-                          subtitle:
-                              Text('Due ${DateFormat.yMMMd().format(o.dueAt)}'),
+                            recsById[o.recurrenceId]?.noteTemplate ??
+                                (recsById[o.recurrenceId]?.kind == 'income'
+                                    ? 'Income'
+                                    : 'Expense'),
+                          ),
+                          subtitle: Text(
+                            'Due ${DateFormat.yMMMd().format(o.dueAt)}',
+                          ),
                           trailing: FilledButton(
                             onPressed: () => showConfirmOccurrenceSheet(
                               context,
@@ -86,8 +93,7 @@ class RecurringScreen extends ConsumerWidget {
             },
           ),
           recsAsync.when(
-            loading: () =>
-                const AppLoading(),
+            loading: () => const AppLoading(),
             error: (e, _) => AppErrorView(error: e),
             data: (items) {
               if (items.isEmpty) {
@@ -99,10 +105,9 @@ class RecurringScreen extends ConsumerWidget {
                   ),
                 );
               }
-              return Column(
+              return RuledColumn(
                 children: [
-                  for (final r in items)
-                    _RecurrenceTile(recurrence: r),
+                  for (final r in items) _RecurrenceTile(recurrence: r),
                 ],
               );
             },
@@ -132,65 +137,67 @@ class _RecurrenceTile extends ConsumerWidget {
       RecurrenceFreq.yearly => 'year(s)',
     };
     final next = recurrence.nextDueAt;
-    return Card(
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor:
-              (recurrence.kind == 'expense' ? Colors.red : Colors.green)
-                  .withValues(alpha: 0.15),
-          foregroundColor:
-              recurrence.kind == 'expense' ? Colors.red : Colors.green,
-          child: Icon(recurrence.kind == 'expense'
+    final role = recurrence.kind == 'expense'
+        ? context.sem.expense
+        : context.sem.income;
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: role.container,
+        foregroundColor: role.onContainer,
+        child: Icon(
+          recurrence.kind == 'expense'
               ? Icons.trending_down
-              : Icons.trending_up),
+              : Icons.trending_up,
         ),
-        title: Text(
-          recurrence.noteTemplate ??
-              '${recurrence.kind == 'expense' ? 'Expense' : 'Income'} every ${rule.interval} $freqLabel',
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Every ${rule.interval} $freqLabel'
-              ' • starts ${DateFormat.yMMMd().format(recurrence.startDate)}',
-            ),
-            if (next != null)
-              Text('Next: ${DateFormat.yMMMd().format(next)}',
-                  style: Theme.of(context).textTheme.bodySmall),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (v) async {
-            switch (v) {
-              case 'occurrences':
-                showOccurrenceHistorySheet(context, recurrence: recurrence);
-              case 'edit':
-                showRecurrenceFormSheet(context, existing: recurrence);
-              case 'delete':
-                final ok = await showAppConfirmDialog(
-                  context,
-                  title: 'Delete recurring entry?',
-                  message: 'Pending occurrences will be removed. Already-confirmed transactions are kept.',
-                  confirmLabel: 'Delete',
-                  destructive: true,
-                );
-                if (ok) {
-                  await ref
-                      .read(financeRepositoryProvider)
-                      .deleteRecurrence(recurrence.id);
-                }
-            }
-          },
-          itemBuilder: (_) => const [
-            PopupMenuItem(value: 'occurrences', child: Text('View occurrences')),
-            PopupMenuItem(value: 'edit', child: Text('Edit')),
-            PopupMenuItem(value: 'delete', child: Text('Delete')),
-          ],
-        ),
-        onTap: () =>
-            showRecurrenceFormSheet(context, existing: recurrence),
       ),
+      title: Text(
+        recurrence.noteTemplate ??
+            '${recurrence.kind == 'expense' ? 'Expense' : 'Income'} every ${rule.interval} $freqLabel',
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Every ${rule.interval} $freqLabel'
+            ' • starts ${DateFormat.yMMMd().format(recurrence.startDate)}',
+          ),
+          if (next != null)
+            Text(
+              'Next: ${DateFormat.yMMMd().format(next)}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+        ],
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (v) async {
+          switch (v) {
+            case 'occurrences':
+              showOccurrenceHistorySheet(context, recurrence: recurrence);
+            case 'edit':
+              showRecurrenceFormSheet(context, existing: recurrence);
+            case 'delete':
+              final ok = await showAppConfirmDialog(
+                context,
+                title: 'Delete recurring entry?',
+                message:
+                    'Pending occurrences will be removed. Already-confirmed transactions are kept.',
+                confirmLabel: 'Delete',
+                destructive: true,
+              );
+              if (ok) {
+                await ref
+                    .read(financeRepositoryProvider)
+                    .deleteRecurrence(recurrence.id);
+              }
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'occurrences', child: Text('View occurrences')),
+          PopupMenuItem(value: 'edit', child: Text('Edit')),
+          PopupMenuItem(value: 'delete', child: Text('Delete')),
+        ],
+      ),
+      onTap: () => showRecurrenceFormSheet(context, existing: recurrence),
     );
   }
 }

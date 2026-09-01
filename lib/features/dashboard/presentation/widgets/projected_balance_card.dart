@@ -15,7 +15,7 @@ class _ProjectedBalanceCard extends ConsumerWidget {
     final upcoming = pending.where((o) => !o.dueAt.isBefore(today)).length;
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
-    return GlassCard(
+    return AppCard(
       child: Row(
         children: [
           _IconBadge(icon: Icons.show_chart_rounded, color: cs.secondary),

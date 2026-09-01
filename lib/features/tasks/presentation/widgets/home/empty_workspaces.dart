@@ -10,7 +10,6 @@ class _EmptyWorkspaces extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final tt = Theme.of(context).textTheme;
     return AppScaffold(
-      mode: SurfaceMode.working,
       bottomSafeArea: true,
       body: Center(
           child: Padding(
@@ -21,19 +20,8 @@ class _EmptyWorkspaces extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [cs.primary, cs.tertiary],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
                     shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: cs.primary.withValues(alpha: 0.4),
-                        blurRadius: 30,
-                        offset: const Offset(0, 12),
-                      ),
-                    ],
+                    color: cs.primary,
                   ),
                   child: Icon(
                     Icons.workspaces_rounded,

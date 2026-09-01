@@ -65,7 +65,7 @@ class _BudgetRow extends StatelessWidget {
             child: LinearProgressIndicator(
               value: item.fraction,
               minHeight: 7,
-              backgroundColor: cs.surfaceContainerHighest,
+              backgroundColor: context.surfaces.sunken,
               color: barColor,
             ),
           ),

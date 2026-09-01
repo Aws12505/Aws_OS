@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/recurrence.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_scaffold.dart';
 import '../providers.dart';
@@ -32,7 +31,6 @@ class TaskDetailScreen extends ConsumerWidget {
 
     if (task == null) {
       return AppScaffold(
-      mode: SurfaceMode.working,
         appBar: AppBar(title: const Text('Task')),
         body: const Center(child: Text('This task no longer exists.')),
       );
@@ -45,7 +43,6 @@ class TaskDetailScreen extends ConsumerWidget {
     final subtasks = all.where((s) => s.parentTaskId == t.id).toList();
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(
         title: const Text('Task details'),
         actions: [

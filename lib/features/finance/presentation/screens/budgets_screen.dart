@@ -7,7 +7,6 @@ import 'package:intl/intl.dart';
 import '../../../../core/db/app_database.dart';
 import '../../../../core/utils/date_ext.dart';
 import '../../../../shared/design/app_theme.dart';
-import '../../../../shared/design/surface_scope.dart';
 import '../../../../shared/widgets/app_card.dart';
 import '../../../../shared/widgets/app_dialog.dart';
 import '../../../../shared/widgets/app_empty_state.dart';
@@ -45,7 +44,6 @@ class BudgetsScreen extends ConsumerWidget {
     final budgetByCat = {for (final b in budgets) b.categoryId: b};
 
     return AppScaffold(
-      mode: SurfaceMode.working,
       appBar: AppBar(title: const Text('Budgets')),
       body: catsAsync.when(
         loading: () => const AppLoading(),
@@ -171,6 +169,7 @@ class _BudgetTile extends StatelessWidget {
             : context.sem.income.base;
 
     return AppCard(
+      style: CardStyle.block,
       margin: const EdgeInsets.symmetric(vertical: 5),
       radius: AppRadius.lg,
       onTap: onEdit,
@@ -207,7 +206,7 @@ class _BudgetTile extends StatelessWidget {
                   child: LinearProgressIndicator(
                     value: frac,
                     minHeight: 7,
-                    backgroundColor: cs.surfaceContainerHighest,
+                    backgroundColor: context.surfaces.sunken,
                     color: barColor,
                   ),
                 ),

@@ -20,22 +20,18 @@ class _TaskTile extends ConsumerWidget {
         task.category != null && task.category!.trim().isNotEmpty;
     final hasMeta =
         task.dueAt != null || task.deadlineAt != null || hasCategory;
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: cs.surface.withValues(alpha: 0.72),
-        borderRadius: BorderRadius.circular(AppRadius.xl),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.45)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
+    // No box. Tasks are rows in a list, and the list separates them with a
+    // rule; boxing each one cost a border, a radius, a shadow and a gap per
+    // item and made a screenful of tasks read as a screenful of widgets.
+    return Padding(
+      padding: EdgeInsets.zero,
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          14,
+          AppSpacing.sm,
+          14,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -166,10 +162,10 @@ class _TaskTile extends ConsumerWidget {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: cs.surfaceContainerHighest.withValues(alpha: 0.4),
+                  color: context.surfaces.sunken,
                   borderRadius: BorderRadius.circular(AppRadius.md),
                   border: Border.all(
-                      color: cs.outlineVariant.withValues(alpha: 0.4)),
+                      color: context.surfaces.hairline),
                 ),
                 child: Column(
                   children: [
@@ -177,7 +173,7 @@ class _TaskTile extends ConsumerWidget {
                       if (i > 0)
                         Divider(
                             height: 12,
-                            color: cs.outlineVariant.withValues(alpha: 0.3)),
+                            color: context.surfaces.hairline),
                       _SubtaskRow(task: subtasks[i], ref: ref),
                     ],
                   ],
